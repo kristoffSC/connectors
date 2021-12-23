@@ -34,6 +34,7 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -45,6 +46,7 @@ import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
 
 @RunWith(Parameterized.class)
+@Ignore
 public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase {
 
     private static final Map<String, CountDownLatch> LATCH_MAP = new ConcurrentHashMap<>();
