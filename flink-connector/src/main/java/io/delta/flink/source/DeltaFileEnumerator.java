@@ -1,13 +1,12 @@
 package io.delta.flink.source;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
 import org.apache.flink.core.fs.BlockLocation;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
@@ -15,7 +14,9 @@ import org.apache.flink.core.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class DeltaFileEnumerator implements FileEnumerator {
+import io.delta.standalone.actions.AddFile;
+
+class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeltaFileEnumerator.class);
 
@@ -25,16 +26,23 @@ class DeltaFileEnumerator implements FileEnumerator {
      */
     private final char[] currentId = "0000000000".toCharArray();
 
-
     @Override
-    public Collection<FileSourceSplit> enumerateSplits(Path[] paths, int minDesiredSplits)
+    public List<DeltaSourceSplit> enumerateSplits(AddFileEnumeratorContext context)
         throws IOException {
-        final ArrayList<FileSourceSplit> splits = new ArrayList<>();
+        final ArrayList<DeltaSourceSplit> splits = new ArrayList<>();
 
-        for (Path path : paths) {
+        for (AddFile addFile : context.getAddFiles()) {
+
+            String addFilePath = addFile.getPath();
+            URI addFileUri = URI.create(addFilePath);
+            if (!addFileUri.isAbsolute()) {
+                addFileUri = URI.create(context.getTablePath() + addFilePath);
+            }
+
+            Path path = new Path(addFileUri);
             final FileSystem fs = path.getFileSystem();
             final FileStatus status = fs.getFileStatus(path);
-            convertToSourceSplits(status, fs, splits);
+            convertToSourceSplits(status, fs, addFile.getPartitionValues(), splits);
         }
 
         return splits;
@@ -44,15 +52,22 @@ class DeltaFileEnumerator implements FileEnumerator {
     //  Copied from Flink's BlockSplittingRecursiveEnumerator and adjusted.
     // ------------------------------------------------------------------------
     private void convertToSourceSplits(final FileStatus fileStatus, final FileSystem fileSystem,
-        final List<FileSourceSplit> target) throws IOException {
+        Map<String, String> partitionValues, final List<DeltaSourceSplit> target)
+        throws IOException {
 
         final BlockLocation[] blocks = getBlockLocationsForFile(fileStatus, fileSystem);
         if (blocks == null) {
             target.add(
-                new FileSourceSplit(getNextId(), fileStatus.getPath(), 0L, fileStatus.getLen()));
+                new DeltaSourceSplit(
+                    partitionValues,
+                    getNextId(),
+                    fileStatus.getPath(),
+                    0L,
+                    fileStatus.getLen()));
         } else {
             for (BlockLocation block : blocks) {
-                target.add(new FileSourceSplit(
+                target.add(new DeltaSourceSplit(
+                    partitionValues,
                     getNextId(),
                     fileStatus.getPath(),
                     block.getOffset(),

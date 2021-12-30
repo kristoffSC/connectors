@@ -6,8 +6,6 @@ import javax.annotation.Nullable;
 
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
 import org.apache.flink.core.fs.Path;
@@ -15,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ContinuousDeltaSourceFileEnumerator implements
-    SplitEnumerator<FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>> {
+    SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
 
     private static final Logger LOG =
         LoggerFactory.getLogger(ContinuousDeltaSourceFileEnumerator.class);
@@ -45,7 +43,7 @@ public class ContinuousDeltaSourceFileEnumerator implements
     }
 
     @Override
-    public void addSplitsBack(List<FileSourceSplit> splits, int subtaskId) {
+    public void addSplitsBack(List<DeltaSourceSplit> splits, int subtaskId) {
 
     }
 
@@ -55,7 +53,7 @@ public class ContinuousDeltaSourceFileEnumerator implements
     }
 
     @Override
-    public PendingSplitsCheckpoint<FileSourceSplit> snapshotState() throws Exception {
+    public DeltaPendingSplitsCheckpoint<DeltaSourceSplit> snapshotState() throws Exception {
         return null;
     }
 

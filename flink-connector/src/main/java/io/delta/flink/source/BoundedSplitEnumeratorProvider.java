@@ -4,33 +4,36 @@ import java.util.Collections;
 
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SplitEnumerator;
-import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
+import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner.Provider;
-import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
 import org.apache.flink.core.fs.Path;
 
 public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
     private final FileSplitAssigner.Provider splitAssignerProvider;
 
-    private final FileEnumerator.Provider fileEnumeratorProvider;
+    private final AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider;
+
+    public BoundedSplitEnumeratorProvider() {
+        this(DeltaSource.DEFAULT_SPLIT_ASSIGNER,
+            DeltaSource.DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
+    }
 
     public BoundedSplitEnumeratorProvider(
-        Provider splitAssignerProvider, FileEnumerator.Provider fileEnumeratorProvider,
-        ContinuousEnumerationSettings settings) {
+        Provider splitAssignerProvider,
+        AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider) {
         this.splitAssignerProvider = splitAssignerProvider;
         this.fileEnumeratorProvider = fileEnumeratorProvider;
     }
 
     @Override
-    public SplitEnumerator<FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>>
-        createEnumerator(Path deltaTablePath) {
+    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+        createEnumerator(
+            Path deltaTablePath, SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         return new BoundedDeltaSourceFileEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
-            splitAssignerProvider.create(Collections.emptyList())
+            splitAssignerProvider.create(Collections.emptyList()), enumContext
         );
     }
 

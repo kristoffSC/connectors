@@ -1,40 +1,47 @@
 package io.delta.flink.source;
 
-import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.fs.Path;
-import static org.apache.flink.util.Preconditions.checkNotNull;
+import org.apache.flink.util.StringUtils;
 
 public class DeltaSourceSplit extends FileSourceSplit {
 
-    private final long snapshotVersion;
+    private static final String[] NO_HOSTS = StringUtils.EMPTY_STRING_ARRAY;
 
-    public DeltaSourceSplit(long snapshotVersion, String id, Path filePath, long offset,
-        long length) {
-        super(id, filePath, offset, length);
-        this.snapshotVersion = checkNotNull(snapshotVersion, "snapshotVersion can not be null");
+    private final Map<String, String> partitionValues;
+
+    public DeltaSourceSplit(Map<String, String> partitionValues, String id,
+        Path filePath, long offset, long length) {
+        this(partitionValues, id, filePath, offset, length, NO_HOSTS, null);
     }
 
-    public DeltaSourceSplit(long snapshotVersion, String id, Path filePath, long offset,
-        long length,
-        String... hostnames) {
-        super(id, filePath, offset, length, hostnames);
-        this.snapshotVersion = checkNotNull(snapshotVersion, "snapshotVersion can not be null");
+    public DeltaSourceSplit(Map<String, String> partitionValues, String id,
+        Path filePath, long offset, long length, String[] hostnames) {
+        this(partitionValues, id, filePath, offset, length, hostnames, null);
     }
 
-    public DeltaSourceSplit(long snapshotVersion, String id, Path filePath, long offset,
-        long length, String[] hostnames,
-        @Nullable CheckpointedPosition readerPosition) {
+    public DeltaSourceSplit(Map<String, String> partitionValues, String id,
+        Path filePath, long offset, long length, String[] hostnames,
+        CheckpointedPosition readerPosition) {
         super(id, filePath, offset, length, hostnames, readerPosition);
-        this.snapshotVersion = checkNotNull(snapshotVersion, "snapshotVersion can not be null");
+
+        // Make split Partition a new Copy of original map to prevent mutation.
+        this.partitionValues =
+            (partitionValues == null) ? Collections.emptyMap() : new HashMap<>(partitionValues);
     }
 
     @Override
-    public DeltaSourceSplit updateWithCheckpointedPosition(
-        @Nullable CheckpointedPosition position) {
-        return new DeltaSourceSplit(snapshotVersion, splitId(), path(), offset(), length(),
+    public DeltaSourceSplit updateWithCheckpointedPosition(CheckpointedPosition position) {
+        return new DeltaSourceSplit(partitionValues, splitId(), path(), offset(), length(),
             hostnames(), position);
+    }
+
+    public Map<String, String> getPartitionValues() {
+        return Collections.unmodifiableMap(partitionValues);
     }
 }

@@ -4,9 +4,8 @@ import java.util.Collections;
 
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SplitEnumerator;
+import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner.Provider;
 import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
@@ -29,8 +28,9 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     }
 
     @Override
-    public SplitEnumerator<FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>>
-        createEnumerator(Path deltaTablePath) {
+    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+            createEnumerator(Path deltaTablePath,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         return new ContinuousDeltaSourceFileEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()), settings
