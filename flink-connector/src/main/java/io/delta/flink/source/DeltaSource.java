@@ -8,38 +8,37 @@ import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
-import org.apache.flink.connector.file.src.enumerate.FileEnumerator;
 import org.apache.flink.connector.file.src.impl.FileSourceReader;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
+import org.apache.hadoop.conf.Configuration;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 public class DeltaSource<T>
-    implements Source<T, FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>>,
+    implements Source<T, DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {
+
+    // ALL FIELDS HAVE TO BE SERIALIZABLE
 
     public static final FileSplitAssigner.Provider DEFAULT_SPLIT_ASSIGNER =
         LocalityAwareSplitAssigner::new;
 
-    public static final FileEnumerator.Provider DEFAULT_SPLITTABLE_FILE_ENUMERATOR =
-        DeltaFileEnumerator::new;
-
+    public static final AddFileEnumerator.Provider<DeltaSourceSplit>
+        DEFAULT_SPLITTABLE_FILE_ENUMERATOR = DeltaFileEnumerator::new;
 
     private static final long serialVersionUID = 1L;
 
     private final Path tablePath;
 
-    private final BulkFormat<T, FileSourceSplit> readerFormat;
+    private final BulkFormat<T, DeltaSourceSplit> readerFormat;
 
     private final SplitEnumeratorProvider splitEnumeratorProvider;
 
-    protected DeltaSource(Path tablePath, BulkFormat<T, FileSourceSplit> readerFormat,
-        SplitEnumeratorProvider splitEnumeratorProvider) {
+    protected DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
+        SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration) {
 
         this.tablePath = tablePath;
         this.readerFormat = readerFormat;
@@ -53,23 +52,24 @@ public class DeltaSource<T>
      * <p>Examples for bulk readers are compressed and vectorized formats such as ORC or Parquet.
      */
     public static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
-        BulkFormat<T, FileSourceSplit> reader, SplitEnumeratorProvider splitEnumeratorProvider) {
+        BulkFormat<T, DeltaSourceSplit> reader, SplitEnumeratorProvider splitEnumeratorProvider,
+        Configuration configuration) {
         checkNotNull(deltaTablePath, "deltaTablePath");
         checkNotNull(reader, "reader");
         checkNotNull(splitEnumeratorProvider, "splitEnumeratorProvider");
 
-        return new DeltaSource<>(deltaTablePath, reader, splitEnumeratorProvider);
+        return new DeltaSource<>(deltaTablePath, reader, splitEnumeratorProvider, configuration);
     }
 
     @Override
-    public SimpleVersionedSerializer<FileSourceSplit> getSplitSerializer() {
-        return null;
+    public SimpleVersionedSerializer<DeltaSourceSplit> getSplitSerializer() {
+        return DeltaSourceSplitSerializer.INSTANCE;
     }
 
     @Override
-    public SimpleVersionedSerializer<PendingSplitsCheckpoint<FileSourceSplit>>
+    public SimpleVersionedSerializer<DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         getEnumeratorCheckpointSerializer() {
-        return null;
+        return new DeltaPendingSplitsCheckpointSerializer(DeltaSourceSplitSerializer.INSTANCE);
     }
 
     @Override
@@ -78,28 +78,28 @@ public class DeltaSource<T>
     }
 
     @Override
-    public SourceReader<T, FileSourceSplit> createReader(SourceReaderContext readerContext)
+    public SourceReader<T, DeltaSourceSplit> createReader(SourceReaderContext readerContext)
         throws Exception {
         return new FileSourceReader<>(readerContext, readerFormat,
             readerContext.getConfiguration());
     }
 
     @Override
-    public SplitEnumerator<FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>>
+    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         createEnumerator(
-        SplitEnumeratorContext<FileSourceSplit> enumContext) {
-        return splitEnumeratorProvider.createEnumerator(tablePath);
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        return splitEnumeratorProvider.createEnumerator(tablePath, enumContext);
     }
 
     @Override
-    public SplitEnumerator<FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>>
-        restoreEnumerator(SplitEnumeratorContext<FileSourceSplit> enumContext,
-        PendingSplitsCheckpoint<FileSourceSplit> checkpoint) throws Exception {
-        return splitEnumeratorProvider.createEnumerator(tablePath);
+    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+        restoreEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
+        return splitEnumeratorProvider.createEnumerator(tablePath, enumContext);
     }
 
     @Override
     public TypeInformation<T> getProducedType() {
-        return null;
+        return readerFormat.getProducedType();
     }
 }

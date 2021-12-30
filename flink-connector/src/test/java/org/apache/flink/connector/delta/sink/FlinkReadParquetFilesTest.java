@@ -2,6 +2,7 @@ package org.apache.flink.connector.delta.sink;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -12,6 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
+import io.delta.flink.source.BoundedSplitEnumeratorProvider;
+import io.delta.flink.source.DeltaColumnarRowInputFormatFactory;
+import io.delta.flink.source.DeltaSource;
+import io.delta.flink.source.DeltaSourceSplit;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -28,6 +33,7 @@ import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.filesystem.PartitionFieldExtractor;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -51,7 +57,8 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
 
     private static final Map<String, CountDownLatch> LATCH_MAP = new ConcurrentHashMap<>();
     private String latchId;
-    private String deltaTablePath;
+    private String nonPartitionedDeltaTablePath;
+    private String partitionedDeltaTablePath;
 
     @Parameterized.Parameters(
         name = "triggerFailover = {0}"
@@ -68,9 +75,11 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
         this.latchId = UUID.randomUUID().toString();
         LATCH_MAP.put(latchId, new CountDownLatch(1));
         try {
-            deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+            nonPartitionedDeltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+            partitionedDeltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
 
-            DeltaSinkTestUtils.initTestForNonPartitionedTable(deltaTablePath);
+            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedDeltaTablePath);
+            DeltaSinkTestUtils.initTestForPartitionedTable(partitionedDeltaTablePath);
         } catch (IOException e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
@@ -83,7 +92,8 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
 
     @Test
     public void testDeltaLog() {
-        DeltaLog deltaLog = DeltaLog.forTable(DeltaSinkTestUtils.getHadoopConf(), deltaTablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(DeltaSinkTestUtils.getHadoopConf(),
+            nonPartitionedDeltaTablePath);
         Snapshot snapshot = deltaLog.snapshot();
 
         List<AddFile> filesFromSnapshot = snapshot.getAllFiles();
@@ -96,8 +106,83 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
         }
 
         System.out.println(changes);
+    }
+
+    @Test
+    public void testDeltaBoundedSourceWithPartitions() throws Exception {
+
+    }
 
 
+    @Test
+    public void testDeltaBoundedSource() throws Exception {
+        StreamExecutionEnvironment env = getTestStreamEnv();
+
+        final LogicalType[] fieldTypes =
+            new LogicalType[]{
+                new CharType(), new CharType(), new IntType()
+            };
+
+        ParquetColumnarRowInputFormat<DeltaSourceSplit> format =
+            DeltaColumnarRowInputFormatFactory.createFormat(
+                DeltaSinkTestUtils.getHadoopConf(),
+                RowType.of(fieldTypes, new String[]{"name", "surname", "age"}),
+                500,
+                false, true
+            );
+
+        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
+            Path.fromLocalFile(new File(nonPartitionedDeltaTablePath)),
+            format, new BoundedSplitEnumeratorProvider(), DeltaSinkTestUtils.getHadoopConf());
+
+        env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "file-source")
+            .print();
+
+        JobGraph jobGraph = env.getStreamGraph().getJobGraph();
+
+        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
+            miniCluster.start();
+            miniCluster.executeJobBlocking(jobGraph);
+        }
+    }
+
+    @Test
+    public void testFileSourceWithPartition() throws Exception {
+        StreamExecutionEnvironment env = getTestStreamEnv();
+
+        final LogicalType[] fieldTypes =
+            new LogicalType[]{
+                new CharType(), new CharType(), new IntType(), new CharType()
+            };
+
+        List<String> partitions = new ArrayList<>();
+        partitions.add("col");
+
+        ParquetColumnarRowInputFormat<FileSourceSplit> partitionedFormat =
+            ParquetColumnarRowInputFormat.createPartitionedFormat(
+                DeltaSinkTestUtils.getHadoopConf(),
+                RowType.of(fieldTypes, new String[]{"name", "surname", "age", "col"}),
+                partitions,
+                (PartitionFieldExtractor<FileSourceSplit>) (split, fieldName, fieldType) ->
+                    "partition_value",
+                500,
+                false, true
+            );
+
+        final FileSource<RowData> source =
+            FileSource.forBulkFileFormat(partitionedFormat, Path.fromLocalFile(new File(
+                    partitionedDeltaTablePath)))
+                .build();
+
+        env.fromSource(source, WatermarkStrategy.noWatermarks(), "file-source")
+            .print();
+
+        JobGraph jobGraph = env.getStreamGraph().getJobGraph();
+
+        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
+            miniCluster.start();
+            miniCluster.executeJobBlocking(jobGraph);
+        }
     }
 
     @Test
@@ -118,7 +203,8 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
                 true);
 
         final FileSource<RowData> source =
-            FileSource.forBulkFileFormat(format, Path.fromLocalFile(new File(deltaTablePath)))
+            FileSource.forBulkFileFormat(format, Path.fromLocalFile(new File(
+                    nonPartitionedDeltaTablePath)))
                 .build();
 
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "file-source")

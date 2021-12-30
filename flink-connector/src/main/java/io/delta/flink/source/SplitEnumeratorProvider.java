@@ -1,15 +1,16 @@
 package io.delta.flink.source;
 
+import java.io.Serializable;
+
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SplitEnumerator;
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
+import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.core.fs.Path;
 
-public interface SplitEnumeratorProvider {
+public interface SplitEnumeratorProvider extends Serializable {
 
-    SplitEnumerator<FileSourceSplit, PendingSplitsCheckpoint<FileSourceSplit>>
-        createEnumerator(Path deltaTablePath);
+    SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+        createEnumerator(Path deltaTablePath, SplitEnumeratorContext<DeltaSourceSplit> enumContext);
 
     Boundedness getBoundedness();
 
