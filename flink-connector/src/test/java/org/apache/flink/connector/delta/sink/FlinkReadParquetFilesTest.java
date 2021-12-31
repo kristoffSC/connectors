@@ -110,9 +110,38 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
 
     @Test
     public void testDeltaBoundedSourceWithPartitions() throws Exception {
+        StreamExecutionEnvironment env = getTestStreamEnv();
 
+        final LogicalType[] fieldTypes =
+            new LogicalType[]{
+                new CharType(), new CharType(), new IntType(), new CharType(), new CharType()
+            };
+
+        List<String> partitions = Arrays.asList("col1", "col2");
+
+        ParquetColumnarRowInputFormat<DeltaSourceSplit> format =
+            DeltaColumnarRowInputFormatFactory.createPartitionedFormat(
+                DeltaSinkTestUtils.getHadoopConf(),
+                RowType.of(fieldTypes, new String[]{"name", "surname", "age", "col1", "col2"}),
+                partitions,
+                500,
+                false, true
+            );
+
+        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
+            Path.fromLocalFile(new File(partitionedDeltaTablePath)),
+            format, new BoundedSplitEnumeratorProvider(), DeltaSinkTestUtils.getHadoopConf());
+
+        env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "file-source")
+            .print();
+
+        JobGraph jobGraph = env.getStreamGraph().getJobGraph();
+
+        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
+            miniCluster.start();
+            miniCluster.executeJobBlocking(jobGraph);
+        }
     }
-
 
     @Test
     public void testDeltaBoundedSource() throws Exception {
@@ -227,7 +256,8 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
         env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
 
         if (triggerFailover) {
-            env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, Time.milliseconds(100)));
+            env.setRestartStrategy(
+                RestartStrategies.fixedDelayRestart(1, Time.milliseconds(100)));
         } else {
             env.setRestartStrategy(RestartStrategies.noRestart());
         }
