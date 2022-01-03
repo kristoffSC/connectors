@@ -21,7 +21,7 @@ public class DeltaSourceSplit extends FileSourceSplit {
     }
 
     public DeltaSourceSplit(Map<String, String> partitionValues, String id,
-        Path filePath, long offset, long length, String[] hostnames) {
+        Path filePath, long offset, long length, String... hostnames) {
         this(partitionValues, id, filePath, offset, length, hostnames, null);
     }
 
