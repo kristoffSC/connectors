@@ -23,11 +23,11 @@ import org.slf4j.LoggerFactory;
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
 
-public class BoundedDeltaSourceFileEnumerator
+public class BoundedDeltaSourceSplitEnumerator
     implements SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
 
     private static final Logger LOG =
-        LoggerFactory.getLogger(BoundedDeltaSourceFileEnumerator.class);
+        LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
 
     private final Path deltaTablePath;
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
@@ -37,15 +37,17 @@ public class BoundedDeltaSourceFileEnumerator
     private final SplitEnumeratorContext<DeltaSourceSplit> enumContext;
     private final LinkedHashMap<Integer, String> readersAwaitingSplit;
 
-    public BoundedDeltaSourceFileEnumerator(
+    public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
-        FileSplitAssigner splitAssigner, SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        this(deltaTablePath, fileEnumerator, splitAssigner, enumContext, -1);
+        FileSplitAssigner splitAssigner, Configuration configuration,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext, -1);
     }
 
-    public BoundedDeltaSourceFileEnumerator(
+    public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
-        FileSplitAssigner splitAssigner, SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        FileSplitAssigner splitAssigner, Configuration configuration,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         long initialSnapshotVersion) {
         this.deltaTablePath = deltaTablePath;
         this.fileEnumerator = fileEnumerator;
@@ -53,10 +55,7 @@ public class BoundedDeltaSourceFileEnumerator
         this.enumContext = enumContext;
         this.initialSnapshotVersion = initialSnapshotVersion;
         this.readersAwaitingSplit = new LinkedHashMap<>();
-
-        Configuration conf = new Configuration();
-        conf.set("parquet.compression", "SNAPPY");
-        this.configuration = conf;
+        this.configuration = configuration;
     }
 
     @Override

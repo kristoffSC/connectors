@@ -12,18 +12,18 @@ import org.apache.flink.core.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ContinuousDeltaSourceFileEnumerator implements
+public class ContinuousDeltaSourceSplitEnumerator implements
     SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
 
     private static final Logger LOG =
-        LoggerFactory.getLogger(ContinuousDeltaSourceFileEnumerator.class);
+        LoggerFactory.getLogger(ContinuousDeltaSourceSplitEnumerator.class);
 
     private final Path deltaTablePath;
     private final FileEnumerator fileEnumerator;
     private final FileSplitAssigner splitAssigner;
     private final ContinuousEnumerationSettings settings;
 
-    public ContinuousDeltaSourceFileEnumerator(Path deltaTablePath, FileEnumerator fileEnumerator,
+    public ContinuousDeltaSourceSplitEnumerator(Path deltaTablePath, FileEnumerator fileEnumerator,
         FileSplitAssigner splitAssigner, ContinuousEnumerationSettings settings) {
 
         this.deltaTablePath = deltaTablePath;

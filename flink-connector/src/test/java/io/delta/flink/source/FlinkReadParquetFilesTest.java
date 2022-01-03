@@ -1,4 +1,4 @@
-package org.apache.flink.connector.delta.sink;
+package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,10 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
-import io.delta.flink.source.BoundedSplitEnumeratorProvider;
-import io.delta.flink.source.DeltaColumnarRowInputFormatFactory;
-import io.delta.flink.source.DeltaSource;
-import io.delta.flink.source.DeltaSourceSplit;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;

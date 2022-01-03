@@ -14,6 +14,7 @@ import org.apache.flink.connector.file.src.impl.FileSourceReader;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
+import org.apache.flink.formats.parquet.utils.SerializableConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -37,12 +38,15 @@ public class DeltaSource<T>
 
     private final SplitEnumeratorProvider splitEnumeratorProvider;
 
+    private final SerializableConfiguration serializableConf;
+
     protected DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
         SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration) {
 
         this.tablePath = tablePath;
         this.readerFormat = readerFormat;
         this.splitEnumeratorProvider = splitEnumeratorProvider;
+        this.serializableConf = new SerializableConfiguration(configuration);
     }
 
     /**
@@ -88,14 +92,16 @@ public class DeltaSource<T>
     public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        return splitEnumeratorProvider.createEnumerator(tablePath, enumContext);
+        return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
+            enumContext);
     }
 
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         restoreEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
-        return splitEnumeratorProvider.createEnumerator(tablePath, enumContext);
+        return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
+            enumContext);
     }
 
     @Override

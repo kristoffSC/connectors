@@ -8,6 +8,7 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner.Provider;
 import org.apache.flink.core.fs.Path;
+import org.apache.hadoop.conf.Configuration;
 
 public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
@@ -30,10 +31,11 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         createEnumerator(
-            Path deltaTablePath, SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        return new BoundedDeltaSourceFileEnumerator(
+        Path deltaTablePath, Configuration configuration,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        return new BoundedDeltaSourceSplitEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
-            splitAssignerProvider.create(Collections.emptyList()), enumContext
+            splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext
         );
     }
 
