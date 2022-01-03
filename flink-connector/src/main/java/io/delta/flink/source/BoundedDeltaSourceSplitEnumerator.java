@@ -21,13 +21,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.delta.standalone.DeltaLog;
-import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.Snapshot;
 
 public class BoundedDeltaSourceSplitEnumerator
     implements SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
 
     private static final Logger LOG =
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
+    private static final int NO_SNAPSHOT_VERSION = -1;
 
     private final Path deltaTablePath;
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
@@ -41,7 +42,8 @@ public class BoundedDeltaSourceSplitEnumerator
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext, -1);
+        this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext,
+            NO_SNAPSHOT_VERSION);
     }
 
     public BoundedDeltaSourceSplitEnumerator(
@@ -64,20 +66,30 @@ public class BoundedDeltaSourceSplitEnumerator
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
         try {
-            // TODO Since this is the Bounded mode,
-            //  we must use initialSnapshotVersion and deltaLog.getSnapshotForVersionAsOf(...)
-            //  to make sure that we are reading the same table after recovery
-            String deltaTableStringPath = deltaTablePath.toUri().normalize().toString();
-            DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTableStringPath);
-            List<AddFile> allFiles = deltaLog.snapshot().getAllFiles();
-
-            AddFileEnumeratorContext context = new AddFileEnumeratorContext(
-                deltaTableStringPath, allFiles);
+            AddFileEnumeratorContext context = setUpEnumeratorContext();
             List<DeltaSourceSplit> splits = fileEnumerator.enumerateSplits(context);
             addSplits(splits);
         } catch (Exception e) {
             // TODO Create Delta Source Exception
             throw new RuntimeException(e);
+        }
+    }
+
+    private AddFileEnumeratorContext setUpEnumeratorContext() {
+        String deltaTableStringPath = deltaTablePath.toUri().normalize().toString();
+        DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTableStringPath);
+        Snapshot snapshot = getSnapshot(deltaLog);
+        return new AddFileEnumeratorContext(deltaTableStringPath, snapshot.getAllFiles());
+    }
+
+    private Snapshot getSnapshot(DeltaLog deltaLog) {
+        //  Since this is the Bounded mode,
+        //  we must use initialSnapshotVersion and deltaLog.getSnapshotForVersionAsOf(...)
+        //  to make sure that we are reading the same table after recovery.
+        if (this.initialSnapshotVersion == NO_SNAPSHOT_VERSION) {
+            return deltaLog.snapshot();
+        } else {
+            return deltaLog.getSnapshotForVersionAsOf(this.initialSnapshotVersion);
         }
     }
 
