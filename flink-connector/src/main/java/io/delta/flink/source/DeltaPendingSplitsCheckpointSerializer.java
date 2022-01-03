@@ -11,14 +11,14 @@ import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
-public class DeltaPendingSplitsCheckpointSerializer implements
-    SimpleVersionedSerializer<DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
+public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSplit> implements
+    SimpleVersionedSerializer<DeltaPendingSplitsCheckpoint<SplitT>> {
 
     private static final int VERSION = 1;
-    private final PendingSplitsCheckpointSerializer<DeltaSourceSplit> decoratedSerDe;
+    private final PendingSplitsCheckpointSerializer<SplitT> decoratedSerDe;
 
     public DeltaPendingSplitsCheckpointSerializer(
-        SimpleVersionedSerializer<DeltaSourceSplit> splitSerDe) {
+        SimpleVersionedSerializer<SplitT> splitSerDe) {
         this.decoratedSerDe = new PendingSplitsCheckpointSerializer<>(splitSerDe);
     }
 
@@ -28,13 +28,13 @@ public class DeltaPendingSplitsCheckpointSerializer implements
     }
 
     @Override
-    public byte[] serialize(DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint)
+    public byte[] serialize(DeltaPendingSplitsCheckpoint<SplitT> checkpoint)
         throws IOException {
         checkArgument(
             checkpoint.getClass() == DeltaPendingSplitsCheckpoint.class,
             "Only supports %s", DeltaPendingSplitsCheckpoint.class.getName());
 
-        PendingSplitsCheckpoint<DeltaSourceSplit> decoratedCheckPoint =
+        PendingSplitsCheckpoint<SplitT> decoratedCheckPoint =
             checkpoint.getPendingSplitsCheckpoint();
 
         byte[] decoratedBytes = decoratedSerDe.serialize(decoratedCheckPoint);
@@ -51,7 +51,7 @@ public class DeltaPendingSplitsCheckpointSerializer implements
     }
 
     @Override
-    public DeltaPendingSplitsCheckpoint<DeltaSourceSplit> deserialize(int version,
+    public DeltaPendingSplitsCheckpoint<SplitT> deserialize(int version,
         byte[] serialized) throws IOException {
         if (version == 1) {
             return tryDeserializeV1(serialized);
@@ -60,7 +60,7 @@ public class DeltaPendingSplitsCheckpointSerializer implements
         throw new IOException("Unknown version: " + version);
     }
 
-    private DeltaPendingSplitsCheckpoint<DeltaSourceSplit> tryDeserializeV1(byte[] serialized)
+    private DeltaPendingSplitsCheckpoint<SplitT> tryDeserializeV1(byte[] serialized)
         throws IOException {
         try (DataInputViewStreamWrapper inputWrapper =
             new DataInputViewStreamWrapper(new ByteArrayInputStream(serialized))) {
@@ -68,11 +68,11 @@ public class DeltaPendingSplitsCheckpointSerializer implements
         }
     }
 
-    private DeltaPendingSplitsCheckpoint<DeltaSourceSplit> deserializeV1(
+    private DeltaPendingSplitsCheckpoint<SplitT> deserializeV1(
         DataInputViewStreamWrapper inputWrapper) throws IOException {
         byte[] decoratedBytes = new byte[inputWrapper.readInt()];
         inputWrapper.readFully(decoratedBytes);
-        PendingSplitsCheckpoint<DeltaSourceSplit> decoratedCheckPoint =
+        PendingSplitsCheckpoint<SplitT> decoratedCheckPoint =
             decoratedSerDe.deserialize(decoratedSerDe.getVersion(), decoratedBytes);
 
         long initialSnapshotVersion = inputWrapper.readLong();

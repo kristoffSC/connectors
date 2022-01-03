@@ -22,8 +22,9 @@ public class DeltaSource<T>
     implements Source<T, DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {
 
-    // ALL FIELDS HAVE TO BE SERIALIZABLE
-
+    // ---------------------------------------------------------------------------------------------
+    // ALL NON TRANSIENT FIELDS HAVE TO BE SERIALIZABLE
+    // ---------------------------------------------------------------------------------------------
     public static final FileSplitAssigner.Provider DEFAULT_SPLIT_ASSIGNER =
         LocalityAwareSplitAssigner::new;
 
@@ -39,6 +40,8 @@ public class DeltaSource<T>
     private final SplitEnumeratorProvider splitEnumeratorProvider;
 
     private final SerializableConfiguration serializableConf;
+
+    // ---------------------------------------------------------------------------------------------
 
     protected DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
         SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration) {
@@ -73,7 +76,7 @@ public class DeltaSource<T>
     @Override
     public SimpleVersionedSerializer<DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         getEnumeratorCheckpointSerializer() {
-        return new DeltaPendingSplitsCheckpointSerializer(DeltaSourceSplitSerializer.INSTANCE);
+        return new DeltaPendingSplitsCheckpointSerializer<>(DeltaSourceSplitSerializer.INSTANCE);
     }
 
     @Override
