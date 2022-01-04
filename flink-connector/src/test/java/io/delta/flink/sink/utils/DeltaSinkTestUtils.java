@@ -26,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.DeltaTablePartitionAssigner;
 import io.delta.flink.sink.committables.AbstractDeltaCommittable;
@@ -253,14 +254,13 @@ public class DeltaSinkTestUtils {
             deserialized.getDeltaPendingFile().getPartitionSpec());
     }
 
+    // TODO Remove this method and use one from DeltaTestUtils.
     ///////////////////////////////////////////////////////////////////////////
     // hadoop conf test utils
     ///////////////////////////////////////////////////////////////////////////
 
     public static org.apache.hadoop.conf.Configuration getHadoopConf() {
-        org.apache.hadoop.conf.Configuration conf = new org.apache.hadoop.conf.Configuration();
-        conf.set("parquet.compression", "SNAPPY");
-        return conf;
+        return DeltaTestUtils.getHadoopConf();
     }
 
     ///////////////////////////////////////////////////////////////////////////

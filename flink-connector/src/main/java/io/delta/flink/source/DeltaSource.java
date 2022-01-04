@@ -103,6 +103,8 @@ public class DeltaSource<T>
     public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
         restoreEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
+
+        // TODO use actual checkpoint state to restore Enumerator;
         return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
             enumContext);
     }
