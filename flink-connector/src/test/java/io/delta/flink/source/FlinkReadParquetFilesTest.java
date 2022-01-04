@@ -247,7 +247,7 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         org.apache.flink.configuration.Configuration config = new Configuration();
-        config.set(ExecutionOptions.RUNTIME_MODE, RuntimeExecutionMode.STREAMING);
+        config.set(ExecutionOptions.RUNTIME_MODE, RuntimeExecutionMode.AUTOMATIC);
         env.configure(config, getClass().getClassLoader());
         env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
 

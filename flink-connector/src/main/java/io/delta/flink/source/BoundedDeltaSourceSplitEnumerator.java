@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -66,30 +65,14 @@ public class BoundedDeltaSourceSplitEnumerator
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
         try {
+            // TODO check for already processed files and skipp them.
+            //  This is needed for Checkpoint restoration.
             AddFileEnumeratorContext context = setUpEnumeratorContext();
             List<DeltaSourceSplit> splits = fileEnumerator.enumerateSplits(context);
             addSplits(splits);
         } catch (Exception e) {
             // TODO Create Delta Source Exception
             throw new RuntimeException(e);
-        }
-    }
-
-    private AddFileEnumeratorContext setUpEnumeratorContext() {
-        String deltaTableStringPath = deltaTablePath.toUri().normalize().toString();
-        DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTableStringPath);
-        Snapshot snapshot = getSnapshot(deltaLog);
-        return new AddFileEnumeratorContext(deltaTableStringPath, snapshot.getAllFiles());
-    }
-
-    private Snapshot getSnapshot(DeltaLog deltaLog) {
-        //  Since this is the Bounded mode,
-        //  we must use initialSnapshotVersion and deltaLog.getSnapshotForVersionAsOf(...)
-        //  to make sure that we are reading the same table after recovery.
-        if (this.initialSnapshotVersion == NO_SNAPSHOT_VERSION) {
-            return deltaLog.snapshot();
-        } else {
-            return deltaLog.getSnapshotForVersionAsOf(this.initialSnapshotVersion);
         }
     }
 
@@ -153,21 +136,53 @@ public class BoundedDeltaSourceSplitEnumerator
     }
 
     private void assignSplits(int subtaskId) {
-        Iterator<Entry<Integer, String>> awaitingReader =
+        final Iterator<Map.Entry<Integer, String>> awaitingReader =
             readersAwaitingSplit.entrySet().iterator();
+
         while (awaitingReader.hasNext()) {
             Map.Entry<Integer, String> nextAwaiting = awaitingReader.next();
+
+            // if the reader that requested another split has failed in the meantime, remove
+            // it from the list of waiting readers - FLINK-20261
+            if (!enumContext.registeredReaders().containsKey(nextAwaiting.getKey())) {
+                awaitingReader.remove();
+                continue;
+            }
+
             String hostname = nextAwaiting.getValue();
             int awaitingSubtask = nextAwaiting.getKey();
             Optional<FileSourceSplit> nextSplit = splitAssigner.getNext(hostname);
             if (nextSplit.isPresent()) {
-                enumContext.assignSplit((DeltaSourceSplit) nextSplit.get(), awaitingSubtask);
+                FileSourceSplit split = nextSplit.get();
+                enumContext.assignSplit((DeltaSourceSplit) split, awaitingSubtask);
+                LOG.info("Assigned split to subtask {} : {}", awaitingSubtask, split);
                 awaitingReader.remove();
             } else {
-                // TODO for batch load we will need to modify this to get a new batch from Delta.
+                // TODO for batch load we will need to modify this to get a new batch from Delta.;
+                LOG.info("No more splits available for subtasks");
                 enumContext.signalNoMoreSplits(subtaskId);
                 LOG.info("No more splits available for subtask {}", subtaskId);
+                break;
             }
+        }
+    }
+
+
+    private AddFileEnumeratorContext setUpEnumeratorContext() {
+        String deltaTableStringPath = deltaTablePath.toUri().normalize().toString();
+        DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTableStringPath);
+        Snapshot snapshot = getSnapshot(deltaLog);
+        return new AddFileEnumeratorContext(deltaTableStringPath, snapshot.getAllFiles());
+    }
+
+    private Snapshot getSnapshot(DeltaLog deltaLog) {
+        //  Since this is the Bounded mode,
+        //  we must use initialSnapshotVersion and deltaLog.getSnapshotForVersionAsOf(...)
+        //  to make sure that we are reading the same table after recovery.
+        if (this.initialSnapshotVersion == NO_SNAPSHOT_VERSION) {
+            return deltaLog.snapshot();
+        } else {
+            return deltaLog.getSnapshotForVersionAsOf(this.initialSnapshotVersion);
         }
     }
 }
