@@ -19,7 +19,7 @@ import org.apache.hadoop.conf.Configuration;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 public class DeltaSource<T>
-    implements Source<T, DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>,
+    implements Source<T, DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {
 
     // ---------------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ public class DeltaSource<T>
     }
 
     @Override
-    public SimpleVersionedSerializer<DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+    public SimpleVersionedSerializer<DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         getEnumeratorCheckpointSerializer() {
         return new DeltaPendingSplitsCheckpointSerializer<>(DeltaSourceSplitSerializer.INSTANCE);
     }
@@ -92,7 +92,7 @@ public class DeltaSource<T>
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
@@ -100,13 +100,12 @@ public class DeltaSource<T>
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         restoreEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
 
-        // TODO use actual checkpoint state to restore Enumerator;
-        return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
-            enumContext);
+        return splitEnumeratorProvider.createEnumerator(
+            checkpoint, serializableConf.conf(), enumContext);
     }
 
     @Override

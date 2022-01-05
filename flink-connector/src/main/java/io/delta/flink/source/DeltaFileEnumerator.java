@@ -18,8 +18,11 @@ import io.delta.standalone.actions.AddFile;
 
 class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
 
+    /**
+     * The directory separator, a slash.
+     */
+    public static final String SEPARATOR = "/";
     private static final Logger LOG = LoggerFactory.getLogger(DeltaFileEnumerator.class);
-
     /**
      * The current Id as a mutable string representation. This covers more values than the integer
      * value range, so we should never overflow.
@@ -36,7 +39,7 @@ class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
             String addFilePath = addFile.getPath();
             URI addFileUri = URI.create(addFilePath);
             if (!addFileUri.isAbsolute()) {
-                addFileUri = URI.create(context.getTablePath() + addFilePath);
+                addFileUri = URI.create(getTablePath(context) + addFilePath);
             }
 
             Path path = new Path(addFileUri);
@@ -46,6 +49,16 @@ class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
         }
 
         return splits;
+    }
+
+    // TODO Add unit Tests for this, currently we get this only in IT case
+    //  test where we trigger Job Manager failover.
+    private String getTablePath(AddFileEnumeratorContext context) {
+        // When we deserialize DeltaTablePath as string during recovery,
+        // Flink's Path(String path) contractor strips the last '/' from the String.
+        return (context.getTablePath().endsWith(SEPARATOR))
+            ? context.getTablePath()
+            : context.getTablePath() + SEPARATOR;
     }
 
     // ------------------------------------------------------------------------

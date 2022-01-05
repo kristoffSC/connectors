@@ -29,13 +29,22 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
-            createEnumerator(Path deltaTablePath, Configuration configuration,
+    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
+        createEnumerator(Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         return new ContinuousDeltaSourceSplitEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()), settings
         );
+    }
+
+    @Override
+    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
+        createEnumerator(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        // TODO Implement this
+        return null;
     }
 
     @Override
