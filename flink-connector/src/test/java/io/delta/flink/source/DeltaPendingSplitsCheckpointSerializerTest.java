@@ -18,13 +18,15 @@ import static org.junit.Assert.assertEquals;
 public class DeltaPendingSplitsCheckpointSerializerTest {
 
     private static final long SNAPSHOT_VERSION = 1L;
+    private static final Path TABLE_PATH = new Path("some/path");
 
     @Test
     public void serializeEmptyCheckpoint() throws Exception {
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaPendingSplitsCheckpoint.fromCollectionSnapshot(-1, Collections.emptyList());
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
+            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(TABLE_PATH, -1,
+                Collections.emptyList());
 
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> deSerialized =
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
 
         assertCheckpointsEqual(checkpoint, deSerialized);
@@ -32,12 +34,13 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
     @Test
     public void serializeSomeSplits() throws Exception {
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaPendingSplitsCheckpoint.fromCollectionSnapshot(SNAPSHOT_VERSION,
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
+            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
+                TABLE_PATH, SNAPSHOT_VERSION,
                 Arrays.asList(testSplitNoPartitions(), testSplitSinglePartition(),
                     testSplitMultiplePartitions()));
 
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> deSerialized =
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
 
         assertCheckpointsEqual(checkpoint, deSerialized);
@@ -45,8 +48,9 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
     @Test
     public void serializeSplitsAndProcessedPaths() throws Exception {
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaPendingSplitsCheckpoint.fromCollectionSnapshot(SNAPSHOT_VERSION,
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
+            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
+                TABLE_PATH, SNAPSHOT_VERSION,
                 Arrays.asList(testSplitNoPartitions(), testSplitSinglePartition(),
                     testSplitMultiplePartitions()),
                 Arrays.asList(
@@ -54,14 +58,14 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
                     new Path("s3://bucket/key/and/path"),
                     new Path("hdfs://namenode:12345/path")));
 
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> deSerialized =
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
 
         assertCheckpointsEqual(checkpoint, deSerialized);
     }
 
-    private DeltaPendingSplitsCheckpoint<DeltaSourceSplit> serializeAndDeserialize(
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> split) throws IOException {
+    private DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> serializeAndDeserialize(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> split) throws IOException {
 
         DeltaPendingSplitsCheckpointSerializer<DeltaSourceSplit> serializer =
             new DeltaPendingSplitsCheckpointSerializer<>(DeltaSourceSplitSerializer.INSTANCE);
@@ -71,9 +75,10 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
     }
 
     private void assertCheckpointsEqual(
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> expected,
-        DeltaPendingSplitsCheckpoint<DeltaSourceSplit> actual) {
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> expected,
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> actual) {
 
+        assertEquals(expected.getDeltaTablePath(), actual.getDeltaTablePath());
         assertEquals(expected.getInitialSnapshotVersion(), actual.getInitialSnapshotVersion());
 
         assertOrderedCollectionEquals(

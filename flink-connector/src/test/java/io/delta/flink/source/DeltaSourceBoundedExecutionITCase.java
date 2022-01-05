@@ -13,10 +13,12 @@ import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -24,25 +26,60 @@ import static org.junit.Assert.assertThat;
 
 public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
 
-    public static final Set<String> EXPECTED_NAMES =
+    private static final Set<String> EXPECTED_NAMES =
         Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
+
     private static final Configuration HADOOP_CONF = DeltaTestUtils.getHadoopConf();
 
-    private String nonPartitionedDeltaTablePath;
+    private static final int LARGE_TABLE_COUNT = 1100;
 
-    private String partitionedDeltaTablePath;
+    private String nonPartitionedTablePath;
+
+    private String nonPartitionedLargeTablePath;
+
+    private String partitionedTablePath;
 
     @Before
     public void setup() {
         try {
-            nonPartitionedDeltaTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-            partitionedDeltaTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            partitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
 
-            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedDeltaTablePath);
-            DeltaSinkTestUtils.initTestForPartitionedTable(partitionedDeltaTablePath);
+            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
+            DeltaSinkTestUtils.initTestForPartitionedTable(partitionedTablePath);
+            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
+                nonPartitionedLargeTablePath);
         } catch (IOException e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
+
+        CountSink.count.set(0);
+    }
+
+    @After
+    public void after() {
+        miniClusterResource.getClusterClient().close();
+    }
+
+    @Test
+    public void foo() throws Exception {
+        // GIVEN
+        ParquetColumnarRowInputFormat<DeltaSourceSplit>
+            format = buildFormat(
+            new String[]{"col1", "col2", "col3"},
+            new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
+
+        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
+            Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
+            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
+
+        // WHEN
+        List<RowData> resultData = testDeltaSource(deltaSource);
+
+        System.out.println(CountSink.count.get());
+        System.out.println(resultData.size());
+
     }
 
     @Test
@@ -55,7 +92,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             new LogicalType[]{new CharType(), new CharType(), new IntType()});
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedDeltaTablePath)),
+            Path.fromLocalFile(new File(nonPartitionedTablePath)),
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
@@ -84,7 +121,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             new String[]{"col1", "col2"});
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(partitionedDeltaTablePath)),
+            Path.fromLocalFile(new File(partitionedTablePath)),
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
@@ -118,7 +155,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             new String[]{"col1", "col2"});
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(partitionedDeltaTablePath)),
+            Path.fromLocalFile(new File(partitionedTablePath)),
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
@@ -149,26 +186,27 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         // GIVEN
         ParquetColumnarRowInputFormat<DeltaSourceSplit>
             format = buildFormat(
-            new String[]{"name", "surname", "age"},
-            new LogicalType[]{new CharType(), new CharType(), new IntType()});
+            new String[]{"col1", "col2", "col3"},
+            new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedDeltaTablePath)),
+            Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
         List<RowData> resultData = testDeltaSource(FailoverType.TM, deltaSource,
-            (FailCheck) readRows -> readRows >= 1);
+            (FailCheck) readRows -> readRows == LARGE_TABLE_COUNT / 2);
 
-        Set<String> actualNames =
-            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+        Set<Long> actualValues =
+            resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
-            equalTo(2));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(EXPECTED_NAMES));
+            equalTo(LARGE_TABLE_COUNT));
+        assertThat("Source Must Have produced some duplicates.", actualValues.size(),
+            equalTo(LARGE_TABLE_COUNT));
 
+        //System.out.println(CountSink.count.get());
         System.out.println(resultData);
     }
 
@@ -180,26 +218,27 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         // GIVEN
         ParquetColumnarRowInputFormat<DeltaSourceSplit>
             format = buildFormat(
-            new String[]{"name", "surname", "age"},
-            new LogicalType[]{new CharType(), new CharType(), new IntType()});
+            new String[]{"col1", "col2", "col3"},
+            new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedDeltaTablePath)),
+            Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
         List<RowData> resultData = testDeltaSource(FailoverType.JM, deltaSource,
-            (FailCheck) readRows -> readRows >= 2);
+            (FailCheck) readRows -> readRows == LARGE_TABLE_COUNT / 2);
 
-        Set<String> actualNames =
-            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+        Set<Long> actualValues =
+            resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
-            equalTo(2));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(EXPECTED_NAMES));
+            equalTo(LARGE_TABLE_COUNT));
+        assertThat("Source Must Have produced some duplicates.", actualValues.size(),
+            equalTo(LARGE_TABLE_COUNT));
 
+        //System.out.println(CountSink.count.get());
         System.out.println(resultData);
     }
 

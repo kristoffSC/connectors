@@ -3,6 +3,8 @@ package io.delta.flink.source;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,7 +25,7 @@ import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
 
 public class BoundedDeltaSourceSplitEnumerator
-    implements SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
+    implements SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>> {
 
     private static final Logger LOG =
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
@@ -32,31 +34,40 @@ public class BoundedDeltaSourceSplitEnumerator
     private final Path deltaTablePath;
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
     private final FileSplitAssigner splitAssigner;
-    private final Configuration configuration;
     private final long initialSnapshotVersion;
+    private final Snapshot snapshot;
     private final SplitEnumeratorContext<DeltaSourceSplit> enumContext;
     private final LinkedHashMap<Integer, String> readersAwaitingSplit;
+    private final HashSet<Path> pathsAlreadyProcessed;
 
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext,
-            NO_SNAPSHOT_VERSION);
+            NO_SNAPSHOT_VERSION, Collections.emptySet());
     }
 
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        long initialSnapshotVersion) {
-        this.deltaTablePath = deltaTablePath;
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, long initialSnapshotVersion,
+        Collection<Path> alreadyDiscoveredPaths) {
         this.fileEnumerator = fileEnumerator;
         this.splitAssigner = splitAssigner;
         this.enumContext = enumContext;
-        this.initialSnapshotVersion = initialSnapshotVersion;
         this.readersAwaitingSplit = new LinkedHashMap<>();
-        this.configuration = configuration;
+        this.deltaTablePath = deltaTablePath;
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(configuration, deltaTablePath.toUri().normalize().toString());
+        this.snapshot = (initialSnapshotVersion == NO_SNAPSHOT_VERSION) ?
+            deltaLog.snapshot() : deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion);
+
+        this.initialSnapshotVersion = snapshot.getVersion();
+
+        // TODO Add this to Enumerator State and actually use it in start method.
+        this.pathsAlreadyProcessed = new HashSet<>(alreadyDiscoveredPaths);
     }
 
     @Override
@@ -106,7 +117,7 @@ public class BoundedDeltaSourceSplitEnumerator
     }
 
     @Override
-    public DeltaPendingSplitsCheckpoint<DeltaSourceSplit> snapshotState() throws Exception {
+    public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState() throws Exception {
 
         // The Flink's SplitAssigner interface uses FileSourceSplit
         // in its signatures and return types even though it is expected to be extended
@@ -117,8 +128,8 @@ public class BoundedDeltaSourceSplitEnumerator
         Collection<DeltaSourceSplit> remainingSplits =
             (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
 
-        return DeltaPendingSplitsCheckpoint.fromCollectionSnapshot(initialSnapshotVersion,
-            remainingSplits);
+        return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
+            deltaTablePath, initialSnapshotVersion, remainingSplits);
     }
 
     @Override
@@ -167,22 +178,8 @@ public class BoundedDeltaSourceSplitEnumerator
         }
     }
 
-
     private AddFileEnumeratorContext setUpEnumeratorContext() {
-        String deltaTableStringPath = deltaTablePath.toUri().normalize().toString();
-        DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTableStringPath);
-        Snapshot snapshot = getSnapshot(deltaLog);
-        return new AddFileEnumeratorContext(deltaTableStringPath, snapshot.getAllFiles());
-    }
-
-    private Snapshot getSnapshot(DeltaLog deltaLog) {
-        //  Since this is the Bounded mode,
-        //  we must use initialSnapshotVersion and deltaLog.getSnapshotForVersionAsOf(...)
-        //  to make sure that we are reading the same table after recovery.
-        if (this.initialSnapshotVersion == NO_SNAPSHOT_VERSION) {
-            return deltaLog.snapshot();
-        } else {
-            return deltaLog.getSnapshotForVersionAsOf(this.initialSnapshotVersion);
-        }
+        String pathString = SourceUtils.pathToString(deltaTablePath);
+        return new AddFileEnumeratorContext(pathString, snapshot.getAllFiles());
     }
 }

@@ -3,16 +3,18 @@ package io.delta.flink.source;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpointSerializer;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSplit> implements
-    SimpleVersionedSerializer<DeltaPendingSplitsCheckpoint<SplitT>> {
+    SimpleVersionedSerializer<DeltaEnumeratorStateCheckpoint<SplitT>> {
 
     private static final int VERSION = 1;
     private final PendingSplitsCheckpointSerializer<SplitT> decoratedSerDe;
@@ -28,11 +30,11 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
     }
 
     @Override
-    public byte[] serialize(DeltaPendingSplitsCheckpoint<SplitT> checkpoint)
+    public byte[] serialize(DeltaEnumeratorStateCheckpoint<SplitT> checkpoint)
         throws IOException {
         checkArgument(
-            checkpoint.getClass() == DeltaPendingSplitsCheckpoint.class,
-            "Only supports %s", DeltaPendingSplitsCheckpoint.class.getName());
+            checkpoint.getClass() == DeltaEnumeratorStateCheckpoint.class,
+            "Only supports %s", DeltaEnumeratorStateCheckpoint.class.getName());
 
         PendingSplitsCheckpoint<SplitT> decoratedCheckPoint =
             checkpoint.getPendingSplitsCheckpoint();
@@ -45,13 +47,20 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
             outputWrapper.writeInt(decoratedBytes.length);
             outputWrapper.write(decoratedBytes);
             outputWrapper.writeLong(checkpoint.getInitialSnapshotVersion());
+
+            final byte[] serPath =
+                SourceUtils.pathToString(checkpoint.getDeltaTablePath())
+                    .getBytes(StandardCharsets.UTF_8);
+
+            outputWrapper.writeInt(serPath.length);
+            outputWrapper.write(serPath);
         }
 
         return byteArrayOutputStream.toByteArray();
     }
 
     @Override
-    public DeltaPendingSplitsCheckpoint<SplitT> deserialize(int version,
+    public DeltaEnumeratorStateCheckpoint<SplitT> deserialize(int version,
         byte[] serialized) throws IOException {
         if (version == 1) {
             return tryDeserializeV1(serialized);
@@ -60,7 +69,7 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
         throw new IOException("Unknown version: " + version);
     }
 
-    private DeltaPendingSplitsCheckpoint<SplitT> tryDeserializeV1(byte[] serialized)
+    private DeltaEnumeratorStateCheckpoint<SplitT> tryDeserializeV1(byte[] serialized)
         throws IOException {
         try (DataInputViewStreamWrapper inputWrapper =
             new DataInputViewStreamWrapper(new ByteArrayInputStream(serialized))) {
@@ -68,7 +77,7 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
         }
     }
 
-    private DeltaPendingSplitsCheckpoint<SplitT> deserializeV1(
+    private DeltaEnumeratorStateCheckpoint<SplitT> deserializeV1(
         DataInputViewStreamWrapper inputWrapper) throws IOException {
         byte[] decoratedBytes = new byte[inputWrapper.readInt()];
         inputWrapper.readFully(decoratedBytes);
@@ -77,8 +86,13 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
 
         long initialSnapshotVersion = inputWrapper.readLong();
 
-        return DeltaPendingSplitsCheckpoint.fromCollectionSnapshot(
-            initialSnapshotVersion,
+        final byte[] bytes = new byte[inputWrapper.readInt()];
+        inputWrapper.readFully(bytes);
+
+        Path deltaTablePath = new Path(new String(bytes, StandardCharsets.UTF_8));
+
+        return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
+            deltaTablePath, initialSnapshotVersion,
             decoratedCheckPoint.getSplits(), decoratedCheckPoint.getAlreadyProcessedPaths());
     }
 }

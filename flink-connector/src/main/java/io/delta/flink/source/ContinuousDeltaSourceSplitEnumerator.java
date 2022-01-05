@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ContinuousDeltaSourceSplitEnumerator implements
-    SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>> {
+    SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>> {
 
     private static final Logger LOG =
         LoggerFactory.getLogger(ContinuousDeltaSourceSplitEnumerator.class);
@@ -53,7 +53,7 @@ public class ContinuousDeltaSourceSplitEnumerator implements
     }
 
     @Override
-    public DeltaPendingSplitsCheckpoint<DeltaSourceSplit> snapshotState() throws Exception {
+    public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState() throws Exception {
         return null;
     }
 

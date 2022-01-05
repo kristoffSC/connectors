@@ -10,8 +10,14 @@ import org.apache.hadoop.conf.Configuration;
 
 public interface SplitEnumeratorProvider extends Serializable {
 
-    SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+    SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(Path deltaTablePath, Configuration configuration,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext);
+
+
+    SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
+        createEnumerator(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext);
 
     Boundedness getBoundedness();

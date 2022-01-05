@@ -9,6 +9,8 @@ import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
 import org.apache.flink.runtime.minicluster.MiniCluster;
@@ -34,14 +36,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int PARALLELISM = 4;
 
     @Rule
-    public final MiniClusterWithClientResource miniClusterResource =
-        new MiniClusterWithClientResource(
-            new MiniClusterResourceConfiguration.Builder()
-                .setNumberTaskManagers(1)
-                .setNumberSlotsPerTaskManager(PARALLELISM)
-                .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
-                .withHaLeadershipControl()
-                .build());
+    public final MiniClusterWithClientResource miniClusterResource = buildCluster();
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster)
@@ -72,6 +67,20 @@ public abstract class DeltaSourceITBase extends TestLogger {
         miniCluster.terminateTaskManager(0).get();
         afterFailAction.run();
         miniCluster.startTaskManager();
+    }
+
+    private MiniClusterWithClientResource buildCluster() {
+        Configuration configuration = new Configuration();
+        configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, false);
+
+        return new MiniClusterWithClientResource(
+            new MiniClusterResourceConfiguration.Builder()
+                .setNumberTaskManagers(1)
+                .setNumberSlotsPerTaskManager(PARALLELISM)
+                .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
+                .withHaLeadershipControl()
+                .setConfiguration(configuration)
+                .build());
     }
 
     protected ParquetColumnarRowInputFormat<DeltaSourceSplit> buildPartitionedFormat(
@@ -115,6 +124,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         DataStream<T> streamFailingInTheMiddleOfReading =
             RecordCounterToFail.wrapWithFailureAfter(stream, failCheck);
+
+        // TODO Verify IC Case tests for Source with this.
+        // make sure we are testing recovery from checkpoint
+        // and we are skipping already processed files
+        //streamFailingInTheMiddleOfReading.addSink(new CountSink<T>());
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(

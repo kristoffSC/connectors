@@ -29,14 +29,28 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaPendingSplitsCheckpoint<DeltaSourceSplit>>
+    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+
         return new BoundedDeltaSourceSplitEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext
         );
+    }
+
+    @Override
+    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
+        createEnumerator(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+
+        return new BoundedDeltaSourceSplitEnumerator(
+            checkpoint.getDeltaTablePath(), fileEnumeratorProvider.create(),
+            splitAssignerProvider.create(Collections.emptyList()),
+            configuration, enumContext, checkpoint.getInitialSnapshotVersion(),
+            checkpoint.getAlreadyProcessedPaths());
     }
 
     @Override
