@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
+import io.delta.flink.source.AddFileEnumerator.SplitFilter;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.FileSourceSplit;
@@ -79,7 +80,8 @@ public class BoundedDeltaSourceSplitEnumerator
             // TODO check for already processed files and skipp them.
             //  This is needed for Checkpoint restoration.
             AddFileEnumeratorContext context = setUpEnumeratorContext();
-            List<DeltaSourceSplit> splits = fileEnumerator.enumerateSplits(context);
+            List<DeltaSourceSplit> splits = fileEnumerator
+                .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
             addSplits(splits);
         } catch (Exception e) {
             // TODO Create Delta Source Exception
@@ -129,7 +131,7 @@ public class BoundedDeltaSourceSplitEnumerator
             (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
 
         return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-            deltaTablePath, initialSnapshotVersion, remainingSplits);
+            deltaTablePath, initialSnapshotVersion, remainingSplits, pathsAlreadyProcessed);
     }
 
     @Override

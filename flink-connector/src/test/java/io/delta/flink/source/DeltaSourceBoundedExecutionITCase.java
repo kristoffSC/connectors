@@ -53,8 +53,6 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         } catch (IOException e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
-
-        CountSink.count.set(0);
     }
 
     @After
@@ -77,9 +75,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         // WHEN
         List<RowData> resultData = testDeltaSource(deltaSource);
 
-        System.out.println(CountSink.count.get());
-        System.out.println(resultData.size());
-
+        //System.out.println(resultData.size());
     }
 
     @Test
@@ -107,7 +103,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
             equalTo(EXPECTED_NAMES));
 
-        System.out.println(resultData);
+        //System.out.println(resultData);
     }
 
     @Test
@@ -140,7 +136,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             assertPartitionValue(rowData, 3, "val2");
         });
 
-        System.out.println(resultData);
+        //System.out.println(resultData);
     }
 
     @Test
@@ -175,7 +171,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             assertPartitionValue(rowData, 4, "val2");
         });
 
-        System.out.println(resultData);
+        //System.out.println(resultData);
     }
 
     @Test
@@ -207,7 +203,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             equalTo(LARGE_TABLE_COUNT));
 
         //System.out.println(CountSink.count.get());
-        System.out.println(resultData);
+        //System.out.println(resultData);
     }
 
     @Test
@@ -238,8 +234,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
             equalTo(LARGE_TABLE_COUNT));
 
-        //System.out.println(CountSink.count.get());
-        System.out.println(resultData);
+        //System.out.println(resultData);
     }
 
 

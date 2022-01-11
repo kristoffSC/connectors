@@ -30,7 +30,8 @@ class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
     private final char[] currentId = "0000000000".toCharArray();
 
     @Override
-    public List<DeltaSourceSplit> enumerateSplits(AddFileEnumeratorContext context)
+    public List<DeltaSourceSplit> enumerateSplits(AddFileEnumeratorContext context,
+        SplitFilter<Path> splitFilter)
         throws IOException {
         final ArrayList<DeltaSourceSplit> splits = new ArrayList<>();
 
@@ -43,9 +44,11 @@ class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
             }
 
             Path path = new Path(addFileUri);
-            final FileSystem fs = path.getFileSystem();
-            final FileStatus status = fs.getFileStatus(path);
-            convertToSourceSplits(status, fs, addFile.getPartitionValues(), splits);
+            if (splitFilter.test(path)) {
+                final FileSystem fs = path.getFileSystem();
+                final FileStatus status = fs.getFileStatus(path);
+                convertToSourceSplits(status, fs, addFile.getPartitionValues(), splits);
+            }
         }
 
         return splits;
@@ -90,10 +93,6 @@ class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
         }
     }
 
-    // ------------------------------------------------------------------------
-    //  Copied as is from Flink's BlockSplittingRecursiveEnumerator
-    // ------------------------------------------------------------------------
-
     private String getNextId() {
         // because we just increment numbers, we increment the char representation directly,
         // rather than incrementing an integer and converting it to a string representation
@@ -101,6 +100,10 @@ class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
         incrementCharArrayByOne(currentId, currentId.length - 1);
         return new String(currentId);
     }
+
+    // ------------------------------------------------------------------------
+    //  Copied as is from Flink's BlockSplittingRecursiveEnumerator
+    // ------------------------------------------------------------------------
 
     private void incrementCharArrayByOne(char[] array, int pos) {
         char c = array[pos];
