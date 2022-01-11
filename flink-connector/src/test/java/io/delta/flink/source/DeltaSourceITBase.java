@@ -7,6 +7,7 @@ import java.util.List;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.Configuration;
@@ -116,19 +117,14 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(PARALLELISM);
-        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, 0));
-        env.enableCheckpointing(10L);
+        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
+        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
 
         DataStream<T> stream =
             env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
 
         DataStream<T> streamFailingInTheMiddleOfReading =
             RecordCounterToFail.wrapWithFailureAfter(stream, failCheck);
-
-        // TODO Verify IC Case tests for Source with this.
-        // make sure we are testing recovery from checkpoint
-        // and we are skipping already processed files
-        //streamFailingInTheMiddleOfReading.addSink(new CountSink<T>());
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(
