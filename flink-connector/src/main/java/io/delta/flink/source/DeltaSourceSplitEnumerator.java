@@ -98,7 +98,8 @@ public abstract class DeltaSourceSplitEnumerator implements
     }
 
     @Override
-    public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState() throws Exception {
+    public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState(long checkpointId)
+        throws Exception {
 
         // The Flink's SplitAssigner interface uses FileSourceSplit
         // in its signatures and return types even though it is expected to be extended
