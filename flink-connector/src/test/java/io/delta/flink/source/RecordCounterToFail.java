@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
 
 public class RecordCounterToFail implements Serializable {
 
@@ -35,7 +34,7 @@ public class RecordCounterToFail implements Serializable {
             });
     }
 
-    public static void waitToFail(ClientAndIterator<?> client) throws Exception {
+    public static void waitToFail() throws Exception {
         int retryMax = 10;
         int retry = 0;
         while (retry++ < retryMax) {
@@ -58,5 +57,4 @@ public class RecordCounterToFail implements Serializable {
     public interface FailCheck extends Predicate<Integer>, Serializable {
 
     }
-
 }

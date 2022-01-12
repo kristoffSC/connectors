@@ -10,6 +10,7 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
@@ -107,13 +108,18 @@ public abstract class DeltaSourceITBase extends TestLogger {
         );
     }
 
-    protected <T> List<T> testDeltaSource(DeltaSource<T> source)
+    protected <T> List<T> testBoundDeltaSource(DeltaSource<T> source)
         throws Exception {
-        return testDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
+        return testBoundDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
     }
 
-    protected <T> List<T> testDeltaSource(FailoverType failoverType, DeltaSource<T> source,
+    protected <T> List<T> testBoundDeltaSource(FailoverType failoverType, DeltaSource<T> source,
         FailCheck failCheck) throws Exception {
+
+        if (source.getBoundedness() == Boundedness.CONTINUOUS_UNBOUNDED) {
+            throw new RuntimeException(
+                "Using Continuous source in Bounded test setup. This will not work properly.");
+        }
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(PARALLELISM);
@@ -131,7 +137,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 streamFailingInTheMiddleOfReading, "Bounded DeltaSource Test");
         JobID jobId = client.client.getJobID();
 
-        RecordCounterToFail.waitToFail(client);
+        RecordCounterToFail.waitToFail();
         triggerFailover(
             failoverType,
             jobId,
@@ -144,6 +150,71 @@ public abstract class DeltaSourceITBase extends TestLogger {
         }
 
         return result;
+    }
+
+    protected <T> List<List<T>> testContinuousDeltaSource(
+        DeltaSource<T> source, ContinuousTestDescriptor testDescriptor)
+        throws Exception {
+        return testContinuousDeltaSource(FailoverType.NONE, source, testDescriptor,
+            (FailCheck) integer -> true);
+    }
+
+    protected <T> List<List<T>> testContinuousDeltaSource(
+        FailoverType failoverType, DeltaSource<T> source, ContinuousTestDescriptor testDescriptor,
+        FailCheck failCheck)
+        throws Exception {
+
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(source.getTablePath().toString());
+        List<List<T>> totalResults = new ArrayList<>();
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(PARALLELISM);
+        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
+        env.enableCheckpointing(10L);
+        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
+
+        DataStream<T> stream =
+            env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
+
+        ClientAndIterator<T> client =
+            DataStreamUtils.collectWithClient(stream, "Continuous DeltaSource  Test");
+        JobID jobId = client.client.getJobID();
+
+        // Initial Table Data
+        totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
+            testDescriptor.getInitialDataSize()));
+
+        // Table Updates
+        testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
+            tableUpdater.writeToTable(descriptor);
+            totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                descriptor.getExpectedCount()));
+            System.out.println(totalResults.size());
+        });
+
+        client.client.cancel().get();
+
+        return totalResults;
+
+        /*        // write the remaining files over time, after that collect the final result
+        for (int i = 1; i < LINES_PER_FILE.length; i++) {
+            Thread.sleep(10);
+            writeFile(testDir, i);
+            final boolean failAfterHalfOfInput = i == LINES_PER_FILE.length / 2;
+            if (failAfterHalfOfInput) {
+                triggerFailover(type, jobId, () -> {
+                }, miniClusterResource.getMiniCluster());
+            }
+        }
+
+        final List<String> result2 =
+            DataStreamUtils.collectRecordsFromUnboundedStream(client, numLinesAfter);
+
+
+        result1.addAll(result2);*/
+
+        // shut down the job, now that we have all the results we expected.
+
     }
 
     public enum FailoverType {
