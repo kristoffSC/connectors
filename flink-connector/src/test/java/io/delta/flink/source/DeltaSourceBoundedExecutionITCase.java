@@ -61,24 +61,6 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
     }
 
     @Test
-    public void foo() throws Exception {
-        // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildFormat(
-            new String[]{"col1", "col2", "col3"},
-            new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
-
-        // WHEN
-        List<RowData> resultData = testDeltaSource(deltaSource);
-
-        //System.out.println(resultData.size());
-    }
-
-    @Test
     public void testWithoutPartitions() throws Exception {
 
         // GIVEN
@@ -92,7 +74,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
-        List<RowData> resultData = testDeltaSource(deltaSource);
+        List<RowData> resultData = testBoundDeltaSource(deltaSource);
 
         Set<String> actualNames =
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
@@ -121,7 +103,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
-        List<RowData> resultData = testDeltaSource(deltaSource);
+        List<RowData> resultData = testBoundDeltaSource(deltaSource);
 
         Set<String> actualNames =
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
@@ -155,7 +137,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
-        List<RowData> resultData = testDeltaSource(deltaSource);
+        List<RowData> resultData = testBoundDeltaSource(deltaSource);
 
         Set<String> actualNames =
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
@@ -190,7 +172,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
-        List<RowData> resultData = testDeltaSource(FailoverType.TM, deltaSource,
+        List<RowData> resultData = testBoundDeltaSource(FailoverType.TM, deltaSource,
             (FailCheck) readRows -> readRows == LARGE_TABLE_COUNT / 2);
 
         Set<Long> actualValues =
@@ -222,7 +204,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
 
         // WHEN
-        List<RowData> resultData = testDeltaSource(FailoverType.JM, deltaSource,
+        List<RowData> resultData = testBoundDeltaSource(FailoverType.JM, deltaSource,
             (FailCheck) readRows -> readRows == LARGE_TABLE_COUNT / 2);
 
         Set<Long> actualValues =

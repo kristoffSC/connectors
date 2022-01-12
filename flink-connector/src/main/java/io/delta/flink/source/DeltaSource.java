@@ -1,5 +1,6 @@
 package io.delta.flink.source;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.Source;
@@ -111,5 +112,10 @@ public class DeltaSource<T>
     @Override
     public TypeInformation<T> getProducedType() {
         return readerFormat.getProducedType();
+    }
+
+    @VisibleForTesting
+    Path getTablePath() {
+        return tablePath;
     }
 }

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.types.Row;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -87,21 +89,38 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
     }
 
     @Test
-    public void testDeltaLog() {
+    public void testDeltaLog() throws IOException {
         DeltaLog deltaLog = DeltaLog.forTable(DeltaSinkTestUtils.getHadoopConf(),
             nonPartitionedDeltaTablePath);
         Snapshot snapshot = deltaLog.snapshot();
+        long initialVersion = snapshot.getVersion();
+        System.out.println("Initial version " + initialVersion);
 
         List<AddFile> filesFromSnapshot = snapshot.getAllFiles();
 
-        Iterator<VersionLog> changes = deltaLog.getChanges(snapshot.getVersion(), true);
+        processChanges(deltaLog.getChanges(initialVersion, true));
 
+        System.out.println(filesFromSnapshot);
+
+        System.out.println("");
+
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedDeltaTablePath);
+        RowType rowType = RowType.of(new CharType(), new CharType(), new IntType());
+
+        tableUpdater.writeToTable(rowType, Collections.singletonList(Row.of("Jan", "Nowak", 69)));
+        Snapshot newSnapshot = deltaLog.update();
+        long newVersion = newSnapshot.getVersion();
+
+        System.out.println("New Version " + newVersion);
+        System.out.println(newSnapshot.getAllFiles());
+        processChanges(deltaLog.getChanges(initialVersion, true));
+    }
+
+    private void processChanges(Iterator<VersionLog> changes) {
         while ((changes.hasNext())) {
             List<Action> actions = changes.next().getActions();
             System.out.println(actions);
         }
-
-        System.out.println(changes);
     }
 
     @Test
