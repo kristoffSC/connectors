@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -11,7 +12,6 @@ import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
@@ -64,14 +64,12 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
     public void testWithoutPartitions() throws Exception {
 
         // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildFormat(
-            new String[]{"name", "surname", "age"},
-            new LogicalType[]{new CharType(), new CharType(), new IntType()});
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(nonPartitionedTablePath)))
+            .columnNames(new String[]{"name", "surname", "age"})
+            .columnTypes(new LogicalType[]{new CharType(), new CharType(), new IntType()})
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .build();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -92,15 +90,14 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
     public void testWithOnePartitions() throws Exception {
 
         // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildPartitionedFormat(
-            new String[]{"name", "surname", "age", "col2"},
-            new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType()},
-            new String[]{"col1", "col2"});
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(partitionedTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(partitionedTablePath)))
+            .columnNames(new String[]{"name", "surname", "age", "col2"})
+            .columnTypes(
+                new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType()})
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .partitions(Arrays.asList("col1", "col2"))
+            .build();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -125,16 +122,15 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
     public void testWithBothPartitions() throws Exception {
 
         // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildPartitionedFormat(
-            new String[]{"name", "surname", "age", "col1", "col2"},
-            new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType(),
-                new CharType()},
-            new String[]{"col1", "col2"});
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(partitionedTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(partitionedTablePath)))
+            .columnNames(new String[]{"name", "surname", "age", "col1", "col2"})
+            .columnTypes(
+                new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType(),
+                    new CharType()})
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .partitions(Arrays.asList("col1", "col2"))
+            .build();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -161,15 +157,12 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
     // meaning if splits were added back to the Enumerator's state and reassigned to new TM.
     public void testWithTaskManagerFailover() throws Exception {
 
-        // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildFormat(
-            new String[]{"col1", "col2", "col3"},
-            new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)))
+            .columnNames(new String[]{"col1", "col2", "col3"})
+            .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .build();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(FailoverType.TM, deltaSource,
@@ -194,14 +187,12 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
         //  maybe we need bigger test set.
 
         // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildFormat(
-            new String[]{"col1", "col2", "col3"},
-            new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)))
+            .columnNames(new String[]{"col1", "col2", "col3"})
+            .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .build();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(FailoverType.JM, deltaSource,

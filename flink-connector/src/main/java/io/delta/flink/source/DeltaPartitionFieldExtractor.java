@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import java.util.Map;
 
+import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.table.filesystem.PartitionFieldExtractor;
 import org.apache.flink.table.filesystem.RowPartitionComputer;
 import org.apache.flink.table.types.logical.LogicalType;

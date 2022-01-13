@@ -1,5 +1,4 @@
 package io.delta.flink.source;
-
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -7,6 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import io.delta.flink.source.file.AddFileEnumerator;
+import io.delta.flink.source.file.AddFileEnumeratorContext;
+import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.core.fs.BlockLocation;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;

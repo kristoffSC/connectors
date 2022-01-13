@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.source.state;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

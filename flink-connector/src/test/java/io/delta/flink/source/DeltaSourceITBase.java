@@ -1,10 +1,8 @@
 package io.delta.flink.source;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
@@ -13,7 +11,6 @@ import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
-import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.RpcServiceSharing;
@@ -22,8 +19,6 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
-import org.apache.flink.table.types.logical.LogicalType;
-import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.util.TestLogger;
 import org.junit.ClassRule;
@@ -83,29 +78,6 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 .withHaLeadershipControl()
                 .setConfiguration(configuration)
                 .build());
-    }
-
-    protected ParquetColumnarRowInputFormat<DeltaSourceSplit> buildPartitionedFormat(
-        String[] columnNames, LogicalType[] columnTypes, String[] partitionKeys) {
-
-        return DeltaColumnarRowInputFormatFactory.createPartitionedFormat(
-            DeltaSinkTestUtils.getHadoopConf(),
-            RowType.of(columnTypes, columnNames),
-            Arrays.asList(partitionKeys),
-            500,
-            false, true
-        );
-    }
-
-    protected ParquetColumnarRowInputFormat<DeltaSourceSplit> buildFormat(String[] columnNames,
-        LogicalType[] columnTypes) {
-
-        return DeltaColumnarRowInputFormatFactory.createFormat(
-            DeltaSinkTestUtils.getHadoopConf(),
-            RowType.of(columnTypes, columnNames),
-            500,
-            false, true
-        );
     }
 
     protected <T> List<T> testBoundDeltaSource(DeltaSource<T> source)

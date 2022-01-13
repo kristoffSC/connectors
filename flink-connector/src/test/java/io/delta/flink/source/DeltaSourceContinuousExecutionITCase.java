@@ -2,6 +2,8 @@ package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,8 +13,8 @@ import java.util.stream.Stream;
 
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
+import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
@@ -69,12 +71,14 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
     public void testWithoutUpdates() throws Exception {
 
         // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildFormat(COLUMN_NAMES, COLUMN_TYPES);
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedTablePath)),
-            format, new ContinuousSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(nonPartitionedTablePath)))
+            .columnNames(COLUMN_NAMES)
+            .columnTypes(COLUMN_TYPES)
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .continuousEnumerationSettings(
+                new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
+            .build();
 
         // WHEN
         List<List<RowData>> resultData =
@@ -99,12 +103,14 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
         // TODO make this test parametrized and merge with testWithoutUpdates.
         //  test parameters TABLE_UPDATES_LIM and ROWS_PER_TABLE_UPDATE
         // GIVEN
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            format = buildFormat(COLUMN_NAMES, COLUMN_TYPES);
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedTablePath)),
-            format, new ContinuousSplitEnumeratorProvider(), HADOOP_CONF);
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(nonPartitionedTablePath)))
+            .columnNames(COLUMN_NAMES)
+            .columnTypes(COLUMN_TYPES)
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .continuousEnumerationSettings(
+                new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
+            .build();
 
         ContinuousTestDescriptor testDescriptor = new ContinuousTestDescriptor(INITIAL_DATA_SIZE);
         for (int i = 0; i < TABLE_UPDATES_LIM; i++) {

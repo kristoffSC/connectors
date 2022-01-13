@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.source.file;
 
 import java.util.List;
 

@@ -51,6 +51,7 @@ import io.delta.standalone.actions.AddFile;
 
 @RunWith(Parameterized.class)
 @Ignore
+// This class is for development testing, will be removed eventually
 public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase {
 
     private static final Map<String, CountDownLatch> LATCH_MAP = new ConcurrentHashMap<>();
@@ -89,6 +90,17 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
     }
 
     @Test
+    public void foo() {
+        DeltaSourceBuilder.builder()
+            .tablePath(new Path())
+            .columnNames(new String[0])
+            .columnTypes(new LogicalType[0])
+            .configuration(DeltaSinkTestUtils.getHadoopConf())
+            .build();
+    }
+
+
+    @Test
     public void testDeltaLog() throws IOException {
         DeltaLog deltaLog = DeltaLog.forTable(DeltaSinkTestUtils.getHadoopConf(),
             nonPartitionedDeltaTablePath);
@@ -120,73 +132,6 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
         while ((changes.hasNext())) {
             List<Action> actions = changes.next().getActions();
             System.out.println(actions);
-        }
-    }
-
-    @Test
-    public void testDeltaBoundedSourceWithPartitions() throws Exception {
-        StreamExecutionEnvironment env = getTestStreamEnv();
-
-        final LogicalType[] fieldTypes =
-            new LogicalType[]{
-                new CharType(), new CharType(), new IntType(), new CharType(), new CharType()
-            };
-
-        List<String> partitions = Arrays.asList("col1", "col2");
-
-        ParquetColumnarRowInputFormat<DeltaSourceSplit> format =
-            DeltaColumnarRowInputFormatFactory.createPartitionedFormat(
-                DeltaSinkTestUtils.getHadoopConf(),
-                RowType.of(fieldTypes, new String[]{"name", "surname", "age", "col1", "col2"}),
-                partitions,
-                500,
-                false, true
-            );
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(partitionedDeltaTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), DeltaSinkTestUtils.getHadoopConf());
-
-        env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "file-source")
-            .print();
-
-        JobGraph jobGraph = env.getStreamGraph().getJobGraph();
-
-        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
-            miniCluster.start();
-            miniCluster.executeJobBlocking(jobGraph);
-        }
-    }
-
-    @Test
-    public void testDeltaBoundedSource() throws Exception {
-        StreamExecutionEnvironment env = getTestStreamEnv();
-
-        final LogicalType[] fieldTypes =
-            new LogicalType[]{
-                new CharType(), new CharType(), new IntType()
-            };
-
-        ParquetColumnarRowInputFormat<DeltaSourceSplit> format =
-            DeltaColumnarRowInputFormatFactory.createFormat(
-                DeltaSinkTestUtils.getHadoopConf(),
-                RowType.of(fieldTypes, new String[]{"name", "surname", "age"}),
-                500,
-                false, true
-            );
-
-        DeltaSource<RowData> deltaSource = DeltaSource.forBulkFileFormat(
-            Path.fromLocalFile(new File(nonPartitionedDeltaTablePath)),
-            format, new BoundedSplitEnumeratorProvider(), DeltaSinkTestUtils.getHadoopConf());
-
-        env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "file-source")
-            .print();
-
-        JobGraph jobGraph = env.getStreamGraph().getJobGraph();
-
-        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
-            miniCluster.start();
-            miniCluster.executeJobBlocking(jobGraph);
         }
     }
 

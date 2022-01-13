@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.source.state;
 
 import java.io.IOException;
 import java.util.Arrays;
