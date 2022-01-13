@@ -1,7 +1,9 @@
-package io.delta.flink.source;
+package io.delta.flink.source.enumerator;
 
 import java.io.Serializable;
 
+import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;

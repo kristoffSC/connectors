@@ -1,10 +1,11 @@
-package io.delta.flink.source;
+package io.delta.flink.source.file;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.function.Predicate;
 
+import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.core.fs.Path;
 
 public interface AddFileEnumerator<SplitT extends DeltaSourceSplit> {

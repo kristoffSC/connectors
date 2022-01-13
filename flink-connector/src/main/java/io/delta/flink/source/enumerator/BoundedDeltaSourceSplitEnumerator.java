@@ -1,10 +1,14 @@
-package io.delta.flink.source;
+package io.delta.flink.source.enumerator;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import io.delta.flink.source.AddFileEnumerator.SplitFilter;
+import io.delta.flink.source.DeltaSourceSplitEnumerator;
+import io.delta.flink.source.file.AddFileEnumerator;
+import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
+import io.delta.flink.source.file.AddFileEnumeratorContext;
+import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;

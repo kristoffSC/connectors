@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.source.state;
 
 import java.util.Collections;
 import java.util.Map;

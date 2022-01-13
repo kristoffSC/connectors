@@ -1,5 +1,10 @@
 package io.delta.flink.source;
 
+import io.delta.flink.source.enumerator.SplitEnumeratorProvider;
+import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.state.DeltaPendingSplitsCheckpointSerializer;
+import io.delta.flink.source.state.DeltaSourceSplit;
+import io.delta.flink.source.state.DeltaSourceSplitSerializer;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
@@ -9,8 +14,6 @@ import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
-import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
-import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.connector.file.src.impl.FileSourceReader;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.Path;
@@ -26,12 +29,6 @@ public class DeltaSource<T>
     // ---------------------------------------------------------------------------------------------
     // ALL NON TRANSIENT FIELDS HAVE TO BE SERIALIZABLE
     // ---------------------------------------------------------------------------------------------
-    public static final FileSplitAssigner.Provider DEFAULT_SPLIT_ASSIGNER =
-        LocalityAwareSplitAssigner::new;
-
-    public static final AddFileEnumerator.Provider<DeltaSourceSplit>
-        DEFAULT_SPLITTABLE_FILE_ENUMERATOR = DeltaFileEnumerator::new;
-
     private static final long serialVersionUID = 1L;
 
     private final Path tablePath;

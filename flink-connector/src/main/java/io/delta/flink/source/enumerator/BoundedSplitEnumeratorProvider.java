@@ -1,30 +1,25 @@
-package io.delta.flink.source;
+package io.delta.flink.source.enumerator;
 
 import java.util.Collections;
 
+import io.delta.flink.source.file.AddFileEnumerator;
+import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
-import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner.Provider;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
-public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvider {
+public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
     private final FileSplitAssigner.Provider splitAssignerProvider;
 
     private final AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider;
 
-    private final ContinuousEnumerationSettings settings = null;
-
-    public ContinuousSplitEnumeratorProvider() {
-        this(DeltaSource.DEFAULT_SPLIT_ASSIGNER,
-            DeltaSource.DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
-    }
-
-    public ContinuousSplitEnumeratorProvider(
+    public BoundedSplitEnumeratorProvider(
         Provider splitAssignerProvider,
         AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider) {
         this.splitAssignerProvider = splitAssignerProvider;
@@ -33,9 +28,11 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
 
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumerator(Path deltaTablePath, Configuration configuration,
+        createEnumerator(
+        Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        return new ContinuousDeltaSourceSplitEnumerator(
+
+        return new BoundedDeltaSourceSplitEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext
         );
@@ -46,7 +43,8 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         createEnumerator(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        return new ContinuousDeltaSourceSplitEnumerator(
+
+        return new BoundedDeltaSourceSplitEnumerator(
             checkpoint.getDeltaTablePath(), fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()),
             configuration, enumContext, checkpoint.getInitialSnapshotVersion(),
@@ -55,6 +53,6 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
 
     @Override
     public Boundedness getBoundedness() {
-        return Boundedness.CONTINUOUS_UNBOUNDED;
+        return Boundedness.BOUNDED;
     }
 }
