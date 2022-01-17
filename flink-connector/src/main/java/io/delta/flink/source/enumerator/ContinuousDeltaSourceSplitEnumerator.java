@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import io.delta.standalone.VersionLog;
 import io.delta.standalone.actions.Action;
-import io.delta.standalone.actions.AddCDCFile;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.actions.RemoveFile;
 
@@ -73,6 +72,11 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             throw new RuntimeException(e);
         }
 
+        // TODO Currently we are assigning new splits after processing all VersionLog elements.
+        //  the crucial requirement is that we must assign splits at least on VersionLog element
+        //  granularity.
+        //  The possible performance improvement here could be to assign splits
+        //  after each VersionLog element processing, so after processChangesForVersion method.
         //monitor for changes
         enumContext.callAsync(
             this::monitorForChanges,
@@ -81,8 +85,15 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             5000);
     }
 
-    // TODO extract this to separate class - TableMonitor
+    @Override
+    protected void handleNoMoreSplits(int subtaskId) {
+        //Do nothing since readers have to continuously wait for new data.
+    }
+
+    // TODO Extract this to separate class - TableMonitor
     //  and add tests, especially for Action filters.
+    //
+    // TODO add tests to check split creation//assignment granularity is in scope of VersionLog.
     private List<DeltaSourceSplit> monitorForChanges() {
         long currentTableVersion = deltaLog.update().getVersion();
         if (currentTableVersion > currentLocalSnapshotVersion) {
@@ -91,36 +102,66 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             List<AddFile> addFiles = new ArrayList<>();
             while (changes.hasNext()) {
                 VersionLog versionLog = changes.next();
-                long version = versionLog.getVersion();
-
-                // track the highest version number for future use
-                if (highestSeenVersion < version) {
-                    highestSeenVersion = version;
-                }
-
-                // create splits only for new versions
-                if (version > currentLocalSnapshotVersion) {
-                    List<Action> actions = versionLog.getActions();
-                    for (Action action : actions) {
-                        if (action instanceof RemoveFile || action instanceof AddCDCFile) {
-                            throw new RuntimeException(
-                                "Unsupported Action, table does not have only append changes.");
-                        }
-
-                        if (action instanceof AddFile) {
-                            addFiles.add((AddFile) action);
-                        } else {
-                            LOG.info(
-                                "Ignoring action {}, since this is not an ADDFile nor Remove/CDC",
-                                action.getClass());
-                        }
-                    }
-                }
+                highestSeenVersion =
+                    processVersion(highestSeenVersion, addFiles, versionLog);
             }
             currentLocalSnapshotVersion = highestSeenVersion;
             return prepareSplits(addFiles);
         }
         return Collections.emptyList();
+    }
+
+    // The crucial requirement is that we must assign splits at least on VersionLog element
+    // granularity, meaning that we cannot assign splits during VersionLog but after, when we are
+    // sure that there were no breaking changes in this version, for which we could emit downstream
+    // a corrupted data.
+    private long processVersion(long highestSeenVersion, List<AddFile> addFiles,
+        VersionLog versionLog) {
+        long version = versionLog.getVersion();
+
+        // track the highest version number for future use
+        if (highestSeenVersion < version) {
+            highestSeenVersion = version;
+        }
+
+        // create splits only for new versions
+        if (version > currentLocalSnapshotVersion) {
+            List<Action> actions = versionLog.getActions();
+            processChangesForVersion(addFiles, actions);
+        }
+        return highestSeenVersion;
+    }
+
+    private void processChangesForVersion(List<AddFile> addFiles, List<Action> actions) {
+        for (Action action : actions) {
+            DeltaActions deltaActions = DeltaActions.instanceBy(action.getClass().getSimpleName());
+            switch (deltaActions) {
+                case ADD:
+                    addFiles.add((AddFile) action);
+                    break;
+                case REMOVE:
+                    if (((RemoveFile) action).isDataChange()) {
+                        throwOnUnsupported();
+                    } else {
+                        ignoreAction(action);
+                    }
+                    break;
+                case CDC:
+                    throwOnUnsupported();
+                    break;
+                default:
+                    ignoreAction(action);
+            }
+        }
+    }
+
+    private void throwOnUnsupported() {
+        throw new RuntimeException(
+            "Unsupported Action, table does not have only append changes.");
+    }
+
+    private void ignoreAction(Action action) {
+        LOG.info("Ignoring action {}", action.getClass());
     }
 
     private List<DeltaSourceSplit> prepareSplits(List<AddFile> addFiles) {
@@ -131,11 +172,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         } catch (Exception e) {
             throw new RuntimeException("Exception wile preparing Splits.", e);
         }
-    }
-
-    @Override
-    protected void handleNoMoreSplits(int subtaskId) {
-        //Do nothing since readers have to continuously wait for new data.
     }
 
     private void processDiscoveredSplits(List<DeltaSourceSplit> splits, Throwable error) {
