@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import io.delta.flink.source.DeltaSourceException;
 import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
@@ -68,8 +69,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
             addSplits(splits);
         } catch (Exception e) {
-            // TODO Create Delta Source Exception
-            throw new RuntimeException(e);
+            throw new DeltaSourceException(e);
         }
 
         // TODO Currently we are assigning new splits after processing all VersionLog elements.
@@ -156,7 +156,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     }
 
     private void throwOnUnsupported() {
-        throw new RuntimeException(
+        throw new DeltaSourceException(
             "Unsupported Action, table does not have only append changes.");
     }
 
@@ -170,7 +170,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             return fileEnumerator
                 .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
         } catch (Exception e) {
-            throw new RuntimeException("Exception wile preparing Splits.", e);
+            throw new DeltaSourceException("Exception wile preparing Splits.", e);
         }
     }
 

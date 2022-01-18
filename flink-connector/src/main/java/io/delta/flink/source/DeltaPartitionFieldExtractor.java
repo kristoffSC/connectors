@@ -22,13 +22,13 @@ public class DeltaPartitionFieldExtractor<SplitT extends DeltaSourceSplit>
 
     private void sanityCheck(String fieldName, Map<String, String> partitionValues) {
         if (tableHasNoPartitions(partitionValues)) {
-            throw new RuntimeException(
+            throw new DeltaSourceException(
                 "Attempt to get a value for partition column from unpartitioned Delta Table. "
                     + "Column name" + fieldName);
         }
 
         if (isNotAPartitionColumn(fieldName, partitionValues)) {
-            throw new RuntimeException(
+            throw new DeltaSourceException(
                 "Cannot find the partition value in Delta MetaData: " + fieldName);
         }
     }
