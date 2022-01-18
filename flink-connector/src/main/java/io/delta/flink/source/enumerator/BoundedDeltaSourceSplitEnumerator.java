@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import io.delta.flink.source.DeltaSourceException;
 import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
@@ -48,8 +49,7 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
                 .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
             addSplits(splits);
         } catch (Exception e) {
-            // TODO Create Delta Source Exception
-            throw new RuntimeException(e);
+            throw new DeltaSourceException(e);
         }
     }
 
