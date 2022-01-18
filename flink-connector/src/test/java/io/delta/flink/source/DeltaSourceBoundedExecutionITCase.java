@@ -153,10 +153,13 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
     }
 
     @Test
+    // NOTE that this test can take some time to finish since we are restarting JM here.
+    // It can be around 30 seconds or so.
     // Test if SplitEnumerator::addSplitsBack works well,
     // meaning if splits were added back to the Enumerator's state and reassigned to new TM.
     public void testWithTaskManagerFailover() throws Exception {
 
+        // GIVEN
         DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
             .tablePath(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)))
             .columnNames(new String[]{"col1", "col2", "col3"})
