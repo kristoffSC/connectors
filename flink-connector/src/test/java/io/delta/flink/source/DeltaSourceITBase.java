@@ -2,6 +2,9 @@ package io.delta.flink.source;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
@@ -32,6 +35,10 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     protected static final int PARALLELISM = 4;
 
+    private static final ExecutorService UPDATER_EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final ExecutorService INITIAL_RESULT_FETCHER =
+        Executors.newSingleThreadExecutor();
+
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
 
@@ -53,6 +60,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public static void triggerJobManagerFailover(
         JobID jobId, Runnable afterFailAction, MiniCluster miniCluster) throws Exception {
+        System.out.println("Triggering Job Manager failover.");
         HaLeadershipControl haLeadershipControl = miniCluster.getHaLeadershipControl().get();
         haLeadershipControl.revokeJobMasterLeadership(jobId).get();
         afterFailAction.run();
@@ -61,6 +69,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public static void restartTaskManager(Runnable afterFailAction, MiniCluster miniCluster)
         throws Exception {
+        System.out.println("Triggering Task Manager failover.");
         miniCluster.terminateTaskManager(0).get();
         afterFailAction.run();
         miniCluster.startTaskManager();
@@ -101,12 +110,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
         DataStream<T> stream =
             env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
 
-        DataStream<T> streamFailingInTheMiddleOfReading =
+        DataStream<T> failingStreamDecorator =
             RecordCounterToFail.wrapWithFailureAfter(stream, failCheck);
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(
-                streamFailingInTheMiddleOfReading, "Bounded DeltaSource Test");
+                failingStreamDecorator, "Bounded DeltaSource Test");
         JobID jobId = client.client.getJobID();
 
         RecordCounterToFail.waitToFail();
@@ -142,51 +151,63 @@ public abstract class DeltaSourceITBase extends TestLogger {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(PARALLELISM);
         env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
-        env.enableCheckpointing(10L);
+        env.enableCheckpointing(100L);
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
 
         DataStream<T> stream =
             env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
 
+        DataStream<T> failingStreamDecorator =
+            RecordCounterToFail.wrapWithFailureAfter(stream, failCheck);
+
         ClientAndIterator<T> client =
-            DataStreamUtils.collectWithClient(stream, "Continuous DeltaSource  Test");
+            DataStreamUtils.collectWithClient(failingStreamDecorator,
+                "Continuous DeltaSource  Test");
+
         JobID jobId = client.client.getJobID();
 
         // Initial Table Data
-        totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
-            testDescriptor.getInitialDataSize()));
+        Future<?> initialDataFuture =
+            startInitialResultsFetcherThread(testDescriptor, totalResults, client);
 
         // Table Updates
-        testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
-            tableUpdater.writeToTable(descriptor);
-            totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
-                descriptor.getExpectedCount()));
-            System.out.println(totalResults.size());
-        });
+        Future<?> tableUpdaterFuture =
+            startTableUpdaterThread(testDescriptor, tableUpdater, totalResults, client);
 
+        RecordCounterToFail.waitToFail();
+        triggerFailover(
+            failoverType,
+            jobId,
+            RecordCounterToFail::continueProcessing,
+            miniClusterResource.getMiniCluster());
+
+        // Main thread wait for all threads to finish.
+        initialDataFuture.get();
+        tableUpdaterFuture.get();
         client.client.cancel().get();
 
         return totalResults;
+    }
 
-        /*        // write the remaining files over time, after that collect the final result
-        for (int i = 1; i < LINES_PER_FILE.length; i++) {
-            Thread.sleep(10);
-            writeFile(testDir, i);
-            final boolean failAfterHalfOfInput = i == LINES_PER_FILE.length / 2;
-            if (failAfterHalfOfInput) {
-                triggerFailover(type, jobId, () -> {
-                }, miniClusterResource.getMiniCluster());
-            }
-        }
+    private <T> Future<?> startInitialResultsFetcherThread(ContinuousTestDescriptor testDescriptor,
+        List<List<T>> totalResults, ClientAndIterator<T> client) {
+        Future<?> initialDataFuture = INITIAL_RESULT_FETCHER.submit(() -> {
+            totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                testDescriptor.getInitialDataSize()));
+        });
+        return initialDataFuture;
+    }
 
-        final List<String> result2 =
-            DataStreamUtils.collectRecordsFromUnboundedStream(client, numLinesAfter);
-
-
-        result1.addAll(result2);*/
-
-        // shut down the job, now that we have all the results we expected.
-
+    private <T> Future<?> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
+        DeltaTableUpdater tableUpdater, List<List<T>> totalResults, ClientAndIterator<T> client) {
+        Future<?> updaterFuture = UPDATER_EXECUTOR.submit(
+            () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
+                tableUpdater.writeToTable(descriptor);
+                totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                    descriptor.getExpectedCount()));
+                System.out.println("Stream result size: " + totalResults.size());
+            }));
+        return updaterFuture;
     }
 
     public enum FailoverType {

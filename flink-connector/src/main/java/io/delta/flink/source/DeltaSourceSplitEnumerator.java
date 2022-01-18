@@ -68,8 +68,6 @@ public abstract class DeltaSourceSplitEnumerator implements
             deltaLog.snapshot() : deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion);
 
         this.initialSnapshotVersion = snapshot.getVersion();
-
-        // TODO Add this to Enumerator State and actually use it in start method.
         this.pathsAlreadyProcessed = new HashSet<>(alreadyDiscoveredPaths);
     }
 

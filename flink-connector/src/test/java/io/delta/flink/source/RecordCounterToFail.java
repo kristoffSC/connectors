@@ -2,8 +2,6 @@ package io.delta.flink.source;
 
 import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
@@ -35,15 +33,8 @@ public class RecordCounterToFail implements Serializable {
     }
 
     public static void waitToFail() throws Exception {
-        int retryMax = 10;
-        int retry = 0;
-        while (retry++ < retryMax) {
-            try {
-                fail.get(1, TimeUnit.SECONDS);
-            } catch (TimeoutException e) {
-                // Hush
-            }
-        }
+        fail.get();
+        System.out.println("Wait to fail Finished.");
     }
 
     public static void continueProcessing() {

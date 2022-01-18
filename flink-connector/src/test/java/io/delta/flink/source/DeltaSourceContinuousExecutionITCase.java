@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -13,21 +14,26 @@ import java.util.stream.Stream;
 
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
+import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
-import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
+@RunWith(Parameterized.class)
 public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
 
     public static final LogicalType[] COLUMN_TYPES =
@@ -38,13 +44,24 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
     public static final int INITIAL_DATA_SIZE = 2;
     private static final Set<String> EXPECTED_NAMES =
         Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
-    private static final Configuration HADOOP_CONF = DeltaTestUtils.getHadoopConf();
     private static final int LARGE_TABLE_COUNT = 1100;
+    private static final int SMALL_TABLE_COUNT = 2;
+    private final FailoverType failoverType;
     private String nonPartitionedTablePath;
-
     private String nonPartitionedLargeTablePath;
-
     private String partitionedTablePath;
+
+    public DeltaSourceContinuousExecutionITCase(
+        FailoverType failoverType) {
+        this.failoverType = failoverType;
+    }
+
+    @Parameters(name = "{index}: FailoverType = [{0}]")
+    public static Collection<Object[]> param() {
+        return Arrays.asList(new Object[][]{
+            {FailoverType.NONE}, {FailoverType.TM}, {FailoverType.JM}
+        });
+    }
 
     @Before
     public void setup() {
@@ -68,7 +85,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
     }
 
     @Test
-    public void testWithoutUpdates() throws Exception {
+    public void testWithNoUpdates() throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
@@ -81,8 +98,9 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .build();
 
         // WHEN
-        List<List<RowData>> resultData =
-            testContinuousDeltaSource(deltaSource, new ContinuousTestDescriptor(2));
+        List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
+            new ContinuousTestDescriptor(2),
+            (FailCheck) integer -> true);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
         Set<String> actualNames =
@@ -91,17 +109,45 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
-            equalTo(2));
+            equalTo(SMALL_TABLE_COUNT));
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
             equalTo(EXPECTED_NAMES));
+    }
+
+    @Test
+    public void testWithNoUpdatesLargeTable() throws Exception {
+
+        // GIVEN
+        DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)))
+            .columnNames(new String[]{"col1", "col2", "col3"})
+            .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
+            .configuration(DeltaTestUtils.getHadoopConf())
+            .continuousEnumerationSettings(
+                new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
+            .build();
+
+        // WHEN
+        List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
+            new ContinuousTestDescriptor(LARGE_TABLE_COUNT),
+            (FailCheck) integer -> true);
+
+        int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
+        Set<Long> actualValues =
+            resultData.stream().flatMap(Collection::stream).map(row -> row.getLong(0))
+                .collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
+            equalTo(LARGE_TABLE_COUNT));
+        assertThat("Source Produced Different Rows that were in Delta Table", actualValues.size(),
+            equalTo(LARGE_TABLE_COUNT));
     }
 
     @Test
     // This test updates Delta Table 5 times, so it will take some time to finish. About 1 minute.
     public void testWithUpdates() throws Exception {
 
-        // TODO make this test parametrized and merge with testWithoutUpdates.
-        //  test parameters TABLE_UPDATES_LIM and ROWS_PER_TABLE_UPDATE
         // GIVEN
         DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
             .tablePath(Path.fromLocalFile(new File(nonPartitionedTablePath)))
@@ -112,18 +158,13 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
                 new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
             .build();
 
-        ContinuousTestDescriptor testDescriptor = new ContinuousTestDescriptor(INITIAL_DATA_SIZE);
-        for (int i = 0; i < TABLE_UPDATES_LIM; i++) {
-            List<Row> newRows = new ArrayList<>();
-            for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
-                newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
-            }
-            testDescriptor.add(RowType.of(COLUMN_TYPES, COLUMN_NAMES), newRows, newRows.size());
-        }
+        ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
 
         // WHEN
         List<List<RowData>> resultData =
-            testContinuousDeltaSource(deltaSource, testDescriptor);
+            testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
+                (FailCheck) readRows -> readRows
+                    == (INITIAL_DATA_SIZE + TABLE_UPDATES_LIM * ROWS_PER_TABLE_UPDATE) / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
         Set<String> actualSurNames =
@@ -137,8 +178,17 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             equalTo(INITIAL_DATA_SIZE + TABLE_UPDATES_LIM * ROWS_PER_TABLE_UPDATE));
     }
 
-    // TODO Add test for Failvoer TM and JM
-    // TODO Add tests for Partitions
-    // TODO add tests for Large File
+    private ContinuousTestDescriptor prepareTableUpdates() {
+        ContinuousTestDescriptor testDescriptor = new ContinuousTestDescriptor(INITIAL_DATA_SIZE);
+        for (int i = 0; i < TABLE_UPDATES_LIM; i++) {
+            List<Row> newRows = new ArrayList<>();
+            for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
+                newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
+            }
+            testDescriptor.add(RowType.of(COLUMN_TYPES, COLUMN_NAMES), newRows, newRows.size());
+        }
+        return testDescriptor;
+    }
 
+    // TODO Add tests for Partitions
 }
