@@ -39,12 +39,13 @@ public abstract class DeltaSourceSplitEnumerator implements
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
     protected final Path deltaTablePath;
     protected final FileSplitAssigner splitAssigner;
-    protected final long initialSnapshotVersion;
     protected final Snapshot snapshot;
     protected final SplitEnumeratorContext<DeltaSourceSplit> enumContext;
     protected final LinkedHashMap<Integer, String> readersAwaitingSplit;
     protected final HashSet<Path> pathsAlreadyProcessed;
     protected final DeltaLog deltaLog;
+
+    protected long initialSnapshotVersion;
 
     public DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
