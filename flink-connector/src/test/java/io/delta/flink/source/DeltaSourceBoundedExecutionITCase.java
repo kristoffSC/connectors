@@ -186,9 +186,6 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
 
     @Test
     public void testWithJobManagerFailover() throws Exception {
-        // TODO Check what we are actually testing with this test. Can't make it fail.
-        //  maybe we need bigger test set.
-
         // GIVEN
         DeltaSource<RowData> deltaSource = DeltaSourceBuilder.builder()
             .tablePath(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)))

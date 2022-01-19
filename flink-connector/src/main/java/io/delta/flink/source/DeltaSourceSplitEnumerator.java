@@ -165,7 +165,6 @@ public abstract class DeltaSourceSplitEnumerator implements
                 // TODO for chunking load we will have to modify this to get a new chunk from Delta.
                 LOG.info("No more splits available for subtasks");
                 handleNoMoreSplits(subtaskId);
-                LOG.info("No more splits available for subtask {}", subtaskId);
                 break;
             }
         }
