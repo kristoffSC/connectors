@@ -1,9 +1,7 @@
 package io.delta.flink.source.enumerator;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import io.delta.flink.source.DeltaSourceException;
@@ -19,10 +17,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.delta.standalone.VersionLog;
-import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
-import io.delta.standalone.actions.RemoveFile;
 
 public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerator {
 
@@ -30,6 +25,8 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
+
+    private final TableMonitor tableMonitor;
 
     public ContinuousDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
@@ -47,7 +44,11 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
         super(deltaTablePath, splitAssigner, configuration, enumContext, initialSnapshotVersion,
             alreadyDiscoveredPaths);
+
         this.fileEnumerator = fileEnumerator;
+
+        // Maybe we could inject it from the provider.
+        this.tableMonitor = new TableMonitor(deltaLog, this.initialSnapshotVersion);
     }
 
     @Override
@@ -70,15 +71,11 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             throw new DeltaSourceException(e);
         }
 
-        // TODO Currently we are assigning new splits after processing all VersionLog elements.
-        //  the crucial requirement is that we must assign splits at least on VersionLog element
-        //  granularity.
-        //  The possible performance improvement here could be to assign splits
-        //  after each VersionLog element processing, so after processChangesForVersion method.
+        // TODO add tests to check split creation//assignment granularity is in scope of VersionLog.
         //monitor for changes
         enumContext.callAsync(
-            this::monitorForChanges,
-            this::processDiscoveredSplits,
+            tableMonitor, // executed sequentially by ScheduledPool Thread.
+            this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
             1000,
             5000);
     }
@@ -86,80 +83,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     @Override
     protected void handleNoMoreSplits(int subtaskId) {
         //Do nothing since readers have to continuously wait for new data.
-    }
-
-    // TODO Extract this to separate class - TableMonitor
-    //  and add tests, especially for Action filters.
-    //
-    // TODO add tests to check split creation//assignment granularity is in scope of VersionLog.
-    private List<DeltaSourceSplit> monitorForChanges() {
-        long currentTableVersion = deltaLog.update().getVersion();
-        if (currentTableVersion > initialSnapshotVersion) {
-            long highestSeenVersion = initialSnapshotVersion;
-            Iterator<VersionLog> changes = deltaLog.getChanges(initialSnapshotVersion, true);
-            List<AddFile> addFiles = new ArrayList<>();
-            while (changes.hasNext()) {
-                VersionLog versionLog = changes.next();
-                highestSeenVersion =
-                    processVersion(highestSeenVersion, addFiles, versionLog);
-            }
-            initialSnapshotVersion = highestSeenVersion;
-            return prepareSplits(addFiles);
-        }
-        return Collections.emptyList();
-    }
-
-    // The crucial requirement is that we must assign splits at least on VersionLog element
-    // granularity, meaning that we cannot assign splits during VersionLog but after, when we are
-    // sure that there were no breaking changes in this version, for which we could emit downstream
-    // a corrupted data.
-    private long processVersion(long highestSeenVersion, List<AddFile> addFiles,
-        VersionLog versionLog) {
-        long version = versionLog.getVersion();
-
-        // track the highest version number for future use
-        if (highestSeenVersion < version) {
-            highestSeenVersion = version;
-        }
-
-        // create splits only for new versions
-        if (version > initialSnapshotVersion) {
-            List<Action> actions = versionLog.getActions();
-            processActionsForVersion(addFiles, actions);
-        }
-        return highestSeenVersion;
-    }
-
-    private void processActionsForVersion(List<AddFile> addFiles, List<Action> actions) {
-        for (Action action : actions) {
-            DeltaActions deltaActions = DeltaActions.instanceBy(action.getClass().getSimpleName());
-            switch (deltaActions) {
-                case ADD:
-                    addFiles.add((AddFile) action);
-                    break;
-                case REMOVE:
-                    if (((RemoveFile) action).isDataChange()) {
-                        throwOnUnsupported();
-                    } else {
-                        ignoreAction(action);
-                    }
-                    break;
-                case CDC:
-                    throwOnUnsupported();
-                    break;
-                default:
-                    ignoreAction(action);
-            }
-        }
-    }
-
-    private void throwOnUnsupported() {
-        throw new DeltaSourceException(
-            "Unsupported Action, table does not have only append changes.");
-    }
-
-    private void ignoreAction(Action action) {
-        LOG.info("Ignoring action {}", action.getClass());
     }
 
     private List<DeltaSourceSplit> prepareSplits(List<AddFile> addFiles) {
@@ -172,15 +95,20 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         }
     }
 
-    private void processDiscoveredSplits(List<DeltaSourceSplit> splits, Throwable error) {
+    private void processDiscoveredVersions(MonitorTableState monitorTableState, Throwable error) {
         if (error != null) {
             LOG.error("Failed to enumerate files", error);
             return;
         }
 
-        addSplits(splits);
+        List<AddFile> newAddFiles = monitorTableState.getResult();
+        this.initialSnapshotVersion = monitorTableState.getSnapshotVersion();
+
+        List<DeltaSourceSplit> discoveredSplits = prepareSplits(newAddFiles);
+        addSplits(discoveredSplits);
 
         // TODO this substskId makes no sense here. Refactor This.
         assignSplits(-1);
+
     }
 }
