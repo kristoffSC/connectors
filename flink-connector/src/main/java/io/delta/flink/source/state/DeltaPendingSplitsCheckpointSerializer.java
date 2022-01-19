@@ -31,14 +31,14 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
     }
 
     @Override
-    public byte[] serialize(DeltaEnumeratorStateCheckpoint<SplitT> checkpoint)
+    public byte[] serialize(DeltaEnumeratorStateCheckpoint<SplitT> state)
         throws IOException {
         checkArgument(
-            checkpoint.getClass() == DeltaEnumeratorStateCheckpoint.class,
+            state.getClass() == DeltaEnumeratorStateCheckpoint.class,
             "Only supports %s", DeltaEnumeratorStateCheckpoint.class.getName());
 
         PendingSplitsCheckpoint<SplitT> decoratedCheckPoint =
-            checkpoint.getPendingSplitsCheckpoint();
+            state.getPendingSplitsCheckpoint();
 
         byte[] decoratedBytes = decoratedSerDe.serialize(decoratedCheckPoint);
 
@@ -47,10 +47,10 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
             new DataOutputViewStreamWrapper(byteArrayOutputStream)) {
             outputWrapper.writeInt(decoratedBytes.length);
             outputWrapper.write(decoratedBytes);
-            outputWrapper.writeLong(checkpoint.getInitialSnapshotVersion());
+            outputWrapper.writeLong(state.getInitialSnapshotVersion());
 
             final byte[] serPath =
-                SourceUtils.pathToString(checkpoint.getDeltaTablePath())
+                SourceUtils.pathToString(state.getDeltaTablePath())
                     .getBytes(StandardCharsets.UTF_8);
 
             outputWrapper.writeInt(serPath.length);

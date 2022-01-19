@@ -31,8 +31,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
-    private long currentLocalSnapshotVersion;
-
     public ContinuousDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
@@ -50,7 +48,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         super(deltaTablePath, splitAssigner, configuration, enumContext, initialSnapshotVersion,
             alreadyDiscoveredPaths);
         this.fileEnumerator = fileEnumerator;
-        this.currentLocalSnapshotVersion = this.initialSnapshotVersion;
     }
 
     @Override
@@ -66,6 +63,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
         //get data for start version
         try {
+            LOG.info("Getting data for start version - {}", snapshot.getVersion());
             List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
             addSplits(splits);
         } catch (Exception e) {
@@ -96,16 +94,16 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     // TODO add tests to check split creation//assignment granularity is in scope of VersionLog.
     private List<DeltaSourceSplit> monitorForChanges() {
         long currentTableVersion = deltaLog.update().getVersion();
-        if (currentTableVersion > currentLocalSnapshotVersion) {
-            long highestSeenVersion = currentLocalSnapshotVersion;
-            Iterator<VersionLog> changes = deltaLog.getChanges(currentLocalSnapshotVersion, true);
+        if (currentTableVersion > initialSnapshotVersion) {
+            long highestSeenVersion = initialSnapshotVersion;
+            Iterator<VersionLog> changes = deltaLog.getChanges(initialSnapshotVersion, true);
             List<AddFile> addFiles = new ArrayList<>();
             while (changes.hasNext()) {
                 VersionLog versionLog = changes.next();
                 highestSeenVersion =
                     processVersion(highestSeenVersion, addFiles, versionLog);
             }
-            currentLocalSnapshotVersion = highestSeenVersion;
+            initialSnapshotVersion = highestSeenVersion;
             return prepareSplits(addFiles);
         }
         return Collections.emptyList();
@@ -125,14 +123,14 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         }
 
         // create splits only for new versions
-        if (version > currentLocalSnapshotVersion) {
+        if (version > initialSnapshotVersion) {
             List<Action> actions = versionLog.getActions();
-            processChangesForVersion(addFiles, actions);
+            processActionsForVersion(addFiles, actions);
         }
         return highestSeenVersion;
     }
 
-    private void processChangesForVersion(List<AddFile> addFiles, List<Action> actions) {
+    private void processActionsForVersion(List<AddFile> addFiles, List<Action> actions) {
         for (Action action : actions) {
             DeltaActions deltaActions = DeltaActions.instanceBy(action.getClass().getSimpleName());
             switch (deltaActions) {
