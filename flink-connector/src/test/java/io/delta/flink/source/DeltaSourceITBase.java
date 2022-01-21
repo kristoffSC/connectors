@@ -191,23 +191,21 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     private <T> Future<?> startInitialResultsFetcherThread(ContinuousTestDescriptor testDescriptor,
         List<List<T>> totalResults, ClientAndIterator<T> client) {
-        Future<?> initialDataFuture = INITIAL_RESULT_FETCHER.submit(() -> {
+        return INITIAL_RESULT_FETCHER.submit(() -> {
             totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
                 testDescriptor.getInitialDataSize()));
         });
-        return initialDataFuture;
     }
 
     private <T> Future<?> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
         DeltaTableUpdater tableUpdater, List<List<T>> totalResults, ClientAndIterator<T> client) {
-        Future<?> updaterFuture = UPDATER_EXECUTOR.submit(
+        return UPDATER_EXECUTOR.submit(
             () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
                 tableUpdater.writeToTable(descriptor);
                 totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
                     descriptor.getExpectedCount()));
                 System.out.println("Stream result size: " + totalResults.size());
             }));
-        return updaterFuture;
     }
 
     public enum FailoverType {

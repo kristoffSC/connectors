@@ -48,7 +48,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             checkpoint.getDeltaTablePath(), fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()),
             configuration, enumContext, checkpoint.getInitialSnapshotVersion(),
-            checkpoint.getAlreadyProcessedPaths());
+            checkpoint.getCurrentTableVersion(), checkpoint.getAlreadyProcessedPaths());
     }
 
     @Override

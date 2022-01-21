@@ -1,61 +1,68 @@
 package io.delta.flink.source.enumerator;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import io.delta.flink.source.DeltaSourceException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.tuple.Pair;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.VersionLog;
 import io.delta.standalone.actions.Action;
-import io.delta.standalone.actions.AddFile;
-import io.delta.standalone.actions.RemoveFile;
 
 public class TableMonitor implements Callable<MonitorTableState> {
-
-    private static final Logger LOG = LoggerFactory.getLogger(TableMonitor.class);
 
     private final DeltaLog deltaLog;
 
     private long snapshotVersion;
 
-    public TableMonitor(DeltaLog deltaLog, long initialSnapshotVersion) {
+    public TableMonitor(DeltaLog deltaLog, long initialMonitorSnapshotVersion) {
         this.deltaLog = deltaLog;
-        this.snapshotVersion = initialSnapshotVersion;
+        this.snapshotVersion = initialMonitorSnapshotVersion;
     }
 
     @Override
     public MonitorTableState call() throws Exception {
-        List<AddFile> result = new ArrayList<>();
-        this.snapshotVersion = monitorForChanges(this.snapshotVersion, result);
-        return new MonitorTableState(this.snapshotVersion, result);
+        Pair<Long, List<List<Action>>> changes = monitorForChanges(this.snapshotVersion);
+        this.snapshotVersion = changes.getKey();
+        return new MonitorTableState(this.snapshotVersion, changes.getValue());
     }
 
-    // TODO and add tests, especially for Action filters.
-    private long monitorForChanges(long startVersion, List<AddFile> result) {
+    /**
+     * Monitor underlying Delta Table for changes. Returns a Pair of the highest snapshot version
+     * found and List of actions grouped by each intermediate version.
+     *
+     * @param startVersion - Delta Snapshot version (inclusive) from which monitoring of changes
+     *                     will begin.
+     * @return - Pair of values - highest seen version and List of all table changes grouped by each
+     * intermediate version.
+     */
+    private Pair<Long, List<List<Action>>> monitorForChanges(long startVersion) {
+        // TODO and add tests, especially for Action filters.
         long currentTableVersion = deltaLog.update().getVersion();
-        if (currentTableVersion > startVersion) {
+        if (currentTableVersion >= startVersion) {
+            List<List<Action>> actions = new ArrayList<>();
             long highestSeenVersion = startVersion;
-            Iterator<VersionLog> changes = deltaLog.getChanges(startVersion + 1, true);
+            Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
             while (changes.hasNext()) {
                 VersionLog versionLog = changes.next();
-                highestSeenVersion =
-                    processVersion(highestSeenVersion, result, versionLog);
+                Pair<Long, List<Action>> version = processVersion(highestSeenVersion, versionLog);
+
+                highestSeenVersion = version.getKey();
+                actions.add(version.getValue());
             }
-            return highestSeenVersion;
+            return Pair.of(highestSeenVersion, actions);
         }
-        return startVersion;
+        return Pair.of(startVersion, Collections.emptyList());
     }
 
     // The crucial requirement is that we must assign splits at least on VersionLog element
     // granularity, meaning that we cannot assign splits during VersionLog but after, when we are
     // sure that there were no breaking changes in this version, for which we could emit downstream
     // a corrupted data.
-    private long processVersion(long highestSeenVersion, List<AddFile> addFiles,
+    private Pair<Long, List<Action>> processVersion(long highestSeenVersion,
         VersionLog versionLog) {
         long version = versionLog.getVersion();
 
@@ -64,42 +71,6 @@ public class TableMonitor implements Callable<MonitorTableState> {
             highestSeenVersion = version;
         }
 
-        List<Action> actions = versionLog.getActions();
-        processActionsForVersion(addFiles, actions);
-
-        return highestSeenVersion;
+        return Pair.of(highestSeenVersion, versionLog.getActions());
     }
-
-    private void processActionsForVersion(List<AddFile> addFiles, List<Action> actions) {
-        for (Action action : actions) {
-            DeltaActions deltaActions = DeltaActions.instanceBy(action.getClass().getSimpleName());
-            switch (deltaActions) {
-                case ADD:
-                    addFiles.add((AddFile) action);
-                    break;
-                case REMOVE:
-                    if (((RemoveFile) action).isDataChange()) {
-                        throwOnUnsupported();
-                    } else {
-                        ignoreAction(action);
-                    }
-                    break;
-                case CDC:
-                    throwOnUnsupported();
-                    break;
-                default:
-                    ignoreAction(action);
-            }
-        }
-    }
-
-    private void throwOnUnsupported() {
-        throw new DeltaSourceException(
-            "Unsupported Action, table does not have only append changes.");
-    }
-
-    private void ignoreAction(Action action) {
-        LOG.info("Ignoring action {}", action.getClass());
-    }
-
 }
