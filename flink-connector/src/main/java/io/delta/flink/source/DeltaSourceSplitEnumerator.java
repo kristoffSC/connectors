@@ -44,8 +44,7 @@ public abstract class DeltaSourceSplitEnumerator implements
     protected final LinkedHashMap<Integer, String> readersAwaitingSplit;
     protected final HashSet<Path> pathsAlreadyProcessed;
     protected final DeltaLog deltaLog;
-
-    protected long initialSnapshotVersion;
+    protected final long initialSnapshotVersion;
 
     public DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
@@ -102,25 +101,18 @@ public abstract class DeltaSourceSplitEnumerator implements
     }
 
     @Override
-    public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState(long checkpointId)
-        throws Exception {
+    public void close() throws IOException {
+        // no resources to close
+    }
 
+    @SuppressWarnings("unchecked")
+    protected Collection<DeltaSourceSplit> getRemainingSplits() {
         // The Flink's SplitAssigner interface uses FileSourceSplit
         // in its signatures and return types even though it is expected to be extended
         // by other implementations. This "trick" is used also in Flink source code
         // by bundled Hive connector -
         // https://github.com/apache/flink/blob/release-1.14/flink-connectors/flink-connector-hive/src/main/java/org/apache/flink/connectors/hive/ContinuousHiveSplitEnumerator.java#L137
-        @SuppressWarnings("unchecked")
-        Collection<DeltaSourceSplit> remainingSplits =
-            (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
-
-        return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-            deltaTablePath, initialSnapshotVersion, remainingSplits, pathsAlreadyProcessed);
-    }
-
-    @Override
-    public void close() throws IOException {
-        // no resources to close
+        return  (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
     }
 
     protected abstract void handleNoMoreSplits(int subtaskId);

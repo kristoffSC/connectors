@@ -2,14 +2,14 @@ package io.delta.flink.source.enumerator;
 
 import java.util.List;
 
-import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.actions.Action;
 
 public class MonitorTableState {
 
     private final long snapshotVersion;
-    private final List<AddFile> result;
+    private final List<List<Action>> result;
 
-    public MonitorTableState(long snapshotVersion, List<AddFile> result) {
+    public MonitorTableState(long snapshotVersion, List<List<Action>> result) {
         this.snapshotVersion = snapshotVersion;
         this.result = result;
     }
@@ -18,7 +18,7 @@ public class MonitorTableState {
         return snapshotVersion;
     }
 
-    public List<AddFile> getResult() {
+    public List<List<Action>> getResult() {
         return result;
     }
 }

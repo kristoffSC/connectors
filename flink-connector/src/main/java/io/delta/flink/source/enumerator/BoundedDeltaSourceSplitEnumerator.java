@@ -9,6 +9,7 @@ import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.file.AddFileEnumeratorContext;
+import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
@@ -51,6 +52,14 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
         } catch (Exception e) {
             throw new DeltaSourceException(e);
         }
+    }
+
+    @Override
+    public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState(long checkpointId)
+        throws Exception {
+        return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
+            deltaTablePath, initialSnapshotVersion, initialSnapshotVersion, getRemainingSplits(),
+            pathsAlreadyProcessed);
     }
 
     @Override

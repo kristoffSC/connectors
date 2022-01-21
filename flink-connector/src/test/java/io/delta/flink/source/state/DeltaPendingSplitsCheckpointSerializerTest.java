@@ -17,13 +17,14 @@ import static org.junit.Assert.assertEquals;
 
 public class DeltaPendingSplitsCheckpointSerializerTest {
 
-    private static final long SNAPSHOT_VERSION = 1L;
+    private static final long INITIAL_SNAPSHOT_VERSION = 1L;
+    private static final long CURRENT_SNAPSHOT_VERSION = 10L;
     private static final Path TABLE_PATH = new Path("some/path");
 
     @Test
     public void serializeEmptyCheckpoint() throws Exception {
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(TABLE_PATH, -1,
+            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(TABLE_PATH, -1, -1,
                 Collections.emptyList());
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
@@ -36,7 +37,7 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
     public void serializeSomeSplits() throws Exception {
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
             DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-                TABLE_PATH, SNAPSHOT_VERSION,
+                TABLE_PATH, INITIAL_SNAPSHOT_VERSION, CURRENT_SNAPSHOT_VERSION,
                 Arrays.asList(testSplitNoPartitions(), testSplitSinglePartition(),
                     testSplitMultiplePartitions()));
 
@@ -50,7 +51,7 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
     public void serializeSplitsAndProcessedPaths() throws Exception {
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
             DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-                TABLE_PATH, SNAPSHOT_VERSION,
+                TABLE_PATH, INITIAL_SNAPSHOT_VERSION, CURRENT_SNAPSHOT_VERSION,
                 Arrays.asList(testSplitNoPartitions(), testSplitSinglePartition(),
                     testSplitMultiplePartitions()),
                 Arrays.asList(
@@ -80,6 +81,7 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
         assertEquals(expected.getDeltaTablePath(), actual.getDeltaTablePath());
         assertEquals(expected.getInitialSnapshotVersion(), actual.getInitialSnapshotVersion());
+        assertEquals(expected.getCurrentTableVersion(), actual.getCurrentTableVersion());
 
         assertOrderedCollectionEquals(
             expected.getSplits(),
