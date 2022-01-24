@@ -8,10 +8,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 import io.delta.flink.source.enumerator.BoundedDeltaSourceSplitEnumerator;
@@ -26,6 +24,8 @@ import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.delta.flink.source.DeltaSourceSplitEnumerator.AssignSplitStatus.NO_MORE_READERS;
+import static io.delta.flink.source.DeltaSourceSplitEnumerator.AssignSplitStatus.NO_MORE_SPLITS;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -117,8 +117,6 @@ public abstract class DeltaSourceSplitEnumerator implements
         return (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
     }
 
-    protected abstract void handleNoMoreSplits(int subtaskId);
-
     protected void addSplits(List<DeltaSourceSplit> splits) {
         // We are creating new Array to trick Java type check since the signature of this
         // constructor is "? extends E". The downside is that this constructor creates an extra
@@ -133,12 +131,14 @@ public abstract class DeltaSourceSplitEnumerator implements
         return new AddFileEnumeratorContext(pathString, addFiles);
     }
 
-    protected void assignSplits(int subtaskId) {
+    protected abstract void handleNoMoreSplits(int subtaskId);
+
+    protected AssignSplitStatus assignSplits() {
         final Iterator<Entry<Integer, String>> awaitingReader =
             readersAwaitingSplit.entrySet().iterator();
 
         while (awaitingReader.hasNext()) {
-            Map.Entry<Integer, String> nextAwaiting = awaitingReader.next();
+            Entry<Integer, String> nextAwaiting = awaitingReader.next();
 
             // if the reader that requested another split has failed in the meantime, remove
             // it from the list of waiting readers - FLINK-20261
@@ -157,10 +157,23 @@ public abstract class DeltaSourceSplitEnumerator implements
                 awaitingReader.remove();
             } else {
                 // TODO for chunking load we will have to modify this to get a new chunk from Delta.
-                LOG.info("No more splits available for subtasks");
-                handleNoMoreSplits(subtaskId);
-                break;
+                return NO_MORE_SPLITS;
             }
         }
+
+        return NO_MORE_READERS;
+    }
+
+    private void assignSplits(int subtaskId) {
+        AssignSplitStatus assignSplitStatus = assignSplits();
+        if (NO_MORE_SPLITS.equals(assignSplitStatus)) {
+            LOG.info("No more splits available for subtasks");
+            handleNoMoreSplits(subtaskId);
+        }
+    }
+
+    public enum AssignSplitStatus {
+        NO_MORE_SPLITS,
+        NO_MORE_READERS;
     }
 }

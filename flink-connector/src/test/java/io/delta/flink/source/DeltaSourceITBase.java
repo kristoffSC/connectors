@@ -152,7 +152,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(PARALLELISM);
         env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
-        env.enableCheckpointing(100L);
+        env.enableCheckpointing(200L);
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
 
         DataStream<T> stream =

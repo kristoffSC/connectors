@@ -14,7 +14,6 @@ public interface DeltaSourceBuilderSteps {
 
     }
 
-
     interface TablePathStep {
 
         TableColumnNamesStep tablePath(Path tablePath);
