@@ -45,22 +45,24 @@ public abstract class DeltaSourceSplitEnumerator implements
     protected final HashSet<Path> pathsAlreadyProcessed;
     protected final DeltaLog deltaLog;
     protected final long initialSnapshotVersion;
+    protected final DeltaSourceOptions sourceOptions;
 
     public DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        this(deltaTablePath, splitAssigner, configuration, enumContext,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
+        this(deltaTablePath, splitAssigner, configuration, enumContext, sourceOptions,
             NO_SNAPSHOT_VERSION, Collections.emptySet());
     }
 
     public DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, long initialSnapshotVersion,
-        Collection<Path> alreadyDiscoveredPaths) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
+        long initialSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
         this.splitAssigner = splitAssigner;
         this.enumContext = enumContext;
         this.readersAwaitingSplit = new LinkedHashMap<>();
         this.deltaTablePath = deltaTablePath;
+        this.sourceOptions = sourceOptions;
 
         this.deltaLog =
             DeltaLog.forTable(configuration, deltaTablePath.toUri().normalize().toString());
@@ -112,7 +114,7 @@ public abstract class DeltaSourceSplitEnumerator implements
         // by other implementations. This "trick" is used also in Flink source code
         // by bundled Hive connector -
         // https://github.com/apache/flink/blob/release-1.14/flink-connectors/flink-connector-hive/src/main/java/org/apache/flink/connectors/hive/ContinuousHiveSplitEnumerator.java#L137
-        return  (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
+        return (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
     }
 
     protected abstract void handleNoMoreSplits(int subtaskId);

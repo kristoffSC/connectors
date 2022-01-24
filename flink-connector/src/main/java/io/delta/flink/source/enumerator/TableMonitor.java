@@ -43,19 +43,24 @@ public class TableMonitor implements Callable<MonitorTableState> {
         // TODO and add tests, especially for Action filters.
         long currentTableVersion = deltaLog.update().getVersion();
         if (currentTableVersion >= startVersion) {
-            List<List<Action>> actions = new ArrayList<>();
-            long highestSeenVersion = startVersion;
             Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
-            while (changes.hasNext()) {
-                VersionLog versionLog = changes.next();
-                Pair<Long, List<Action>> version = processVersion(highestSeenVersion, versionLog);
-
-                highestSeenVersion = version.getKey();
-                actions.add(version.getValue());
-            }
-            return Pair.of(highestSeenVersion, actions);
+            return processChanges(startVersion, changes);
         }
         return Pair.of(startVersion, Collections.emptyList());
+    }
+
+    private Pair<Long, List<List<Action>>> processChanges(long startVersion,
+        Iterator<VersionLog> changes) {
+        List<List<Action>> actions = new ArrayList<>();
+        long highestSeenVersion = startVersion;
+        while (changes.hasNext()) {
+            VersionLog versionLog = changes.next();
+            Pair<Long, List<Action>> version = processVersion(highestSeenVersion, versionLog);
+
+            highestSeenVersion = version.getKey();
+            actions.add(version.getValue());
+        }
+        return Pair.of(highestSeenVersion, actions);
     }
 
     // The crucial requirement is that we must assign splits at least on VersionLog element

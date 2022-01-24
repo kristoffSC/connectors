@@ -2,6 +2,7 @@ package io.delta.flink.source.enumerator;
 
 import java.util.Collections;
 
+import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.state.DeltaSourceSplit;
@@ -30,11 +31,12 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         Path deltaTablePath, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
 
         return new BoundedDeltaSourceSplitEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
-            splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext
+            splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext,
+            sourceOptions
         );
     }
 
@@ -42,12 +44,12 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
 
         return new BoundedDeltaSourceSplitEnumerator(
             checkpoint.getDeltaTablePath(), fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()),
-            configuration, enumContext, checkpoint.getInitialSnapshotVersion(),
+            configuration, enumContext, sourceOptions, checkpoint.getInitialSnapshotVersion(),
             checkpoint.getAlreadyProcessedPaths());
     }
 

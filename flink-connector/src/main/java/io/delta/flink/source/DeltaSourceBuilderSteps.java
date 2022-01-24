@@ -2,7 +2,6 @@ package io.delta.flink.source;
 
 import java.util.List;
 
-import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -11,7 +10,7 @@ import org.apache.hadoop.conf.Configuration;
 public interface DeltaSourceBuilderSteps {
 
     interface MandatorySteps
-        extends TablePathStep, TableColumnNamesStep, TableColumnTypesStep, ConfigurationStep {
+        extends TablePathStep, TableColumnNamesStep, TableColumnTypesStep, HadoopConfigurationStep {
 
     }
 
@@ -28,20 +27,27 @@ public interface DeltaSourceBuilderSteps {
 
     interface TableColumnTypesStep {
 
-        ConfigurationStep columnTypes(LogicalType[] columnTypes);
+        HadoopConfigurationStep columnTypes(LogicalType[] columnTypes);
     }
 
-    interface ConfigurationStep {
+    interface HadoopConfigurationStep {
 
-        BuildStep configuration(Configuration configuration);
+        BuildStep hadoopConfiguration(Configuration configuration);
     }
 
     interface BuildStep {
 
+        BuildStep option(String optionName, String optionValue);
+
+        BuildStep option(String optionName, boolean optionValue);
+
+        BuildStep option(String optionName, int optionValue);
+
+        BuildStep option(String optionName, long optionValue);
+
         BuildStep partitions(List<String> partitions);
 
-        BuildStep continuousEnumerationSettings(
-            ContinuousEnumerationSettings continuousEnumerationSettings);
+        BuildStep continuousMode();
 
         DeltaSource<RowData> build();
     }
