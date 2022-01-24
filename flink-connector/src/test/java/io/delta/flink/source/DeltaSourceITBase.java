@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
@@ -182,9 +183,9 @@ public abstract class DeltaSourceITBase extends TestLogger {
             miniClusterResource.getMiniCluster());
 
         // Main thread wait for all threads to finish.
-        initialDataFuture.get();
-        tableUpdaterFuture.get();
-        client.client.cancel().get();
+        initialDataFuture.get(2, TimeUnit.MINUTES);
+        tableUpdaterFuture.get(2, TimeUnit.MINUTES);
+        client.client.cancel().get(2, TimeUnit.MINUTES);
 
         return totalResults;
     }

@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.delta.flink.source.DeltaSourceException;
+import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
@@ -27,6 +28,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     private static final Logger LOG =
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
+    private  static final int INITIAL_DELAY = 1000;
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
@@ -37,19 +39,20 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     public ContinuousDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
         this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext,
-            NO_SNAPSHOT_VERSION, NO_SNAPSHOT_VERSION, Collections.emptySet());
+            sourceOptions, NO_SNAPSHOT_VERSION, NO_SNAPSHOT_VERSION, Collections.emptySet());
     }
 
     public ContinuousDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, long initialSnapshotVersion,
-        long currentSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
+        long initialSnapshotVersion, long currentSnapshotVersion,
+        Collection<Path> alreadyDiscoveredPaths) {
 
-        super(deltaTablePath, splitAssigner, configuration, enumContext, initialSnapshotVersion,
-            alreadyDiscoveredPaths);
+        super(deltaTablePath, splitAssigner, configuration, enumContext, sourceOptions,
+            initialSnapshotVersion, alreadyDiscoveredPaths);
 
         this.fileEnumerator = fileEnumerator;
         this.currentSnapshotVersion = (initialSnapshotVersion == NO_SNAPSHOT_VERSION) ?
@@ -87,8 +90,8 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         enumContext.callAsync(
             tableMonitor, // executed sequentially by ScheduledPool Thread.
             this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
-            1000,
-            5000);
+            INITIAL_DELAY,
+            sourceOptions.getOptionValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL));
     }
 
     @Override

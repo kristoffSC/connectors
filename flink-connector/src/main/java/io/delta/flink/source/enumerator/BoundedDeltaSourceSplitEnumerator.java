@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.delta.flink.source.DeltaSourceException;
+import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
@@ -23,19 +24,19 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
         this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext,
-            NO_SNAPSHOT_VERSION, Collections.emptySet());
+            sourceOptions, NO_SNAPSHOT_VERSION, Collections.emptySet());
     }
 
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, long initialSnapshotVersion,
-        Collection<Path> alreadyDiscoveredPaths) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
+        long initialSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
 
-        super(deltaTablePath, splitAssigner, configuration, enumContext, initialSnapshotVersion,
-            alreadyDiscoveredPaths);
+        super(deltaTablePath, splitAssigner, configuration, enumContext, sourceOptions,
+            initialSnapshotVersion, alreadyDiscoveredPaths);
         this.fileEnumerator = fileEnumerator;
     }
 

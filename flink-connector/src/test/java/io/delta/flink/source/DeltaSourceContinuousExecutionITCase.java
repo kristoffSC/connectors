@@ -2,8 +2,6 @@ package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -15,7 +13,6 @@ import java.util.stream.Stream;
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
-import org.apache.flink.connector.file.src.ContinuousEnumerationSettings;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.BigIntType;
@@ -92,9 +89,9 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .tablePath(Path.fromLocalFile(new File(nonPartitionedTablePath)))
             .columnNames(COLUMN_NAMES)
             .columnTypes(COLUMN_TYPES)
-            .configuration(DeltaTestUtils.getHadoopConf())
-            .continuousEnumerationSettings(
-                new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
+            .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
+            .continuousMode(
+            )
             .build();
 
         // WHEN
@@ -122,9 +119,9 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .tablePath(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)))
             .columnNames(new String[]{"col1", "col2", "col3"})
             .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
-            .configuration(DeltaTestUtils.getHadoopConf())
-            .continuousEnumerationSettings(
-                new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
+            .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
+            .continuousMode(
+            )
             .build();
 
         // WHEN
@@ -153,9 +150,9 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .tablePath(Path.fromLocalFile(new File(nonPartitionedTablePath)))
             .columnNames(COLUMN_NAMES)
             .columnTypes(COLUMN_TYPES)
-            .configuration(DeltaTestUtils.getHadoopConf())
-            .continuousEnumerationSettings(
-                new ContinuousEnumerationSettings(Duration.of(5, ChronoUnit.SECONDS)))
+            .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
+            .continuousMode(
+            )
             .build();
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();

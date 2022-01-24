@@ -39,15 +39,19 @@ public class DeltaSource<T>
 
     private final SerializableConfiguration serializableConf;
 
+    private final DeltaSourceOptions sourceOptions;
+
     // ---------------------------------------------------------------------------------------------
 
     protected DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
-        SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration) {
+        SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration,
+        DeltaSourceOptions sourceOptions) {
 
         this.tablePath = tablePath;
         this.readerFormat = readerFormat;
         this.splitEnumeratorProvider = splitEnumeratorProvider;
         this.serializableConf = new SerializableConfiguration(configuration);
+        this.sourceOptions = sourceOptions;
     }
 
     /**
@@ -58,12 +62,13 @@ public class DeltaSource<T>
      */
     public static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
         BulkFormat<T, DeltaSourceSplit> reader, SplitEnumeratorProvider splitEnumeratorProvider,
-        Configuration configuration) {
+        Configuration configuration, DeltaSourceOptions sourceOptions) {
         checkNotNull(deltaTablePath, "deltaTablePath");
         checkNotNull(reader, "reader");
         checkNotNull(splitEnumeratorProvider, "splitEnumeratorProvider");
 
-        return new DeltaSource<>(deltaTablePath, reader, splitEnumeratorProvider, configuration);
+        return new DeltaSource<>(deltaTablePath, reader, splitEnumeratorProvider, configuration,
+            sourceOptions);
     }
 
     @Override
@@ -94,7 +99,7 @@ public class DeltaSource<T>
         createEnumerator(
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
-            enumContext);
+            enumContext, sourceOptions);
     }
 
     @Override
@@ -103,7 +108,7 @@ public class DeltaSource<T>
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
 
         return splitEnumeratorProvider.createEnumerator(
-            checkpoint, serializableConf.conf(), enumContext);
+            checkpoint, serializableConf.conf(), enumContext, sourceOptions);
     }
 
     @Override

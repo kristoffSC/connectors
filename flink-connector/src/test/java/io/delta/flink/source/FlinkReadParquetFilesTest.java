@@ -95,7 +95,7 @@ public class FlinkReadParquetFilesTest extends StreamingExecutionFileSinkITCase 
             .tablePath(new Path())
             .columnNames(new String[0])
             .columnTypes(new LogicalType[0])
-            .configuration(DeltaSinkTestUtils.getHadoopConf())
+            .hadoopConfiguration(DeltaSinkTestUtils.getHadoopConf())
             .build();
     }
 
