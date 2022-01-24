@@ -28,7 +28,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     private static final Logger LOG =
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
-    private  static final int INITIAL_DELAY = 1000;
+    private static final int INITIAL_DELAY = 1000;
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
@@ -64,11 +64,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     @Override
     public void start() {
-
-        // TODO pass continuousEnumerationSettings to
-        //  DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER and ContinuousDeltaSourceSplitEnumerator
-        //  and use them in start method.
-
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
@@ -104,7 +99,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     @Override
     protected void handleNoMoreSplits(int subtaskId) {
-        //Do nothing since readers have to continuously wait for new data.
+        // We should do nothing, since we are continuously monitoring Delta Table.
     }
 
     private List<DeltaSourceSplit> prepareSplits(List<AddFile> addFiles) {
@@ -131,9 +126,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             .map(this::prepareSplits)
             .forEachOrdered(this::addSplits);
 
-        // TODO this subtaskId makes no sense here. Refactor This.
-        assignSplits(-1);
-
+        assignSplits();
     }
 
     private List<AddFile> processActions(List<Action> actions) {
@@ -176,5 +169,4 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     private void ignoreAction(Action action) {
         LOG.info("Ignoring action {}", action.getClass());
     }
-
 }

@@ -57,6 +57,8 @@ public final class DeltaSourceBuilder {
             configuration,
             RowType.of(columnTypes, columnNames),
             sourceOptions.getOptionValue(PARQUET_BATCH_SIZE),
+            // TODO ASK DataBricks about those fields. Should we expose them? What should be
+            //  default values
             false,
             true
         );
