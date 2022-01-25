@@ -34,7 +34,7 @@ public class DeltaSourceOptions implements Serializable {
             .withDescription("Allow for versions with deletes and updates.");
 
     public static final ConfigOption<Integer> PARQUET_BATCH_SIZE =
-        ConfigOptions.key("parquetBatchSize").intType().defaultValue(500)
+        ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read by Parquet Reader from Parquet file per batch.");
 
 
