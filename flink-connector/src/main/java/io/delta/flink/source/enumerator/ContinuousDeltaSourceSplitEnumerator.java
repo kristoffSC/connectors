@@ -167,6 +167,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     }
 
     private void ignoreAction(Action action) {
-        LOG.info("Ignoring action {}", action.getClass());
+        LOG.debug("Ignoring action {}", action.getClass());
     }
 }

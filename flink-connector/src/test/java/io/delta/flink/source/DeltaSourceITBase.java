@@ -36,9 +36,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     protected static final int PARALLELISM = 4;
 
-    private static final ExecutorService UPDATER_EXECUTOR = Executors.newSingleThreadExecutor();
-    private static final ExecutorService INITIAL_RESULT_FETCHER =
-        Executors.newSingleThreadExecutor();
+    private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
 
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
@@ -192,7 +190,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     private <T> Future<?> startInitialResultsFetcherThread(ContinuousTestDescriptor testDescriptor,
         List<List<T>> totalResults, ClientAndIterator<T> client) {
-        return INITIAL_RESULT_FETCHER.submit(() -> {
+        return WORKER_EXECUTOR.submit(() -> {
             totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
                 testDescriptor.getInitialDataSize()));
         });
@@ -200,7 +198,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     private <T> Future<?> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
         DeltaTableUpdater tableUpdater, List<List<T>> totalResults, ClientAndIterator<T> client) {
-        return UPDATER_EXECUTOR.submit(
+        return WORKER_EXECUTOR.submit(
             () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
                 tableUpdater.writeToTable(descriptor);
                 totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
