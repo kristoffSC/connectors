@@ -25,6 +25,11 @@ public class DeltaSourceOptions implements Serializable {
             .withDescription(
                 "Time interval value used for periodical table update checks.");
 
+    public static final ConfigOption<Long> UPDATE_CHECK_INITIAL_DELAY =
+        ConfigOptions.key("updateCheckDelayMillis").longType().defaultValue(1000L)
+            .withDescription(
+                "Time interval value used for periodical table update checks.");
+
     public static final ConfigOption<Boolean> IGNORE_DELETES =
         ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false)
             .withDescription("Allow for Delete only versions");
@@ -35,7 +40,17 @@ public class DeltaSourceOptions implements Serializable {
 
     public static final ConfigOption<Integer> PARQUET_BATCH_SIZE =
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
-            .withDescription("Number of rows read by Parquet Reader from Parquet file per batch.");
+            .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
+
+    public static final ConfigOption<Boolean> PARQUET_UTC_TIMESTAMP =
+        ConfigOptions.key("parquetUtcTimestamp").booleanType().defaultValue(true)
+            .withDescription("Denotes whether timestamps should be represented as SQL UTC "
+                + "timestamps.");
+
+    public static final ConfigOption<Boolean> PARQUET_CASE_SENSITIVE =
+        ConfigOptions.key("parquetCaseSensitive").booleanType().defaultValue(true)
+            .withDescription("Denotes whether timestamps should be represented as SQL UTC "
+                + "timestamps.");
 
     public static final ConfigOption<Integer> ACTIONS_PER_MONITOR_BATCH_LIMIT =
         ConfigOptions.key("actionsPerMonitorBatchLimit").intType().defaultValue(2048)
@@ -49,9 +64,12 @@ public class DeltaSourceOptions implements Serializable {
         ALLOWED_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         ALLOWED_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
         ALLOWED_SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
+        ALLOWED_SOURCE_OPTIONS.put(UPDATE_CHECK_INITIAL_DELAY.key(), UPDATE_CHECK_INITIAL_DELAY);
         ALLOWED_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         ALLOWED_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
         ALLOWED_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
+        ALLOWED_SOURCE_OPTIONS.put(PARQUET_UTC_TIMESTAMP.key(), PARQUET_UTC_TIMESTAMP);
+        ALLOWED_SOURCE_OPTIONS.put(PARQUET_CASE_SENSITIVE.key(), PARQUET_CASE_SENSITIVE);
         ALLOWED_SOURCE_OPTIONS.put(ACTIONS_PER_MONITOR_BATCH_LIMIT.key(),
             ACTIONS_PER_MONITOR_BATCH_LIMIT);
     }

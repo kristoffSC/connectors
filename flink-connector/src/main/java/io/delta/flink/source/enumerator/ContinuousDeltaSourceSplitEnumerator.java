@@ -19,6 +19,8 @@ import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY;
+import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
 import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
@@ -28,7 +30,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     private static final Logger LOG =
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
-    private static final int INITIAL_DELAY = 1000;
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
@@ -86,8 +87,8 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         enumContext.callAsync(
             tableMonitor, // executed sequentially by ScheduledPool Thread.
             this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
-            INITIAL_DELAY,
-            sourceOptions.getValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL));
+            sourceOptions.getValue(UPDATE_CHECK_INITIAL_DELAY),
+            sourceOptions.getValue(UPDATE_CHECK_INTERVAL));
     }
 
     @Override

@@ -23,8 +23,8 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.DeltaSourceOptions.PARQUET_BATCH_SIZE;
-import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
-
+import static io.delta.flink.source.DeltaSourceOptions.PARQUET_CASE_SENSITIVE;
+import static io.delta.flink.source.DeltaSourceOptions.PARQUET_UTC_TIMESTAMP;
 
 public final class DeltaSourceBuilder {
 
@@ -58,11 +58,8 @@ public final class DeltaSourceBuilder {
             configuration,
             RowType.of(columnTypes, columnNames),
             sourceOptions.getValue(PARQUET_BATCH_SIZE),
-            // TODO ASK DataBricks about those fields. Should we expose them? What should be
-            //  default values
-            false,
-            true
-        );
+            sourceOptions.getValue(PARQUET_UTC_TIMESTAMP),
+            sourceOptions.getValue(PARQUET_CASE_SENSITIVE));
     }
 
     private static ParquetColumnarRowInputFormat<DeltaSourceSplit> buildPartitionedFormat(
@@ -74,10 +71,8 @@ public final class DeltaSourceBuilder {
             RowType.of(columnTypes, columnNames),
             partitionKeys, new DeltaPartitionFieldExtractor<>(),
             sourceOptions.getValue(PARQUET_BATCH_SIZE),
-            // TODO ASK DataBricks about those fields. Should we expose them? What should be
-            //  default values
-            false,
-            true);
+            sourceOptions.getValue(PARQUET_UTC_TIMESTAMP),
+            sourceOptions.getValue(PARQUET_CASE_SENSITIVE));
     }
 
     private static class BuildSteps implements MandatorySteps, BuildStep {
@@ -174,7 +169,7 @@ public final class DeltaSourceBuilder {
         }
 
         private boolean isContinuousMode() {
-            return this.continuousMode || sourceOptions.hasOption(UPDATE_CHECK_INTERVAL.key());
+            return this.continuousMode;
         }
 
         private ConfigOption<?> validateOption(String optionName) {
