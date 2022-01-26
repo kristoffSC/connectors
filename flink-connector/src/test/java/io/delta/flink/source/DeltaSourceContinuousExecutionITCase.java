@@ -90,8 +90,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .columnNames(COLUMN_NAMES)
             .columnTypes(COLUMN_TYPES)
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .continuousMode(
-            )
+            .continuousMode()
             .build();
 
         // WHEN
@@ -120,8 +119,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .columnNames(new String[]{"col1", "col2", "col3"})
             .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .continuousMode(
-            )
+            .continuousMode()
             .build();
 
         // WHEN
@@ -151,8 +149,8 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .columnNames(COLUMN_NAMES)
             .columnTypes(COLUMN_TYPES)
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .continuousMode(
-            )
+            .continuousMode()
+            .option("actionsPerMonitorBatchLimit", 1024)
             .build();
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();

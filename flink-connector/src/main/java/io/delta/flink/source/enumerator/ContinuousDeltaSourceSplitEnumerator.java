@@ -59,7 +59,8 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             this.initialSnapshotVersion : currentSnapshotVersion;
 
         // Maybe we could inject it from the provider.
-        this.tableMonitor = new TableMonitor(deltaLog, this.currentSnapshotVersion + 1);
+        this.tableMonitor =
+            new TableMonitor(deltaLog, this.currentSnapshotVersion + 1, sourceOptions);
     }
 
     @Override
@@ -86,7 +87,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             tableMonitor, // executed sequentially by ScheduledPool Thread.
             this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
             INITIAL_DELAY,
-            sourceOptions.getOptionValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL));
+            sourceOptions.getValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL));
     }
 
     @Override
