@@ -91,7 +91,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .columnTypes(COLUMN_TYPES)
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
             .continuousMode()
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -120,7 +120,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
             .continuousMode()
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -151,7 +151,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
             .continuousMode()
             .option("actionsPerMonitorBatchLimit", 1024)
-            .build();
+            .buildForRowData();
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
 

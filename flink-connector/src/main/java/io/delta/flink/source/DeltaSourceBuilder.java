@@ -150,7 +150,7 @@ public final class DeltaSourceBuilder {
         }
 
         @Override
-        public DeltaSource<RowData> build() {
+        public DeltaSource<RowData> buildForRowData() {
 
             ParquetColumnarRowInputFormat<DeltaSourceSplit> format;
             if (partitions == null || partitions.isEmpty()) {
