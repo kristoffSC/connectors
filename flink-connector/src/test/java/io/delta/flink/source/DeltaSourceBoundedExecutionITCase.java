@@ -69,7 +69,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             .columnNames(new String[]{"name", "surname", "age"})
             .columnTypes(new LogicalType[]{new CharType(), new CharType(), new IntType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -97,7 +97,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
                 new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
             .partitions(Arrays.asList("col1", "col2"))
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -130,7 +130,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
                     new CharType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
             .partitions(Arrays.asList("col1", "col2"))
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -165,7 +165,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             .columnNames(new String[]{"col1", "col2", "col3"})
             .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(FailoverType.TM, deltaSource,
@@ -192,7 +192,7 @@ public class DeltaSourceBoundedExecutionITCase extends DeltaSourceITBase {
             .columnNames(new String[]{"col1", "col2", "col3"})
             .columnTypes(new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()})
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .build();
+            .buildForRowData();
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(FailoverType.JM, deltaSource,

@@ -48,7 +48,7 @@ public interface DeltaSourceBuilderSteps {
 
         BuildStep continuousMode();
 
-        DeltaSource<RowData> build();
+        DeltaSource<RowData> buildForRowData();
     }
 
 }
