@@ -11,6 +11,7 @@ import io.delta.flink.source.DeltaSourceBuilderSteps.TablePathStep;
 import io.delta.flink.source.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.file.AddFileEnumerator;
+import io.delta.flink.source.file.DeltaFileEnumerator;
 import io.delta.flink.source.state.DeltaSourceSplit;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
@@ -56,7 +57,7 @@ public final class DeltaSourceBuilder {
         return new ParquetColumnarRowInputFormat<>(
             configuration,
             RowType.of(columnTypes, columnNames),
-            sourceOptions.getOptionValue(PARQUET_BATCH_SIZE),
+            sourceOptions.getValue(PARQUET_BATCH_SIZE),
             // TODO ASK DataBricks about those fields. Should we expose them? What should be
             //  default values
             false,
@@ -72,7 +73,7 @@ public final class DeltaSourceBuilder {
             configuration,
             RowType.of(columnTypes, columnNames),
             partitionKeys, new DeltaPartitionFieldExtractor<>(),
-            sourceOptions.getOptionValue(PARQUET_BATCH_SIZE),
+            sourceOptions.getValue(PARQUET_BATCH_SIZE),
             // TODO ASK DataBricks about those fields. Should we expose them? What should be
             //  default values
             false,
@@ -177,7 +178,7 @@ public final class DeltaSourceBuilder {
         }
 
         private ConfigOption<?> validateOption(String optionName) {
-            ConfigOption<?> option = DeltaSourceOptions.SOURCE_OPTIONS.get(optionName);
+            ConfigOption<?> option = DeltaSourceOptions.ALLOWED_SOURCE_OPTIONS.get(optionName);
             if (option == null) {
                 throw new DeltaSourceException(
                     "Invalid option [" + optionName + "] used for Delta Source Connector.");

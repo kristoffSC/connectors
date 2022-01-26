@@ -6,7 +6,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import io.delta.flink.source.DeltaSourceOptions;
 import org.apache.commons.lang3.tuple.Pair;
+import static io.delta.flink.source.DeltaSourceOptions.ACTIONS_PER_MONITOR_BATCH_LIMIT;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.VersionLog;
@@ -16,18 +18,25 @@ public class TableMonitor implements Callable<MonitorTableState> {
 
     private final DeltaLog deltaLog;
 
-    private long snapshotVersion;
+    private final int changesPerBatchCountLimit;
 
-    public TableMonitor(DeltaLog deltaLog, long initialMonitorSnapshotVersion) {
+    private long changesFromVersion;
+
+    public TableMonitor(DeltaLog deltaLog, long initialMonitorSnapshotVersion,
+        DeltaSourceOptions sourceOptions) {
         this.deltaLog = deltaLog;
-        this.snapshotVersion = initialMonitorSnapshotVersion;
+        this.changesFromVersion = initialMonitorSnapshotVersion;
+        this.changesPerBatchCountLimit = sourceOptions.getValue(ACTIONS_PER_MONITOR_BATCH_LIMIT);
     }
 
     @Override
     public MonitorTableState call() throws Exception {
-        Pair<Long, List<List<Action>>> changes = monitorForChanges(this.snapshotVersion);
-        this.snapshotVersion = changes.getKey();
-        return new MonitorTableState(this.snapshotVersion, changes.getValue());
+        Pair<Long, List<List<Action>>> changes = monitorForChanges(this.changesFromVersion);
+        Long highestSeenVersion = changes.getKey();
+        if (!changes.getValue().isEmpty()) {
+            this.changesFromVersion = highestSeenVersion + 1;
+        }
+        return new MonitorTableState(highestSeenVersion, changes.getValue());
     }
 
     /**
@@ -49,16 +58,28 @@ public class TableMonitor implements Callable<MonitorTableState> {
         return Pair.of(startVersion, Collections.emptyList());
     }
 
-    private Pair<Long, List<List<Action>>> processChanges(long startVersion,
-        Iterator<VersionLog> changes) {
+    private Pair<Long, List<List<Action>>> processChanges(
+        long startVersion, Iterator<VersionLog> changes) {
+
         List<List<Action>> actions = new ArrayList<>();
         long highestSeenVersion = startVersion;
+
+        int changesPerBatchCount = 0;
+
+        // TODO Discuss With DataBricks about the default value and implement after
+        // long changesPerBatchSize = 0;
+
         while (changes.hasNext()) {
             VersionLog versionLog = changes.next();
             Pair<Long, List<Action>> version = processVersion(highestSeenVersion, versionLog);
 
             highestSeenVersion = version.getKey();
             actions.add(version.getValue());
+
+            changesPerBatchCount += version.getValue().size();
+            if (changesPerBatchCount >= changesPerBatchCountLimit) {
+                break;
+            }
         }
         return Pair.of(highestSeenVersion, actions);
     }
@@ -67,8 +88,8 @@ public class TableMonitor implements Callable<MonitorTableState> {
     // granularity, meaning that we cannot assign splits during VersionLog but after, when we are
     // sure that there were no breaking changes in this version, for which we could emit downstream
     // a corrupted data.
-    private Pair<Long, List<Action>> processVersion(long highestSeenVersion,
-        VersionLog versionLog) {
+    private Pair<Long, List<Action>> processVersion(
+        long highestSeenVersion, VersionLog versionLog) {
         long version = versionLog.getVersion();
 
         // track the highest version number for future use

@@ -37,16 +37,23 @@ public class DeltaSourceOptions implements Serializable {
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read by Parquet Reader from Parquet file per batch.");
 
+    public static final ConfigOption<Integer> ACTIONS_PER_MONITOR_BATCH_LIMIT =
+        ConfigOptions.key("actionsPerMonitorBatchLimit").intType().defaultValue(2048)
+            .withDescription(
+                "Minimal number of actions that we will get during table version update check.");
 
-    public static final Map<String, ConfigOption<?>> SOURCE_OPTIONS = new HashMap<>();
+
+    public static final Map<String, ConfigOption<?>> ALLOWED_SOURCE_OPTIONS = new HashMap<>();
 
     static {
-        SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
-        SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
-        SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
-        SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
-        SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
-        SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
+        ALLOWED_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
+        ALLOWED_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
+        ALLOWED_SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
+        ALLOWED_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
+        ALLOWED_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
+        ALLOWED_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
+        ALLOWED_SOURCE_OPTIONS.put(ACTIONS_PER_MONITOR_BATCH_LIMIT.key(),
+            ACTIONS_PER_MONITOR_BATCH_LIMIT);
     }
 
     private final Map<String, Object> usedSourceOptions = new HashMap<>();
@@ -72,12 +79,12 @@ public class DeltaSourceOptions implements Serializable {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T getOptionValue(ConfigOption<T> option) {
-        return (T) getOptionValue(option.key()).orElse(option.defaultValue());
+    public <T> T getValue(ConfigOption<T> option) {
+        return (T) getValue(option.key()).orElse(option.defaultValue());
     }
 
     @SuppressWarnings("unchecked")
-    private <T> Optional<T> getOptionValue(String optionName) {
+    private <T> Optional<T> getValue(String optionName) {
         return (Optional<T>) Optional.ofNullable(this.usedSourceOptions.get(optionName));
     }
 
