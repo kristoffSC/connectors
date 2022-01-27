@@ -2,7 +2,7 @@ package io.delta.flink.source.state;
 
 import java.util.Collection;
 
-import io.delta.flink.source.DeltaSourceException;
+import io.delta.flink.source.exceptions.DeltaSourceException;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.core.fs.Path;
 import static org.apache.flink.util.Preconditions.checkArgument;

@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.source.exceptions;
 
 public class DeltaSourceException extends RuntimeException {
 
