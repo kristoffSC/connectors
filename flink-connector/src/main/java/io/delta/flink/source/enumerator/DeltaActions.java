@@ -4,31 +4,35 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.actions.Metadata;
+import io.delta.standalone.actions.RemoveFile;
+
 enum DeltaActions {
 
-    ADD("AddFile"),
-    REMOVE("RemoveFile"),
-    CDC("AddCDCFile"),
-    OTHER("");
+    ADD(AddFile.class),
+    REMOVE(RemoveFile.class),
+    METADATA(Metadata.class),
+    OTHER(null);
 
 
-    private static final Map<String, DeltaActions> LOOKUP_MAP;
+    private static final Map<Class<?>, DeltaActions> LOOKUP_MAP;
 
     static {
-        Map<String, DeltaActions> tmpMap = new HashMap<>();
+        Map<Class<?>, DeltaActions> tmpMap = new HashMap<>();
         for (DeltaActions action : DeltaActions.values()) {
-            tmpMap.put(action.deltaActionName, action);
+            tmpMap.put(action.deltaActionClass, action);
         }
         LOOKUP_MAP = Collections.unmodifiableMap(tmpMap);
     }
 
-    private final String deltaActionName;
+    private final Class<?> deltaActionClass;
 
-    DeltaActions(String deltaActionName) {
-        this.deltaActionName = deltaActionName;
+    DeltaActions(Class<?> deltaActionClass) {
+        this.deltaActionClass = deltaActionClass;
     }
 
-    public static DeltaActions instanceBy(String deltaActionName) {
+    public static DeltaActions instanceFrom(Class<?> deltaActionName) {
         return LOOKUP_MAP.getOrDefault(deltaActionName, OTHER);
     }
 

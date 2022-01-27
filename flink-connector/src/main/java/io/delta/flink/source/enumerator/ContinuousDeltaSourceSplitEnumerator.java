@@ -5,9 +5,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import io.delta.flink.source.DeltaSourceException;
 import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.DeltaSourceSplitEnumerator;
+import io.delta.flink.source.enumerator.MonitorTableResult.ChangesPerVersion;
+import io.delta.flink.source.exceptions.DeltaSourceException;
+import io.delta.flink.source.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.file.AddFileEnumeratorContext;
@@ -19,6 +21,8 @@ import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.delta.flink.source.DeltaSourceOptions.IGNORE_CHANGES;
+import static io.delta.flink.source.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY;
 import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
@@ -34,6 +38,10 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
     private final TableMonitor tableMonitor;
+
+    private final boolean ignoreChanges;
+
+    private final boolean ignoreDeletes;
 
     private long currentSnapshotVersion;
 
@@ -62,6 +70,9 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         // Maybe we could inject it from the provider.
         this.tableMonitor =
             new TableMonitor(deltaLog, this.currentSnapshotVersion + 1, sourceOptions);
+
+        this.ignoreChanges = sourceOptions.getValue(IGNORE_CHANGES);
+        this.ignoreDeletes = this.ignoreChanges || sourceOptions.getValue(IGNORE_DELETES);
     }
 
     @Override
@@ -114,14 +125,14 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         }
     }
 
-    private void processDiscoveredVersions(MonitorTableState monitorTableState, Throwable error) {
+    private void processDiscoveredVersions(MonitorTableResult monitorTableResult, Throwable error) {
         if (error != null) {
             LOG.error("Failed to enumerate files", error);
             throw new DeltaSourceException(error);
         }
 
-        this.currentSnapshotVersion = monitorTableState.getSnapshotVersion();
-        List<List<Action>> newActions = monitorTableState.getResult();
+        this.currentSnapshotVersion = monitorTableResult.getHighestSeenVersion();
+        List<ChangesPerVersion> newActions = monitorTableResult.getChanges();
 
         newActions.stream()
             .map(this::processActions)
@@ -131,44 +142,47 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         assignSplits();
     }
 
-    private List<AddFile> processActions(List<Action> actions) {
-        List<AddFile> addFiles = new ArrayList<>();
-        for (Action action : actions) {
-            DeltaActions deltaActions = DeltaActions.instanceBy(action.getClass().getSimpleName());
+    private List<AddFile> processActions(ChangesPerVersion changes) {
+
+        List<AddFile> addFiles = new ArrayList<>(changes.size());
+        boolean seenAddFile = false;
+        boolean seenRemovedFile = false;
+
+        for (Action action : changes.getChanges()) {
+            DeltaActions deltaActions = DeltaActions.instanceFrom(action.getClass());
             switch (deltaActions) {
                 case ADD:
-                    addFiles.add((AddFile) action);
-                    break;
-                case REMOVE:
-                    // TODO add support for ignoreDeletes and ignoreChanges options:
-                    //  ignoreDeletes - if true and particular version had only Deletes
-                    //  (no other actions) then do not throw an exception on RemoveFile
-                    //  regardless of Action.isDataChange flag.
-                    //  ignoreChanges - if true and particular version had combination of
-                    //  deletes and other actions, then do not throw an error on RemoveFile
-                    //  regardless of Action.isDataChange flag deletes.
-                    if (((RemoveFile) action).isDataChange()) {
-                        throwOnUnsupported();
-                    } else {
-                        ignoreAction(action);
+                    if (((AddFile) action).isDataChange()) {
+                        seenAddFile = true;
+                        addFiles.add((AddFile) action);
                     }
                     break;
-                case CDC:
-                    throwOnUnsupported();
+                case REMOVE:
+                    if (((RemoveFile) action).isDataChange()) {
+                        seenRemovedFile = true;
+                    }
                     break;
+                case METADATA:
+                    // TODO implement schema compatibility check similar as it is done in
+                    //  https://github.com/delta-io/delta/blob/0d07d094ccd520c1adbe45dde4804c754c0a4baa/core/src/main/scala/org/apache/spark/sql/delta/sources/DeltaSource.scala#L422
                 default:
-                    ignoreAction(action);
+                    // Do nothing.
+                    break;
             }
         }
+
+        actionsSanityCheck(seenAddFile, seenRemovedFile, changes.getSnapshotVersion());
+
         return addFiles;
     }
 
-    private void throwOnUnsupported() {
-        throw new DeltaSourceException(
-            "Unsupported Action, table does not have only append changes.");
-    }
-
-    private void ignoreAction(Action action) {
-        LOG.debug("Ignoring action {}", action.getClass());
+    private void actionsSanityCheck(boolean seenFileAdd, boolean seenRemovedFile, long version) {
+        if (seenRemovedFile) {
+            if (seenFileAdd && !ignoreChanges) {
+                DeltaSourceExceptionUtils.deltaSourceIgnoreChangesError(version);
+            } else if (!seenFileAdd && !ignoreDeletes) {
+                DeltaSourceExceptionUtils.deltaSourceIgnoreDeleteError(version);
+            }
+        }
     }
 }

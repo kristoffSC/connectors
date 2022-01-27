@@ -10,6 +10,7 @@ import io.delta.flink.source.DeltaSourceBuilderSteps.TableColumnTypesStep;
 import io.delta.flink.source.DeltaSourceBuilderSteps.TablePathStep;
 import io.delta.flink.source.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.enumerator.ContinuousSplitEnumeratorProvider;
+import io.delta.flink.source.exceptions.DeltaSourceException;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.DeltaFileEnumerator;
 import io.delta.flink.source.state.DeltaSourceSplit;

@@ -4,9 +4,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import io.delta.flink.source.DeltaSourceException;
 import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.DeltaSourceSplitEnumerator;
+import io.delta.flink.source.exceptions.DeltaSourceException;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.file.AddFileEnumeratorContext;
