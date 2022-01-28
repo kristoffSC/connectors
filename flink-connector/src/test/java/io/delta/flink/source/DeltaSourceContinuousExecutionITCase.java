@@ -150,7 +150,7 @@ public class DeltaSourceContinuousExecutionITCase extends DeltaSourceITBase {
             .columnTypes(COLUMN_TYPES)
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
             .continuousMode()
-            .option("actionsPerMonitorBatchLimit", 1024)
+            .option("updateCheckIntervalMillis", 3000)
             .buildForRowData();
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();

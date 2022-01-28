@@ -20,13 +20,13 @@ public class DeltaSourceOptions implements Serializable {
                 "Travel back to the latest snapshot that was generated at or before given "
                     + "timestamp.");
 
-    public static final ConfigOption<Long> UPDATE_CHECK_INTERVAL =
-        ConfigOptions.key("updateCheckIntervalMillis").longType().defaultValue(5000L)
+    public static final ConfigOption<Integer> UPDATE_CHECK_INTERVAL =
+        ConfigOptions.key("updateCheckIntervalMillis").intType().defaultValue(5000)
             .withDescription(
                 "Time interval value used for periodical table update checks.");
 
-    public static final ConfigOption<Long> UPDATE_CHECK_INITIAL_DELAY =
-        ConfigOptions.key("updateCheckDelayMillis").longType().defaultValue(1000L)
+    public static final ConfigOption<Integer> UPDATE_CHECK_INITIAL_DELAY =
+        ConfigOptions.key("updateCheckDelayMillis").intType().defaultValue(1000)
             .withDescription(
                 "Time interval value used for periodical table update checks.");
 
@@ -52,12 +52,6 @@ public class DeltaSourceOptions implements Serializable {
             .withDescription("Denotes whether timestamps should be represented as SQL UTC "
                 + "timestamps.");
 
-    public static final ConfigOption<Integer> ACTIONS_PER_MONITOR_BATCH_LIMIT =
-        ConfigOptions.key("actionsPerMonitorBatchLimit").intType().defaultValue(2048)
-            .withDescription(
-                "Minimal number of actions that we will get during table version update check.");
-
-
     public static final Map<String, ConfigOption<?>> ALLOWED_SOURCE_OPTIONS = new HashMap<>();
 
     static {
@@ -70,8 +64,6 @@ public class DeltaSourceOptions implements Serializable {
         ALLOWED_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
         ALLOWED_SOURCE_OPTIONS.put(PARQUET_UTC_TIMESTAMP.key(), PARQUET_UTC_TIMESTAMP);
         ALLOWED_SOURCE_OPTIONS.put(PARQUET_CASE_SENSITIVE.key(), PARQUET_CASE_SENSITIVE);
-        ALLOWED_SOURCE_OPTIONS.put(ACTIONS_PER_MONITOR_BATCH_LIMIT.key(),
-            ACTIONS_PER_MONITOR_BATCH_LIMIT);
     }
 
     private final Map<String, Object> usedSourceOptions = new HashMap<>();
