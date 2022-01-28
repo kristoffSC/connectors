@@ -9,7 +9,7 @@ import java.util.concurrent.Callable;
 import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.enumerator.MonitorTableResult.ChangesPerVersion;
 import org.apache.commons.lang3.tuple.Pair;
-import static io.delta.flink.source.DeltaSourceOptions.ACTIONS_PER_MONITOR_BATCH_LIMIT;
+import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.VersionLog;
@@ -19,7 +19,7 @@ public class TableMonitor implements Callable<MonitorTableResult> {
 
     private final DeltaLog deltaLog;
 
-    private final int changesPerBatchCountLimit;
+    private final long maxDurationMillis;
 
     private long changesFromVersion;
 
@@ -27,7 +27,7 @@ public class TableMonitor implements Callable<MonitorTableResult> {
         DeltaSourceOptions sourceOptions) {
         this.deltaLog = deltaLog;
         this.changesFromVersion = initialMonitorSnapshotVersion;
-        this.changesPerBatchCountLimit = sourceOptions.getValue(ACTIONS_PER_MONITOR_BATCH_LIMIT);
+        this.maxDurationMillis = sourceOptions.getValue(UPDATE_CHECK_INTERVAL);
     }
 
     @Override
@@ -63,10 +63,8 @@ public class TableMonitor implements Callable<MonitorTableResult> {
 
         List<ChangesPerVersion> actionsPerVersion = new ArrayList<>();
         long highestSeenVersion = startVersion;
-        int changesPerBatchCount = 0;
 
-        // TODO Discuss With DataBricks about the default value and implement after
-        // long changesPerBatchSize = 0;
+        long endTime = System.currentTimeMillis() + maxDurationMillis;
 
         while (changes.hasNext()) {
             VersionLog versionLog = changes.next();
@@ -76,8 +74,8 @@ public class TableMonitor implements Callable<MonitorTableResult> {
             actionsPerVersion.add(
                 new ChangesPerVersion(versionLog.getVersion(), version.getValue()));
 
-            changesPerBatchCount += version.getValue().size();
-            if (changesPerBatchCount >= changesPerBatchCountLimit) {
+            // TODO write unit test for this
+            if (System.currentTimeMillis() >= endTime) {
                 break;
             }
         }
