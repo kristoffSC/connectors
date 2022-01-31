@@ -17,6 +17,8 @@ import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
+import io.delta.standalone.Snapshot;
+
 public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerator {
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
@@ -61,6 +63,27 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
         return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
             deltaTablePath, initialSnapshotVersion, initialSnapshotVersion, getRemainingSplits(),
             pathsAlreadyProcessed);
+    }
+
+    @Override
+    protected Snapshot getSnapshot(long providedVersion) {
+        // TODO test all those options
+        // Prefer version from checkpoint
+        if (providedVersion != NO_SNAPSHOT_VERSION) {
+            return deltaLog.getSnapshotForVersionAsOf(providedVersion);
+        }
+
+        Long versionAsOf = sourceOptions.getValue(DeltaSourceOptions.VERSION_AS_OF);
+        if (versionAsOf != null) {
+            return deltaLog.getSnapshotForVersionAsOf(providedVersion);
+        }
+
+        Long timestampAsOf = sourceOptions.getValue(DeltaSourceOptions.TIMESTAMP_AS_OF);
+        if (timestampAsOf != null) {
+            return deltaLog.getSnapshotForTimestampAsOf(timestampAsOf);
+        }
+
+        return deltaLog.snapshot();
     }
 
     @Override

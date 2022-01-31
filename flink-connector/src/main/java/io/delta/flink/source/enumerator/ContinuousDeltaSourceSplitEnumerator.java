@@ -26,6 +26,7 @@ import static io.delta.flink.source.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY;
 import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
+import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.actions.RemoveFile;
@@ -108,6 +109,16 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
             deltaTablePath, initialSnapshotVersion, currentSnapshotVersion, getRemainingSplits(),
             pathsAlreadyProcessed);
+    }
+
+    @Override
+    protected Snapshot getSnapshot(long providedVersion) {
+        // Prefer version from checkpoint
+        if (providedVersion != NO_SNAPSHOT_VERSION) {
+            return deltaLog.getSnapshotForVersionAsOf(providedVersion);
+        }
+
+        return deltaLog.snapshot();
     }
 
     @Override
