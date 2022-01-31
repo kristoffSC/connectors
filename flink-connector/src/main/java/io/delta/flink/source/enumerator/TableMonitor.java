@@ -50,12 +50,14 @@ public class TableMonitor implements Callable<MonitorTableResult> {
      * intermediate version.
      */
     private MonitorTableResult monitorForChanges(long startVersion) {
+
         // TODO and add tests, especially for Action filters.
-        long currentTableVersion = deltaLog.update().getVersion();
-        if (currentTableVersion >= startVersion) {
-            Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
+        Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
+        if (changes.hasNext()) {
             return processChanges(startVersion, changes);
         }
+
+        // Case if there were no changes.
         return new MonitorTableResult(startVersion, Collections.emptyList());
     }
 
@@ -75,6 +77,7 @@ public class TableMonitor implements Callable<MonitorTableResult> {
                 new ChangesPerVersion(versionLog.getVersion(), version.getValue()));
 
             // TODO write unit test for this
+            // Check if we still under task interval limit.
             if (System.currentTimeMillis() >= endTime) {
                 break;
             }
