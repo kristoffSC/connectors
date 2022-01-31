@@ -36,8 +36,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         return new BoundedDeltaSourceSplitEnumerator(
             deltaTablePath, fileEnumeratorProvider.create(),
             splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext,
-            sourceOptions
-        );
+            sourceOptions);
     }
 
     @Override
