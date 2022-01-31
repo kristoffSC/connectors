@@ -3,7 +3,6 @@ package io.delta.flink.source;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -35,6 +34,7 @@ public abstract class DeltaSourceSplitEnumerator implements
     SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>> {
 
     protected static final int NO_SNAPSHOT_VERSION = -1;
+
     private static final Logger LOG =
         LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
     protected final Path deltaTablePath;
@@ -49,13 +49,6 @@ public abstract class DeltaSourceSplitEnumerator implements
 
     public DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
-        this(deltaTablePath, splitAssigner, configuration, enumContext, sourceOptions,
-            NO_SNAPSHOT_VERSION, Collections.emptySet());
-    }
-
-    public DeltaSourceSplitEnumerator(
-        Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
         long initialSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
         this.splitAssigner = splitAssigner;
@@ -66,12 +59,13 @@ public abstract class DeltaSourceSplitEnumerator implements
 
         this.deltaLog =
             DeltaLog.forTable(configuration, deltaTablePath.toUri().normalize().toString());
-        this.snapshot = (initialSnapshotVersion == NO_SNAPSHOT_VERSION) ?
-            deltaLog.snapshot() : deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion);
+        this.snapshot = getSnapshot(initialSnapshotVersion);
 
         this.initialSnapshotVersion = snapshot.getVersion();
         this.pathsAlreadyProcessed = new HashSet<>(alreadyDiscoveredPaths);
     }
+
+    protected abstract Snapshot getSnapshot(long providedVersion);
 
     @Override
     public void handleSplitRequest(int subtaskId, @Nullable String requesterHostname) {

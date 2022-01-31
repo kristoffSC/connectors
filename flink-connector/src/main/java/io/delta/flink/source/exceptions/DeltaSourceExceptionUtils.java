@@ -22,4 +22,10 @@ public final class DeltaSourceExceptionUtils {
                 + "at version %d. This is currently not supported. If you'd like to ignore deletes "
                 + "set the option 'ignoreDeletes' to 'true'.", snapshotVersion));
     }
+
+    public static void usedMutualExcludedOptions(String... excludedOption) {
+        throw new DeltaSourceException(
+            String.format("Used Mutual Excluded options for Source definition [%s]",
+                String.join(";", excludedOption)));
+    }
 }

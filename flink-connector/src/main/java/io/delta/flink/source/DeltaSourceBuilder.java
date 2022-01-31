@@ -11,6 +11,7 @@ import io.delta.flink.source.DeltaSourceBuilderSteps.TablePathStep;
 import io.delta.flink.source.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.exceptions.DeltaSourceException;
+import io.delta.flink.source.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.DeltaFileEnumerator;
 import io.delta.flink.source.state.DeltaSourceSplit;
@@ -26,6 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.DeltaSourceOptions.PARQUET_BATCH_SIZE;
 import static io.delta.flink.source.DeltaSourceOptions.PARQUET_CASE_SENSITIVE;
 import static io.delta.flink.source.DeltaSourceOptions.PARQUET_UTC_TIMESTAMP;
+import static io.delta.flink.source.DeltaSourceOptions.TIMESTAMP_AS_OF;
+import static io.delta.flink.source.DeltaSourceOptions.VERSION_AS_OF;
 
 public final class DeltaSourceBuilder {
 
@@ -52,8 +55,9 @@ public final class DeltaSourceBuilder {
         return new BuildSteps();
     }
 
-    private static ParquetColumnarRowInputFormat<DeltaSourceSplit> buildFormat(String[] columnNames,
-        LogicalType[] columnTypes, Configuration configuration, DeltaSourceOptions sourceOptions) {
+    private static ParquetColumnarRowInputFormat<DeltaSourceSplit> buildFormatWithoutPartitions(
+        String[] columnNames, LogicalType[] columnTypes, Configuration configuration,
+        DeltaSourceOptions sourceOptions) {
 
         return new ParquetColumnarRowInputFormat<>(
             configuration,
@@ -112,28 +116,28 @@ public final class DeltaSourceBuilder {
 
         @Override
         public BuildStep option(String optionName, String optionValue) {
-            ConfigOption<?> configOption = validateOption(optionName);
+            ConfigOption<?> configOption = validateOptionName(optionName);
             sourceOptions.addOption(configOption.key(), optionValue);
             return this;
         }
 
         @Override
         public BuildStep option(String optionName, boolean optionValue) {
-            ConfigOption<?> configOption = validateOption(optionName);
+            ConfigOption<?> configOption = validateOptionName(optionName);
             sourceOptions.addOption(configOption.key(), optionValue);
             return this;
         }
 
         @Override
         public BuildStep option(String optionName, int optionValue) {
-            ConfigOption<?> configOption = validateOption(optionName);
+            ConfigOption<?> configOption = validateOptionName(optionName);
             sourceOptions.addOption(configOption.key(), optionValue);
             return this;
         }
 
         @Override
         public BuildStep option(String optionName, long optionValue) {
-            ConfigOption<?> configOption = validateOption(optionName);
+            ConfigOption<?> configOption = validateOptionName(optionName);
             sourceOptions.addOption(configOption.key(), optionValue);
             return this;
         }
@@ -153,14 +157,10 @@ public final class DeltaSourceBuilder {
         @Override
         public DeltaSource<RowData> buildForRowData() {
 
-            ParquetColumnarRowInputFormat<DeltaSourceSplit> format;
-            if (partitions == null || partitions.isEmpty()) {
-                format = buildFormat(columnNames, columnTypes, configuration, sourceOptions);
-            } else {
-                format =
-                    buildPartitionedFormat(columnNames, columnTypes, configuration, partitions,
-                        sourceOptions);
-            }
+            // TODO test this
+            validateOptionExclusions();
+
+            ParquetColumnarRowInputFormat<DeltaSourceSplit> format = buildFormat();
 
             return DeltaSource.forBulkFileFormat(tablePath, format,
                 (isContinuousMode())
@@ -169,11 +169,32 @@ public final class DeltaSourceBuilder {
                 configuration, sourceOptions);
         }
 
+        private ParquetColumnarRowInputFormat<DeltaSourceSplit> buildFormat() {
+            ParquetColumnarRowInputFormat<DeltaSourceSplit> format;
+            if (partitions == null || partitions.isEmpty()) {
+                format = buildFormatWithoutPartitions(columnNames, columnTypes, configuration,
+                    sourceOptions);
+            } else {
+                format =
+                    buildPartitionedFormat(columnNames, columnTypes, configuration, partitions,
+                        sourceOptions);
+            }
+            return format;
+        }
+
+        private void validateOptionExclusions() {
+            if (sourceOptions.hasOption(VERSION_AS_OF.key()) && sourceOptions.hasOption(
+                TIMESTAMP_AS_OF.key())) {
+                DeltaSourceExceptionUtils.usedMutualExcludedOptions(VERSION_AS_OF.key(),
+                    TIMESTAMP_AS_OF.key());
+            }
+        }
+
         private boolean isContinuousMode() {
             return this.continuousMode;
         }
 
-        private ConfigOption<?> validateOption(String optionName) {
+        private ConfigOption<?> validateOptionName(String optionName) {
             ConfigOption<?> option = DeltaSourceOptions.ALLOWED_SOURCE_OPTIONS.get(optionName);
             if (option == null) {
                 throw new DeltaSourceException(
