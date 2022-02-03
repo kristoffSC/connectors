@@ -5,7 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import io.delta.flink.source.SourceUtils;
+import io.delta.flink.source.utils.SourceUtils;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpointSerializer;
 import org.apache.flink.core.fs.Path;

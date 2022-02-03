@@ -1,7 +1,6 @@
-package io.delta.flink.source;
+package io.delta.flink.source.enumerator;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -11,10 +10,12 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-import io.delta.flink.source.enumerator.BoundedDeltaSourceSplitEnumerator;
+import io.delta.flink.source.DeltaSourceOptions;
 import io.delta.flink.source.file.AddFileEnumeratorContext;
 import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.state.DeltaSourceSplit;
+import io.delta.flink.source.utils.SourceUtils;
+import io.delta.flink.source.utils.TransitiveOptional;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.FileSourceSplit;
@@ -23,8 +24,8 @@ import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static io.delta.flink.source.DeltaSourceSplitEnumerator.AssignSplitStatus.NO_MORE_READERS;
-import static io.delta.flink.source.DeltaSourceSplitEnumerator.AssignSplitStatus.NO_MORE_SPLITS;
+import static io.delta.flink.source.enumerator.DeltaSourceSplitEnumerator.AssignSplitStatus.NO_MORE_READERS;
+import static io.delta.flink.source.enumerator.DeltaSourceSplitEnumerator.AssignSplitStatus.NO_MORE_SPLITS;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -50,7 +51,7 @@ public abstract class DeltaSourceSplitEnumerator implements
     public DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
-        long initialSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
+        long checkpointSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
         this.splitAssigner = splitAssigner;
         this.enumContext = enumContext;
         this.readersAwaitingSplit = new LinkedHashMap<>();
@@ -59,13 +60,13 @@ public abstract class DeltaSourceSplitEnumerator implements
 
         this.deltaLog =
             DeltaLog.forTable(configuration, deltaTablePath.toUri().normalize().toString());
-        this.snapshot = getSnapshot(initialSnapshotVersion);
+        this.snapshot = getInitialSnapshot(checkpointSnapshotVersion);
 
         this.initialSnapshotVersion = snapshot.getVersion();
         this.pathsAlreadyProcessed = new HashSet<>(alreadyDiscoveredPaths);
     }
 
-    protected abstract Snapshot getSnapshot(long providedVersion);
+    protected abstract Snapshot getInitialSnapshot(long checkpointSnapshotVersion);
 
     @Override
     public void handleSplitRequest(int subtaskId, @Nullable String requesterHostname) {
@@ -101,6 +102,8 @@ public abstract class DeltaSourceSplitEnumerator implements
         // no resources to close
     }
 
+    protected abstract void handleNoMoreSplits(int subtaskId);
+
     @SuppressWarnings("unchecked")
     protected Collection<DeltaSourceSplit> getRemainingSplits() {
         // The Flink's SplitAssigner interface uses FileSourceSplit
@@ -111,21 +114,20 @@ public abstract class DeltaSourceSplitEnumerator implements
         return (Collection<DeltaSourceSplit>) (Collection<?>) splitAssigner.remainingSplits();
     }
 
+    @SuppressWarnings("unchecked")
     protected void addSplits(List<DeltaSourceSplit> splits) {
         // We are creating new Array to trick Java type check since the signature of this
         // constructor is "? extends E". The downside is that this constructor creates an extra
         // array and copies all elements which is not efficient.
         // However, there is no point for construction our custom Interface and Implementation
         // for splitAssigner just to have needed type.
-        splitAssigner.addSplits(new ArrayList<>(splits));
+        splitAssigner.addSplits((Collection<FileSourceSplit>) (Collection<?>) splits);
     }
 
     protected AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles) {
         String pathString = SourceUtils.pathToString(deltaTablePath);
         return new AddFileEnumeratorContext(pathString, addFiles);
     }
-
-    protected abstract void handleNoMoreSplits(int subtaskId);
 
     protected AssignSplitStatus assignSplits() {
         final Iterator<Entry<Integer, String>> awaitingReader =
@@ -156,6 +158,19 @@ public abstract class DeltaSourceSplitEnumerator implements
         }
 
         return NO_MORE_READERS;
+    }
+
+    protected TransitiveOptional<Snapshot> getSnapshotFromCheckpoint(
+        long checkpointSnapshotVersion) {
+        if (checkpointSnapshotVersion != NO_SNAPSHOT_VERSION) {
+            return TransitiveOptional.ofNullable(
+                deltaLog.getSnapshotForVersionAsOf(checkpointSnapshotVersion));
+        }
+        return TransitiveOptional.empty();
+    }
+
+    protected TransitiveOptional<Snapshot> getHeadSnapshot() {
+        return TransitiveOptional.ofNullable(deltaLog.snapshot());
     }
 
     private void assignSplits(int subtaskId) {
