@@ -51,7 +51,7 @@ public class TableMonitor implements Callable<MonitorTableResult> {
      */
     private MonitorTableResult monitorForChanges(long startVersion) {
 
-        // TODO and add tests, especially for Action filters.
+        // TODO Add tests, especially for Action filters.
         Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
         if (changes.hasNext()) {
             return processChanges(startVersion, changes);

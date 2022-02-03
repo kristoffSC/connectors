@@ -10,15 +10,26 @@ import org.apache.flink.configuration.ConfigOptions;
 
 public class DeltaSourceOptions implements Serializable {
 
+    // TODO Convert all types to Strings.
     public static final ConfigOption<Long> VERSION_AS_OF =
         ConfigOptions.key("versionAsOf").longType().noDefaultValue()
-            .withDescription("Snapshot version to read from.");
+            .withDescription("Snapshot version to read from. Applicable for Bounded Mode only.");
 
     public static final ConfigOption<Long> TIMESTAMP_AS_OF =
         ConfigOptions.key("timestampAsOf").longType().noDefaultValue()
             .withDescription(
                 "Travel back to the latest snapshot that was generated at or before given "
-                    + "timestamp.");
+                    + "timestamp. Applicable for Bounded Mode only.");
+
+    public static final ConfigOption<String> STARTING_VERSION =
+        ConfigOptions.key("startingVersion").stringType().noDefaultValue()
+            .withDescription(
+                "Snapshot version to read only changes from. Applicable for Continuous Mode only.");
+
+    public static final ConfigOption<String> STARTING_TIMESTAMP =
+        ConfigOptions.key("startingTimestamp").stringType().defaultValue("latest")
+            .withDescription(
+                "Timestamp to to read only changes from. Applicable for Continuous Mode only.");
 
     public static final ConfigOption<Integer> UPDATE_CHECK_INTERVAL =
         ConfigOptions.key("updateCheckIntervalMillis").intType().defaultValue(5000)
@@ -42,28 +53,19 @@ public class DeltaSourceOptions implements Serializable {
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
 
-    public static final ConfigOption<Boolean> PARQUET_UTC_TIMESTAMP =
-        ConfigOptions.key("parquetUtcTimestamp").booleanType().defaultValue(true)
-            .withDescription("Denotes whether timestamps should be represented as SQL UTC "
-                + "timestamps.");
-
-    public static final ConfigOption<Boolean> PARQUET_CASE_SENSITIVE =
-        ConfigOptions.key("parquetCaseSensitive").booleanType().defaultValue(true)
-            .withDescription("Denotes whether timestamps should be represented as SQL UTC "
-                + "timestamps.");
-
     public static final Map<String, ConfigOption<?>> ALLOWED_SOURCE_OPTIONS = new HashMap<>();
 
+    // TODO test all allowed options
     static {
         ALLOWED_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         ALLOWED_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
+        ALLOWED_SOURCE_OPTIONS.put(STARTING_VERSION.key(), STARTING_VERSION);
+        ALLOWED_SOURCE_OPTIONS.put(STARTING_TIMESTAMP.key(), STARTING_TIMESTAMP);
         ALLOWED_SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
         ALLOWED_SOURCE_OPTIONS.put(UPDATE_CHECK_INITIAL_DELAY.key(), UPDATE_CHECK_INITIAL_DELAY);
         ALLOWED_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         ALLOWED_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
         ALLOWED_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
-        ALLOWED_SOURCE_OPTIONS.put(PARQUET_UTC_TIMESTAMP.key(), PARQUET_UTC_TIMESTAMP);
-        ALLOWED_SOURCE_OPTIONS.put(PARQUET_CASE_SENSITIVE.key(), PARQUET_CASE_SENSITIVE);
     }
 
     private final Map<String, Object> usedSourceOptions = new HashMap<>();
@@ -84,8 +86,8 @@ public class DeltaSourceOptions implements Serializable {
         return addOptionObject(name, value);
     }
 
-    public boolean hasOption(String name) {
-        return this.usedSourceOptions.containsKey(name);
+    public boolean hasOption(ConfigOption<?> option) {
+        return this.usedSourceOptions.containsKey(option.key());
     }
 
     @SuppressWarnings("unchecked")

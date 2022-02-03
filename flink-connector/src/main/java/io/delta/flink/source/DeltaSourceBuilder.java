@@ -25,8 +25,8 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.DeltaSourceOptions.PARQUET_BATCH_SIZE;
-import static io.delta.flink.source.DeltaSourceOptions.PARQUET_CASE_SENSITIVE;
-import static io.delta.flink.source.DeltaSourceOptions.PARQUET_UTC_TIMESTAMP;
+import static io.delta.flink.source.DeltaSourceOptions.STARTING_TIMESTAMP;
+import static io.delta.flink.source.DeltaSourceOptions.STARTING_VERSION;
 import static io.delta.flink.source.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.DeltaSourceOptions.VERSION_AS_OF;
 
@@ -47,6 +47,10 @@ public final class DeltaSourceBuilder {
         new ContinuousSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
             DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
 
+    private static final boolean PARQUET_UTC_TIMESTAMP = true;
+
+    private static final boolean PARQUET_CASE_SENSITIVE = true;
+
     private DeltaSourceBuilder() {
 
     }
@@ -63,8 +67,8 @@ public final class DeltaSourceBuilder {
             configuration,
             RowType.of(columnTypes, columnNames),
             sourceOptions.getValue(PARQUET_BATCH_SIZE),
-            sourceOptions.getValue(PARQUET_UTC_TIMESTAMP),
-            sourceOptions.getValue(PARQUET_CASE_SENSITIVE));
+            PARQUET_UTC_TIMESTAMP,
+            PARQUET_CASE_SENSITIVE);
     }
 
     private static ParquetColumnarRowInputFormat<DeltaSourceSplit> buildPartitionedFormat(
@@ -76,8 +80,8 @@ public final class DeltaSourceBuilder {
             RowType.of(columnTypes, columnNames),
             partitionKeys, new DeltaPartitionFieldExtractor<>(),
             sourceOptions.getValue(PARQUET_BATCH_SIZE),
-            sourceOptions.getValue(PARQUET_UTC_TIMESTAMP),
-            sourceOptions.getValue(PARQUET_CASE_SENSITIVE));
+            PARQUET_UTC_TIMESTAMP,
+            PARQUET_CASE_SENSITIVE);
     }
 
     private static class BuildSteps implements MandatorySteps, BuildStep {
@@ -160,6 +164,9 @@ public final class DeltaSourceBuilder {
             // TODO test this
             validateOptionExclusions();
 
+            // TODO add option value validation. Check for null, empty values, numbers for
+            //  "string" like values and string for numeric options.
+
             ParquetColumnarRowInputFormat<DeltaSourceSplit> format = buildFormat();
 
             return DeltaSource.forBulkFileFormat(tablePath, format,
@@ -183,10 +190,24 @@ public final class DeltaSourceBuilder {
         }
 
         private void validateOptionExclusions() {
-            if (sourceOptions.hasOption(VERSION_AS_OF.key()) && sourceOptions.hasOption(
-                TIMESTAMP_AS_OF.key())) {
-                DeltaSourceExceptionUtils.usedMutualExcludedOptions(VERSION_AS_OF.key(),
-                    TIMESTAMP_AS_OF.key());
+
+            // mutually exclusive check for VERSION_AS_OF and TIMESTAMP_AS_OF in Bounded mode.
+            if (sourceOptions.hasOption(VERSION_AS_OF) && sourceOptions.hasOption(
+                TIMESTAMP_AS_OF)) {
+                if (!continuousMode) {
+                    DeltaSourceExceptionUtils.usedMutualExcludedOptions(VERSION_AS_OF.key(),
+                        TIMESTAMP_AS_OF.key());
+                }
+            }
+
+            // mutually exclusive check for STARTING_VERSION and STARTING_TIMESTAMP in Streaming
+            // mode.
+            if (sourceOptions.hasOption(STARTING_TIMESTAMP) && sourceOptions.hasOption(
+                STARTING_VERSION)) {
+                if (continuousMode) {
+                    DeltaSourceExceptionUtils.usedMutualExcludedOptions(STARTING_TIMESTAMP.key(),
+                        STARTING_VERSION.key());
+                }
             }
         }
 

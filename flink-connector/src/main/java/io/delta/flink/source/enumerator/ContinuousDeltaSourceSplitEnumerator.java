@@ -1,12 +1,12 @@
 package io.delta.flink.source.enumerator;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import io.delta.flink.source.DeltaSourceOptions;
-import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.enumerator.MonitorTableResult.ChangesPerVersion;
 import io.delta.flink.source.exceptions.DeltaSourceException;
 import io.delta.flink.source.exceptions.DeltaSourceExceptionUtils;
@@ -15,6 +15,7 @@ import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.file.AddFileEnumeratorContext;
 import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.state.DeltaSourceSplit;
+import io.delta.flink.source.utils.TransitiveOptional;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -23,8 +24,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static io.delta.flink.source.DeltaSourceOptions.IGNORE_CHANGES;
 import static io.delta.flink.source.DeltaSourceOptions.IGNORE_DELETES;
+import static io.delta.flink.source.DeltaSourceOptions.STARTING_TIMESTAMP;
+import static io.delta.flink.source.DeltaSourceOptions.STARTING_VERSION;
 import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY;
 import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
+
 
 import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.Action;
@@ -81,17 +85,8 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
-
-        // get data for start version only if we did not already process is,
-        // hence if currentSnapshotVersion is == initialSnapshotVersion;
-        if (this.initialSnapshotVersion == this.currentSnapshotVersion) {
-            try {
-                LOG.info("Getting data for start version - {}", snapshot.getVersion());
-                List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
-                addSplits(splits);
-            } catch (Exception e) {
-                throw new DeltaSourceException(e);
-            }
+        if (isNotChangeStreamOnly()) {
+            readTableInitialContent();
         }
 
         // TODO add tests to check split creation//assignment granularity is in scope of VersionLog.
@@ -112,13 +107,42 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     }
 
     @Override
-    protected Snapshot getSnapshot(long providedVersion) {
-        // Prefer version from checkpoint
-        if (providedVersion != NO_SNAPSHOT_VERSION) {
-            return deltaLog.getSnapshotForVersionAsOf(providedVersion);
-        }
+    protected Snapshot getInitialSnapshot(long checkpointSnapshotVersion) {
 
-        return deltaLog.snapshot();
+        // TODO test all those options
+        // Prefer version from checkpoint over other ones.
+        return getSnapshotFromCheckpoint(checkpointSnapshotVersion)
+            .or(this::getSnapshotFromStartingVersionOption)
+            .or(this::getSnapshotFromStartingTimestampOption)
+            .or(this::getHeadSnapshot)
+            .get();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromStartingVersionOption() {
+        if (isChangeStreamOnly()) {
+            String startingVersionValue = sourceOptions.getValue(STARTING_VERSION);
+            if (startingVersionValue != null) {
+                if (startingVersionValue.equalsIgnoreCase(
+                    STARTING_VERSION.defaultValue())) {
+                    return TransitiveOptional.ofNullable(deltaLog.snapshot());
+                } else {
+                    return TransitiveOptional.ofNullable(deltaLog.getSnapshotForVersionAsOf(
+                        Long.parseLong(startingVersionValue)));
+                }
+            }
+        }
+        return TransitiveOptional.empty();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromStartingTimestampOption() {
+        if (isChangeStreamOnly()) {
+            String startingTimestampValue = sourceOptions.getValue(STARTING_TIMESTAMP);
+            if (startingTimestampValue != null) {
+                return TransitiveOptional.ofNullable(deltaLog.getSnapshotForTimestampAsOf(
+                    Timestamp.valueOf(startingTimestampValue).getTime()));
+            }
+        }
+        return TransitiveOptional.empty();
     }
 
     @Override
@@ -195,5 +219,30 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
                 DeltaSourceExceptionUtils.deltaSourceIgnoreDeleteError(version);
             }
         }
+    }
+
+    private void readTableInitialContent() {
+        // get data for start version only if we did not already process is,
+        // hence if currentSnapshotVersion is == initialSnapshotVersion;
+        // So do not read the initial data if we recovered from checkpoint.
+        if (this.initialSnapshotVersion == this.currentSnapshotVersion) {
+            try {
+                LOG.info("Getting data for start version - {}", snapshot.getVersion());
+                List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
+                addSplits(splits);
+            } catch (Exception e) {
+                throw new DeltaSourceException(e);
+            }
+        }
+    }
+
+    private boolean isChangeStreamOnly() {
+        return
+            sourceOptions.hasOption(STARTING_VERSION) ||
+                sourceOptions.hasOption(STARTING_TIMESTAMP);
+    }
+
+    private boolean isNotChangeStreamOnly() {
+        return !isChangeStreamOnly();
     }
 }

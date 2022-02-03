@@ -5,13 +5,13 @@ import java.util.Collections;
 import java.util.List;
 
 import io.delta.flink.source.DeltaSourceOptions;
-import io.delta.flink.source.DeltaSourceSplitEnumerator;
 import io.delta.flink.source.exceptions.DeltaSourceException;
 import io.delta.flink.source.file.AddFileEnumerator;
 import io.delta.flink.source.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.file.AddFileEnumeratorContext;
 import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.state.DeltaSourceSplit;
+import io.delta.flink.source.utils.TransitiveOptional;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -66,24 +66,32 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     }
 
     @Override
-    protected Snapshot getSnapshot(long providedVersion) {
-        // TODO test all those options
-        // Prefer version from checkpoint
-        if (providedVersion != NO_SNAPSHOT_VERSION) {
-            return deltaLog.getSnapshotForVersionAsOf(providedVersion);
-        }
+    protected Snapshot getInitialSnapshot(long checkpointSnapshotVersion) {
 
+        // TODO test all those options
+        // Prefer version from checkpoint over other ones.
+        return getSnapshotFromCheckpoint(checkpointSnapshotVersion)
+            .or(this::getSnapshotFromVersionAsOfOption)
+            .or(this::getSnapshotFromTimestampAsOfOption)
+            .or(this::getHeadSnapshot)
+            .get();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromVersionAsOfOption() {
         Long versionAsOf = sourceOptions.getValue(DeltaSourceOptions.VERSION_AS_OF);
         if (versionAsOf != null) {
-            return deltaLog.getSnapshotForVersionAsOf(providedVersion);
+            return TransitiveOptional.ofNullable(deltaLog.getSnapshotForVersionAsOf(versionAsOf));
         }
+        return TransitiveOptional.empty();
+    }
 
+    private TransitiveOptional<Snapshot> getSnapshotFromTimestampAsOfOption() {
         Long timestampAsOf = sourceOptions.getValue(DeltaSourceOptions.TIMESTAMP_AS_OF);
         if (timestampAsOf != null) {
-            return deltaLog.getSnapshotForTimestampAsOf(timestampAsOf);
+            return TransitiveOptional.ofNullable(
+                deltaLog.getSnapshotForTimestampAsOf(timestampAsOf));
         }
-
-        return deltaLog.snapshot();
+        return TransitiveOptional.empty();
     }
 
     @Override
