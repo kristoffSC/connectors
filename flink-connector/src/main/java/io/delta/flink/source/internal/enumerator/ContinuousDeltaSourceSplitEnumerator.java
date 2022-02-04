@@ -38,7 +38,7 @@ import io.delta.standalone.actions.RemoveFile;
 public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerator {
 
     private static final Logger LOG =
-        LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
+        LoggerFactory.getLogger(ContinuousDeltaSourceSplitEnumerator.class);
 
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
