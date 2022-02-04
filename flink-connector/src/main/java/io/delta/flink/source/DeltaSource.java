@@ -1,10 +1,11 @@
 package io.delta.flink.source;
 
-import io.delta.flink.source.enumerator.SplitEnumeratorProvider;
-import io.delta.flink.source.state.DeltaEnumeratorStateCheckpoint;
-import io.delta.flink.source.state.DeltaPendingSplitsCheckpointSerializer;
-import io.delta.flink.source.state.DeltaSourceSplit;
-import io.delta.flink.source.state.DeltaSourceSplitSerializer;
+import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.internal.state.DeltaPendingSplitsCheckpointSerializer;
+import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import io.delta.flink.source.internal.state.DeltaSourceSplitSerializer;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
