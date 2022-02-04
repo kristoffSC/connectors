@@ -2,7 +2,7 @@ package io.delta.flink.source.internal;
 
 import java.util.Map;
 
-import io.delta.flink.source.internal.exceptions.DeltaSourceException;
+import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.table.filesystem.PartitionFieldExtractor;
 import org.apache.flink.table.filesystem.RowPartitionComputer;
@@ -23,14 +23,11 @@ public class DeltaPartitionFieldExtractor<SplitT extends DeltaSourceSplit>
 
     private void sanityCheck(String fieldName, Map<String, String> partitionValues) {
         if (tableHasNoPartitions(partitionValues)) {
-            throw new DeltaSourceException(
-                "Attempt to get a value for partition column from unpartitioned Delta Table. "
-                    + "Column name" + fieldName);
+            DeltaSourceExceptionUtils.notPartitionedTableException(fieldName);
         }
 
         if (isNotAPartitionColumn(fieldName, partitionValues)) {
-            throw new DeltaSourceException(
-                "Cannot find the partition value in Delta MetaData: " + fieldName);
+            DeltaSourceExceptionUtils.missingPartitionValueException(fieldName);
         }
     }
 

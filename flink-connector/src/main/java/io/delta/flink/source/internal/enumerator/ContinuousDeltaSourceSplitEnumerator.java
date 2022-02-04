@@ -8,7 +8,6 @@ import java.util.List;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.MonitorTableResult.ChangesPerVersion;
-import io.delta.flink.source.internal.exceptions.DeltaSourceException;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
@@ -156,14 +155,15 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             return fileEnumerator
                 .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
         } catch (Exception e) {
-            throw new DeltaSourceException("Exception wile preparing Splits.", e);
+            throw DeltaSourceExceptionUtils.generalSourceException(
+                "Exception wile preparing Splits.", e);
         }
     }
 
     private void processDiscoveredVersions(MonitorTableResult monitorTableResult, Throwable error) {
         if (error != null) {
             LOG.error("Failed to enumerate files", error);
-            throw new DeltaSourceException(error);
+            DeltaSourceExceptionUtils.generalSourceException(error);
         }
 
         this.currentSnapshotVersion = monitorTableResult.getHighestSeenVersion();
@@ -214,9 +214,9 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     private void actionsSanityCheck(boolean seenFileAdd, boolean seenRemovedFile, long version) {
         if (seenRemovedFile) {
             if (seenFileAdd && !ignoreChanges) {
-                DeltaSourceExceptionUtils.deltaSourceIgnoreChangesError(version);
+                DeltaSourceExceptionUtils.deltaSourceIgnoreChangesException(version);
             } else if (!seenFileAdd && !ignoreDeletes) {
-                DeltaSourceExceptionUtils.deltaSourceIgnoreDeleteError(version);
+                DeltaSourceExceptionUtils.deltaSourceIgnoreDeleteException(version);
             }
         }
     }
@@ -231,7 +231,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
                 List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
                 addSplits(splits);
             } catch (Exception e) {
-                throw new DeltaSourceException(e);
+                DeltaSourceExceptionUtils.generalSourceException(e);
             }
         }
     }

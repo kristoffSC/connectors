@@ -12,7 +12,6 @@ import io.delta.flink.source.internal.DeltaPartitionFieldExtractor;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
-import io.delta.flink.source.internal.exceptions.DeltaSourceException;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.DeltaFileEnumerator;
@@ -241,7 +240,8 @@ public final class DeltaSourceBuilder {
             if (sourceOptions.hasOption(VERSION_AS_OF) && sourceOptions.hasOption(
                 TIMESTAMP_AS_OF)) {
                 if (!continuousMode) {
-                    DeltaSourceExceptionUtils.usedMutualExcludedOptions(VERSION_AS_OF.key(),
+                    DeltaSourceExceptionUtils.usedMutualExcludedOptionsException(
+                        VERSION_AS_OF.key(),
                         TIMESTAMP_AS_OF.key());
                 }
             }
@@ -251,7 +251,8 @@ public final class DeltaSourceBuilder {
             if (sourceOptions.hasOption(STARTING_TIMESTAMP) && sourceOptions.hasOption(
                 STARTING_VERSION)) {
                 if (continuousMode) {
-                    DeltaSourceExceptionUtils.usedMutualExcludedOptions(STARTING_TIMESTAMP.key(),
+                    DeltaSourceExceptionUtils.usedMutualExcludedOptionsException(
+                        STARTING_TIMESTAMP.key(),
                         STARTING_VERSION.key());
                 }
             }
@@ -264,8 +265,7 @@ public final class DeltaSourceBuilder {
         private ConfigOption<?> validateOptionName(String optionName) {
             ConfigOption<?> option = DeltaSourceOptions.ALLOWED_SOURCE_OPTIONS.get(optionName);
             if (option == null) {
-                throw new DeltaSourceException(
-                    "Invalid option [" + optionName + "] used for Delta Source Connector.");
+                DeltaSourceExceptionUtils.invalidOptionNameException(optionName);
             }
             return option;
         }
