@@ -37,7 +37,8 @@ public abstract class DeltaSourceSplitEnumerator implements
     protected static final int NO_SNAPSHOT_VERSION = -1;
 
     private static final Logger LOG =
-        LoggerFactory.getLogger(BoundedDeltaSourceSplitEnumerator.class);
+        LoggerFactory.getLogger(DeltaSourceSplitEnumerator.class);
+
     protected final Path deltaTablePath;
     protected final FileSplitAssigner splitAssigner;
     protected final Snapshot snapshot;
