@@ -24,10 +24,12 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
+import static io.delta.flink.source.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.DeltaSourceOptions.PARQUET_BATCH_SIZE;
 import static io.delta.flink.source.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.DeltaSourceOptions.STARTING_VERSION;
 import static io.delta.flink.source.DeltaSourceOptions.TIMESTAMP_AS_OF;
+import static io.delta.flink.source.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 import static io.delta.flink.source.DeltaSourceOptions.VERSION_AS_OF;
 
 public final class DeltaSourceBuilder {
@@ -115,6 +117,48 @@ public final class DeltaSourceBuilder {
         @Override
         public BuildStep hadoopConfiguration(Configuration configuration) {
             this.configuration = configuration;
+            return this;
+        }
+
+        @Override
+        public BuildStep versionAsOf(long snapshotVersion) {
+            sourceOptions.addOption(VERSION_AS_OF.key(), snapshotVersion);
+            return this;
+        }
+
+        @Override
+        public BuildStep timestampAsOf(long snapshotTimestamp) {
+            sourceOptions.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
+            return this;
+        }
+
+        @Override
+        public BuildStep startingVersion(long startingVersion) {
+            sourceOptions.addOption(STARTING_VERSION.key(), startingVersion);
+            return this;
+        }
+
+        @Override
+        public BuildStep startingTimestamp(long startingTimestamp) {
+            sourceOptions.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
+            return this;
+        }
+
+        @Override
+        public BuildStep updateCheckIntervalMillis(long updateCheckInterval) {
+            sourceOptions.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
+            return this;
+        }
+
+        @Override
+        public BuildStep ignoreDeletes(long ignoreDeletes) {
+            sourceOptions.addOption(IGNORE_DELETES.key(), ignoreDeletes);
+            return this;
+        }
+
+        @Override
+        public BuildStep ignoreChanges(long ignoreChanges) {
+            sourceOptions.addOption(IGNORE_DELETES.key(), ignoreChanges);
             return this;
         }
 

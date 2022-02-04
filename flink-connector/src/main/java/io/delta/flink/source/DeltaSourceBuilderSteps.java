@@ -36,6 +36,25 @@ public interface DeltaSourceBuilderSteps {
 
     interface BuildStep {
 
+        // -------------- Public Options --------------
+        BuildStep versionAsOf(long snapshotVersion);
+
+        BuildStep timestampAsOf(long snapshotTimestamp);
+
+        BuildStep startingVersion(long startingVersion);
+
+        BuildStep startingTimestamp(long startingTimestamp);
+
+        BuildStep updateCheckIntervalMillis(long updateCheckInterval);
+
+        BuildStep ignoreDeletes(long ignoreDeletes);
+
+        BuildStep ignoreChanges(long ignoreChanges);
+        // --------------------------------------------
+
+
+        // TODO Revisit this
+        // -------------- Non Public Options ----------
         BuildStep option(String optionName, String optionValue);
 
         BuildStep option(String optionName, boolean optionValue);
@@ -43,6 +62,7 @@ public interface DeltaSourceBuilderSteps {
         BuildStep option(String optionName, int optionValue);
 
         BuildStep option(String optionName, long optionValue);
+        // --------------------------------------------
 
         BuildStep partitions(List<String> partitions);
 
