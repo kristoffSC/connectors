@@ -53,6 +53,7 @@ public abstract class DeltaSourceSplitEnumerator implements
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
         long checkpointSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
+
         this.splitAssigner = splitAssigner;
         this.enumContext = enumContext;
         this.readersAwaitingSplit = new LinkedHashMap<>();
