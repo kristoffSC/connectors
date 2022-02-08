@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
+import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.annotation.VisibleForTesting;
@@ -15,12 +16,45 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.connector.file.src.impl.FileSourceReader;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
 import org.apache.flink.formats.parquet.utils.SerializableConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
+import io.delta.standalone.DeltaLog;
+import io.delta.standalone.actions.AddFile;
+
+/**
+ * A unified data source that reads Delta Table - both in batch and in streaming mode.
+ *
+ * <p>This source supports all (distributed) file systems and object stores that can be accessed
+ * via the Flink's {@link FileSystem} class.
+ * <p></p>
+ * <h2>Batch and Streaming</h2>
+ *
+ * <p>This source supports both bounded/batch and continuous/streaming modes. For the
+ * bounded/batch case, the Delta Source processes all {@link AddFile} from Delta Table Snapshot. In
+ * the continuous/streaming case, the source periodically checks the Delta Table for any appending
+ * changes and reads them.
+ * <p></p>
+ * <h2>Format Types</h2>
+ *
+ * <p>The reading of each file happens through file readers defined by <i>file format</i>. These
+ * define the parsing logic for the contents of the underlying Parquet files.
+ *
+ * <p>A {@link BulkFormat} reads batches of records from a file at a time.
+ *
+ * <p></p>
+ * <h2>Discovering / Enumerating Files</h2>
+ * <p>The way that the source lists the files to be processes is defined by the {@link
+ * AddFileEnumerator}. The {@code AddFileEnumerator} is responsible to select the relevant {@link
+ * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
+ * read in parallel.
+ *
+ * @param <T> The type of the events/records produced by this source.
+ */
 public class DeltaSource<T>
     implements Source<T, DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {
@@ -30,14 +64,29 @@ public class DeltaSource<T>
     // ---------------------------------------------------------------------------------------------
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Path to Delta Table from which this {@code DeltaSource} should read.
+     */
     private final Path tablePath;
 
+    /**
+     * A reader format used for this Source.
+     */
     private final BulkFormat<T, DeltaSourceSplit> readerFormat;
 
+    /**
+     * Factory for {@link SplitEnumerator}
+     */
     private final SplitEnumeratorProvider splitEnumeratorProvider;
 
+    /**
+     * A Flink Serialization Wrapper around Hadoop Configuration needed for {@link DeltaLog}
+     */
     private final SerializableConfiguration serializableConf;
 
+    /**
+     * Source Options used for {@code DeltaSource} creation.
+     */
     private final DeltaSourceOptions sourceOptions;
 
     // ---------------------------------------------------------------------------------------------
@@ -56,8 +105,6 @@ public class DeltaSource<T>
     /**
      * Builds a new {@code DeltaSource} using a {@link BulkFormat} to read batches of records from
      * files.
-     *
-     * <p>Examples for bulk readers are compressed and vectorized formats such as ORC or Parquet.
      */
     public static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
         BulkFormat<T, DeltaSourceSplit> reader, SplitEnumeratorProvider splitEnumeratorProvider,

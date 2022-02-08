@@ -7,18 +7,30 @@ import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
-import org.apache.flink.connector.file.src.assigners.FileSplitAssigner.Provider;
+import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
+/**
+ * An implementation of {@link SplitEnumeratorProvider} that creates a {@code
+ * BoundedSplitEnumerator} used for {@link Boundedness#BOUNDED} mode.
+ */
 public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
-    private final Provider splitAssignerProvider;
+    private final FileSplitAssigner.Provider splitAssignerProvider;
 
     private final AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider;
 
+    /**
+     * @param splitAssignerProvider  an instance of {@link FileSplitAssigner.Provider} that will be
+     *                               used for building a {@code BoundedSplitEnumerator} by factory
+     *                               methods.
+     * @param fileEnumeratorProvider an instance of {@link AddFileEnumerator.Provider} that will be
+     *                               used for building a {@code BoundedSplitEnumerator} by factory
+     *                               methods.
+     */
     public BoundedSplitEnumeratorProvider(
-        Provider splitAssignerProvider,
+        FileSplitAssigner.Provider splitAssignerProvider,
         AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider) {
         this.splitAssignerProvider = splitAssignerProvider;
         this.fileEnumeratorProvider = fileEnumeratorProvider;
