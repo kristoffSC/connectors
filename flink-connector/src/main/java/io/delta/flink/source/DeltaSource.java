@@ -2,7 +2,6 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
-import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaPendingSplitsCheckpointSerializer;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -51,18 +50,15 @@ import io.delta.standalone.actions.AddFile;
  *
  * <p></p>
  * <h2>Discovering / Enumerating Files</h2>
- * <p>The way that the source lists the files to be processes is defined by the {@link
+ * <p>The way that the source lists the files to be processes is defined by the {@code
  * AddFileEnumerator}. The {@code AddFileEnumerator} is responsible to select the relevant {@link
  * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
  * read in parallel.
  *
  * @param <T> The type of the events/records produced by this source.
  */
-public class DeltaSource<T>
-    implements
-    Source<T, AbstractDeltaSourceSplit,
-        AbstractDeltaEnumeratorStateCheckpoint<AbstractDeltaSourceSplit>>,
-    ResultTypeQueryable<T> {
+public final class DeltaSource<T> implements Source<T, AbstractDeltaSourceSplit,
+        AbstractDeltaEnumeratorStateCheckpoint<AbstractDeltaSourceSplit>>, ResultTypeQueryable<T> {
 
     // ---------------------------------------------------------------------------------------------
     // ALL NON TRANSIENT FIELDS HAVE TO BE SERIALIZABLE
@@ -81,7 +77,7 @@ public class DeltaSource<T>
 
     // ---------------------------------------------------------------------------------------------
 
-    protected DeltaSource(Path tablePath, BulkFormat<T, AbstractDeltaSourceSplit> readerFormat,
+    DeltaSource(Path tablePath, BulkFormat<T, AbstractDeltaSourceSplit> readerFormat,
         SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration,
         DeltaSourceOptions sourceOptions) {
 
@@ -98,7 +94,7 @@ public class DeltaSource<T>
      *
      * <p>Examples for bulk readers are compressed and vectorized formats such as ORC or Parquet.
      */
-    protected static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
+    static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
         BulkFormat<T, AbstractDeltaSourceSplit> reader,
         SplitEnumeratorProvider splitEnumeratorProvider,
         Configuration configuration, DeltaSourceOptions sourceOptions) {
