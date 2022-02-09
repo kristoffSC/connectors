@@ -17,7 +17,7 @@ import org.apache.flink.core.fs.Path;
  * length is the file size.
  *
  * <p>The split may furthermore have a "reader position", which is the checkpointed position from a
- * reader previously reading this split. This position is typically null when the split is assigned
+ * reader previously reading this split. This position is null when the split is assigned
  * from the enumerator to the readers, and is non-null when the reader's checkpoint their state in a
  * file source split.
  *
@@ -40,7 +40,8 @@ public class DeltaSourceSplit extends FileSourceSplit {
      *                        for underlying Parquet File.
      * @param id              The unique ID of this source split.
      * @param filePath        The path to the Parquet file that this splits represents.
-     * @param offset          The start (inclusive) of the split's rage in the Parquet file.
+     * @param offset          The start (inclusive) of the split's rage in the Parquet file, in
+     *                        bytes.
      * @param length          The number of bytes in the split (starting from the offset)
      * @param hostnames       The hostnames of the nodes storing the split's file range.
      */

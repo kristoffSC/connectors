@@ -3,6 +3,8 @@ package io.delta.flink.source.internal.state;
 import java.util.Collection;
 
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
+import org.apache.flink.api.connector.source.Boundedness;
+import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.core.fs.Path;
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -10,10 +12,15 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * A checkpoint of the current state of
- * {@link org.apache.flink.api.connector.source.SplitEnumerator}.
+ * {@link SplitEnumerator}.
  *
  * <p>It contains all necessary information need by SplitEnumerator to resume work after
- * checkpoint recovery including currently pending splits that are not yet assigned.</p>
+ * checkpoint recovery including currently pending splits that are not yet assigned and
+ * resume changes discovery task on Delta Table in {@link Boundedness#CONTINUOUS_UNBOUNDED} mode</p>
+ *
+ * <p>During checkpoint, Flink will serialize this object and persist it in checkpoint location.
+ * During the recovery, Flink will deserialize this object from Checkpoint/Savepoint
+ * and will use it to recreate {@code SplitEnumerator}.
  */
 public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
 

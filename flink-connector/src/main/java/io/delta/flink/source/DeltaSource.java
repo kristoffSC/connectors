@@ -2,7 +2,6 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
-import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.annotation.VisibleForTesting;
@@ -31,31 +30,33 @@ import io.delta.standalone.actions.AddFile;
  *
  * <p>This source supports all (distributed) file systems and object stores that can be accessed
  * via the Flink's {@link FileSystem} class.
- * <p></p>
- * <h2>Batch and Streaming</h2>
+ *
+ * </p>
+ *
+ * @param <T> The type of the events/records produced by this source.
+ * @implNote <h2>Batch and Streaming</h2>
  *
  * <p>This source supports both bounded/batch and continuous/streaming modes. For the
  * bounded/batch case, the Delta Source processes all {@link AddFile} from Delta Table Snapshot. In
  * the continuous/streaming case, the source periodically checks the Delta Table for any appending
  * changes and reads them.
- * <p></p>
+ *
  * <h2>Format Types</h2>
  *
  * <p>The reading of each file happens through file readers defined by <i>file format</i>. These
  * define the parsing logic for the contents of the underlying Parquet files.
  *
  * <p>A {@link BulkFormat} reads batches of records from a file at a time.
- *
- * <p></p>
- * <h2>Discovering / Enumerating Files</h2>
- * <p>The way that the source lists the files to be processes is defined by the {@link
- * AddFileEnumerator}. The {@code AddFileEnumerator} is responsible to select the relevant {@link
+ * @implNote <h2>Discovering / Enumerating Files</h2>
+ * <p>The way that the source lists the files to be processes is defined by the {@code
+ * AddFileEnumerator}. The {@code AddFileEnumerator} is responsible to select the relevant {@code
  * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
  * read in parallel.
- *
- * @param <T> The type of the events/records produced by this source.
  */
-public class DeltaSource<T>
+// TODO: include basic bounded + continuous creation example (when DeltaSourceBuilder.java API is
+//  finalized).
+// TODO: Add Marker interfaces for internal classes to hide them in public methods.
+public final class DeltaSource<T>
     implements Source<T, DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {
 
@@ -91,7 +92,7 @@ public class DeltaSource<T>
 
     // ---------------------------------------------------------------------------------------------
 
-    protected DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
+    DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
         SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration,
         DeltaSourceOptions sourceOptions) {
 
@@ -106,7 +107,7 @@ public class DeltaSource<T>
      * Builds a new {@code DeltaSource} using a {@link BulkFormat} to read batches of records from
      * files.
      */
-    public static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
+    static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
         BulkFormat<T, DeltaSourceSplit> reader, SplitEnumeratorProvider splitEnumeratorProvider,
         Configuration configuration, DeltaSourceOptions sourceOptions) {
         checkNotNull(deltaTablePath, "deltaTablePath");
