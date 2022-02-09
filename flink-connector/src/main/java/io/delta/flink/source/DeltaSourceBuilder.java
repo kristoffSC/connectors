@@ -16,6 +16,7 @@ import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.DeltaFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import io.delta.flink.source.state.AbstractDeltaSourceSplit;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
@@ -214,7 +215,12 @@ public final class DeltaSourceBuilder {
 
             ParquetColumnarRowInputFormat<DeltaSourceSplit> format = buildFormat();
 
-            return DeltaSource.forBulkFileFormat(tablePath, format,
+            @SuppressWarnings("unchecked")
+            ParquetColumnarRowInputFormat<AbstractDeltaSourceSplit> formatCast =
+                (ParquetColumnarRowInputFormat<AbstractDeltaSourceSplit>)
+                    (ParquetColumnarRowInputFormat<?>) format;
+
+            return DeltaSource.forBulkFileFormat(tablePath, formatCast,
                 (isContinuousMode())
                     ? DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER
                     : DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER,

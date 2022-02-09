@@ -4,12 +4,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.flink.connector.file.src.FileSourceSplit;
+import io.delta.flink.source.state.AbstractDeltaSourceSplit;
 import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.StringUtils;
 
-public class DeltaSourceSplit extends FileSourceSplit {
+public class DeltaSourceSplit extends AbstractDeltaSourceSplit {
 
     private static final String[] NO_HOSTS = StringUtils.EMPTY_STRING_ARRAY;
 
