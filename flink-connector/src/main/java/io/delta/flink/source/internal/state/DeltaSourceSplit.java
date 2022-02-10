@@ -8,6 +8,7 @@ import org.apache.flink.api.connector.source.SourceSplit;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.util.StringUtils;
 
 /**
  * A {@link SourceSplit} that represents a Parquet file, or a region of a file.
@@ -17,15 +18,17 @@ import org.apache.flink.core.fs.Path;
  * length is the file size.
  *
  * <p>The split may furthermore have a "reader position", which is the checkpointed position from a
- * reader previously reading this split. This position is null when the split is assigned
- * from the enumerator to the readers, and is non-null when the reader's checkpoint their state in a
- * file source split.
+ * reader previously reading this split. This position is null when the split is assigned from the
+ * enumerator to the readers, and is non-null when the reader's checkpoint their state in a file
+ * source split.
  *
  * <p>This implementation extends a {@link FileSourceSplit} with Delta Table partition
  * information</p>
  */
 
 public class DeltaSourceSplit extends FileSourceSplit {
+
+    private static final String[] NO_HOSTS = StringUtils.EMPTY_STRING_ARRAY;
 
     /**
      * Map containing partition column name to partition column value mappings. This mapping is used
@@ -34,7 +37,23 @@ public class DeltaSourceSplit extends FileSourceSplit {
     private final Map<String, String> partitionValues;
 
     /**
-     * Constructs a split with host information.
+     * Constructs a split with no host information and with no reader position.
+     *
+     * @param partitionValues The Delta partition column to partition value map that should be used
+     *                        for underlying Parquet File.
+     * @param id              The unique ID of this source split.
+     * @param filePath        The path to the Parquet file that this splits represents.
+     * @param offset          The start (inclusive) of the split's rage in the Parquet file, in
+     *                        bytes.
+     * @param length          The number of bytes in the split (starting from the offset)
+     */
+    public DeltaSourceSplit(Map<String, String> partitionValues, String id,
+        Path filePath, long offset, long length) {
+        this(partitionValues, id, filePath, offset, length, NO_HOSTS, null);
+    }
+
+    /**
+     * Constructs a split with host information and no reader position.
      *
      * @param partitionValues The Delta partition column to partition value map that should be used
      *                        for underlying Parquet File.
@@ -44,6 +63,24 @@ public class DeltaSourceSplit extends FileSourceSplit {
      *                        bytes.
      * @param length          The number of bytes in the split (starting from the offset)
      * @param hostnames       The hostnames of the nodes storing the split's file range.
+     */
+    public DeltaSourceSplit(Map<String, String> partitionValues, String id,
+        Path filePath, long offset, long length, String... hostnames) {
+        this(partitionValues, id, filePath, offset, length, hostnames, null);
+    }
+
+    /**
+     * Constructs a split with host information and reader position restored from checkpoint.
+     *
+     * @param partitionValues The Delta partition column to partition value map that should be used
+     *                        for underlying Parquet File.
+     * @param id              The unique ID of this source split.
+     * @param filePath        The path to the Parquet file that this splits represents.
+     * @param offset          The start (inclusive) of the split's rage in the Parquet file, in
+     *                        bytes.
+     * @param length          The number of bytes in the split (starting from the offset)
+     * @param hostnames       The hostnames of the nodes storing the split's file range.
+     * @param readerPosition  The position of a reader recovered from a checkpoint.
      */
     public DeltaSourceSplit(Map<String, String> partitionValues, String id,
         Path filePath, long offset, long length, String[] hostnames,

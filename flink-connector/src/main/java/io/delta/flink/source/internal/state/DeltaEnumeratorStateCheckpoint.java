@@ -4,6 +4,7 @@ import java.util.Collection;
 
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import org.apache.flink.api.connector.source.Boundedness;
+import org.apache.flink.api.connector.source.SourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.core.fs.Path;
@@ -11,16 +12,18 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * A checkpoint of the current state of
- * {@link SplitEnumerator}.
+ * A checkpoint of the current state of {@link SplitEnumerator}.
  *
  * <p>It contains all necessary information need by SplitEnumerator to resume work after
- * checkpoint recovery including currently pending splits that are not yet assigned and
- * resume changes discovery task on Delta Table in {@link Boundedness#CONTINUOUS_UNBOUNDED} mode</p>
+ * checkpoint recovery including currently pending splits that are not yet assigned and resume
+ * changes discovery task on Delta Table in {@link Boundedness#CONTINUOUS_UNBOUNDED} mode</p>
  *
  * <p>During checkpoint, Flink will serialize this object and persist it in checkpoint location.
- * During the recovery, Flink will deserialize this object from Checkpoint/Savepoint
- * and will use it to recreate {@code SplitEnumerator}.
+ * During the recovery, Flink will deserialize this object from Checkpoint/Savepoint and will use it
+ * to recreate {@code SplitEnumerator}.
+ *
+ * @param <SplitT> The concrete type of {@link SourceSplit} that is kept in @param * splits
+ *                 collection.
  */
 public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
 
@@ -57,6 +60,24 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
     // ------------------------------------------------------------------------
     //  factories
     // ------------------------------------------------------------------------
+    /**
+     * A factory method for creating {@code DeltaEnumeratorStateCheckpoint} from given parameters
+     * including split and already process paths collections.
+     *
+     * @param deltaTablePath         A {@link Path} to Delta Table.
+     * @param initialSnapshotVersion The initial version of Delta Table from witch we started
+     *                               reading the Delta Table.
+     * @param currentTableVersion    The Delta Table snapshot version at moment when snapshot was
+     *                               taken.
+     * @param splits                 A collection of splits that were unassigned to any readers at
+     *                               moment of taking the checkpoint.
+     * @param alreadyProcessedPaths  The paths to Parquet files that for which we already created
+     *                               {@link SourceSplit} and thus should this be ignored.
+     *                               <p>
+     * @param <T>                    The concrete type of {@link SourceSplit} that is kept in @param
+     *                               splits collection.
+     * @return DeltaEnumeratorStateCheckpoint for given T Split type.
+     */
     public static <T extends DeltaSourceSplit> DeltaEnumeratorStateCheckpoint<T>
         fromCollectionSnapshot(
         Path deltaTablePath, long initialSnapshotVersion, long currentTableVersion,

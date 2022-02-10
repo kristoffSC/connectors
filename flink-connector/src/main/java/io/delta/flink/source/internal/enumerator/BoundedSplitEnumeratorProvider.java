@@ -42,7 +42,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
 
-        // TODO add in PR 2
+        // TODO add in PR 3
         return null;
     }
 
@@ -52,7 +52,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
 
-        // TODO add in PR 2
+        // TODO add in PR 3
         return null;
     }
 
