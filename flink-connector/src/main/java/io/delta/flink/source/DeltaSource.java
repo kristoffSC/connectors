@@ -3,7 +3,9 @@ package io.delta.flink.source;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.internal.state.DeltaPendingSplitsCheckpointSerializer;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import io.delta.flink.source.internal.state.DeltaSourceSplitSerializer;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
@@ -120,15 +122,13 @@ public final class DeltaSource<T>
 
     @Override
     public SimpleVersionedSerializer<DeltaSourceSplit> getSplitSerializer() {
-        // TODO Add in PR_2
-        return null;
+        return DeltaSourceSplitSerializer.INSTANCE;
     }
 
     @Override
     public SimpleVersionedSerializer<DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         getEnumeratorCheckpointSerializer() {
-        // TODO Add in PR_2
-        return null;
+        return new DeltaPendingSplitsCheckpointSerializer<>(DeltaSourceSplitSerializer.INSTANCE);
     }
 
     @Override
