@@ -60,19 +60,20 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
     // ------------------------------------------------------------------------
     //  factories
     // ------------------------------------------------------------------------
+
     /**
      * A factory method for creating {@code DeltaEnumeratorStateCheckpoint} from given parameters
      * including split and already process paths collections.
      *
      * @param deltaTablePath         A {@link Path} to Delta Table.
-     * @param initialSnapshotVersion The initial version of Delta Table from witch we started
+     * @param initialSnapshotVersion The initial version of Delta Table from which we started
      *                               reading the Delta Table.
      * @param currentTableVersion    The Delta Table snapshot version at moment when snapshot was
      *                               taken.
      * @param splits                 A collection of splits that were unassigned to any readers at
      *                               moment of taking the checkpoint.
-     * @param alreadyProcessedPaths  The paths to Parquet files that for which we already created
-     *                               {@link SourceSplit} and thus should this be ignored.
+     * @param alreadyProcessedPaths  The paths to Parquet files that have already been processed and
+     *                               can thus be ignored during recovery.
      *                               <p>
      * @param <T>                    The concrete type of {@link SourceSplit} that is kept in @param
      *                               splits collection.

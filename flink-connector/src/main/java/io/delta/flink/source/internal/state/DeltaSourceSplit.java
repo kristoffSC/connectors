@@ -54,6 +54,10 @@ public class DeltaSourceSplit extends FileSourceSplit {
 
     /**
      * Constructs a split with host information and no reader position.
+     * <p>
+     * The {@code hostnames} provides information about the names of the hosts is storing this range
+     * of the file. Empty, if no host information is available. Host information is typically only
+     * available on a specific file systems, like HDFS.
      *
      * @param partitionValues The Delta partition column to partition value map that should be used
      *                        for underlying Parquet File.
@@ -71,6 +75,10 @@ public class DeltaSourceSplit extends FileSourceSplit {
 
     /**
      * Constructs a split with host information and reader position restored from checkpoint.
+     * <p>
+     * The {@code hostnames} parameter provides information about the names of the hosts storing
+     * this range of the file. Empty, if no host information is available. Host information is
+     * typically only available on a specific file systems, like HDFS.
      *
      * @param partitionValues The Delta partition column to partition value map that should be used
      *                        for underlying Parquet File.
@@ -80,7 +88,7 @@ public class DeltaSourceSplit extends FileSourceSplit {
      *                        bytes.
      * @param length          The number of bytes in the split (starting from the offset)
      * @param hostnames       The hostnames of the nodes storing the split's file range.
-     * @param readerPosition  The position of a reader recovered from a checkpoint.
+     * @param readerPosition  The reader position in bytes recovered from a checkpoint.
      */
     public DeltaSourceSplit(Map<String, String> partitionValues, String id,
         Path filePath, long offset, long length, String[] hostnames,

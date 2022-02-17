@@ -16,7 +16,7 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
- * <p> A de/serializer for the {@link DeltaSourceSplit} class.
+ * <p> A de/serializer for objects of class {@link DeltaSourceSplit}.
  *
  * <p> This class provides methods for Flink core to serialize and deserialize {@code
  * DeltaSourceSplit} objects.
@@ -42,6 +42,19 @@ public final class DeltaSourceSplitSerializer
     private static final MapSerializer<String, String> partitionSerDe = new MapSerializer<>(
         StringSerializer.INSTANCE, StringSerializer.INSTANCE);
 
+    /**
+     * The version of the serialization schema.
+     * <p>
+     * The {@link org.apache.flink.runtime.source.event.AddSplitEvent} adds the version number to
+     * {@link DeltaSourceSplit} serialized data.
+     * <p>
+     * During deserialization (checkpoint recovery or after split assignment to Source Reader), this
+     * value is used as a version argument of
+     * {@link DeltaPendingSplitsCheckpointSerializer#deserialize(int,
+     * byte[])} method.
+     * <p>
+     * It can be used to choose proper deserialization schema.
+     */
     private static final int VERSION = 1;
 
     private DeltaSourceSplitSerializer() {

@@ -18,7 +18,7 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
- * <p> A de/serializer for the {@link DeltaPendingSplitsCheckpointSerializer} class.
+ * <p> A de/serializer for objects of class {@link DeltaEnumeratorStateCheckpoint}.
  *
  * <p> This class provides methods for Flink core to serialize and deserialize {@code
  * DeltaPendingSplitsCheckpointSerializer} objects.
@@ -32,6 +32,17 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSplit> implements
     SimpleVersionedSerializer<DeltaEnumeratorStateCheckpoint<SplitT>> {
 
+    /**
+     * The version of the serialization schema.
+     * <p>
+     * The {@link org.apache.flink.runtime.source.coordinator.SourceCoordinator} adds the version
+     * number to {@link SplitEnumerator} checkpoint data.
+     * <p>
+     * During recovery from checkpoint, this value is deserialize and used as a version argument of
+     * {@link DeltaPendingSplitsCheckpointSerializer#deserialize(int, byte[])} method.
+     * <p>
+     * It can be used to choose proper deserialization schema.
+     */
     private static final int VERSION = 1;
 
     /**
