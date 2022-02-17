@@ -41,7 +41,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         createEnumerator(Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
 
-        // TODO add in PR 3
+        // TODO add in PR 6
         return null;
     }
 
@@ -51,7 +51,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
 
-        // TODO add in PR 3
+        // TODO add in PR 6
         return null;
     }
 

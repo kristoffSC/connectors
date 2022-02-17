@@ -682,6 +682,7 @@ lazy val flinkConnector = (project in file("flink-connector"))
       "org.apache.flink" % "flink-connector-test-utils" % flinkVersion % "test",
       "org.apache.flink" % ("flink-clients_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
       "org.apache.flink" % ("flink-test-utils_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
+      "org.mockito" % "mockito-inline" % "3.8.0" % "test",
       "com.github.sbt" % "junit-interface" % "0.12" % Test,
 
       // Compiler plugins
