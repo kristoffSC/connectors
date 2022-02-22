@@ -5,15 +5,34 @@ package io.delta.flink.source.internal.exceptions;
  */
 public class DeltaSourceException extends RuntimeException {
 
-    public DeltaSourceException(Throwable cause) {
+    private final String tablePath;
+
+    private final long snapshotVersion;
+
+    public DeltaSourceException(String tablePath, long snapshotVersion, Throwable cause) {
         super(cause);
+        this.tablePath = tablePath;
+        this.snapshotVersion = snapshotVersion;
     }
 
-    public DeltaSourceException(String message) {
+    public DeltaSourceException(String tablePath, long snapshotVersion, String message) {
         super(message);
+        this.tablePath = tablePath;
+        this.snapshotVersion = snapshotVersion;
     }
 
-    public DeltaSourceException(String message, Throwable cause) {
+    public DeltaSourceException(String tablePath, long snapshotVersion, String message,
+        Throwable cause) {
         super(message, cause);
+        this.tablePath = tablePath;
+        this.snapshotVersion = snapshotVersion;
+    }
+
+    public String getTablePath() {
+        return tablePath;
+    }
+
+    public long getSnapshotVersion() {
+        return snapshotVersion;
     }
 }

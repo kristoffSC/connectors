@@ -2,7 +2,6 @@ package io.delta.flink.source.internal.state;
 
 import java.util.Collection;
 
-import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumerator;
@@ -97,15 +96,11 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
 
     private static void checkArguments(Path deltaTablePath, long initialSnapshotVersion,
         long currentTableVersion) {
-        try {
-            checkNotNull(deltaTablePath);
-            checkNotNull(initialSnapshotVersion);
-            checkNotNull(currentTableVersion);
-            checkArgument(currentTableVersion >= initialSnapshotVersion,
-                "CurrentTableVersion must be equal or higher than initialSnapshotVersion ");
-        } catch (Exception e) {
-            DeltaSourceExceptionUtils.generalSourceException(e);
-        }
+        checkNotNull(deltaTablePath);
+        checkNotNull(initialSnapshotVersion);
+        checkNotNull(currentTableVersion);
+        checkArgument(currentTableVersion >= initialSnapshotVersion,
+            "CurrentTableVersion must be equal or higher than initialSnapshotVersion ");
     }
 
     /**

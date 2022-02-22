@@ -21,15 +21,22 @@ public class AddFileEnumeratorContext {
     private final List<AddFile> addFiles;
 
     /**
+     * A Delta Table snapshot version that this context represents.
+     */
+    private final long snapshotVersion;
+
+    /**
      * Creates AddFileEnumeratorContext for given {@code tablePath} and {@code addFiles} list.
      *
      * @param tablePath A path for Delta Table for witch this context was created.
      * @param addFiles  A list of {@link AddFile} that should be converted to Splits and are coming
      *                  from {@code tablePath}.
      */
-    public AddFileEnumeratorContext(String tablePath, List<AddFile> addFiles) {
+    public AddFileEnumeratorContext(String tablePath, List<AddFile> addFiles,
+        long snapshotVersion) {
         this.tablePath = tablePath;
         this.addFiles = addFiles;
+        this.snapshotVersion = snapshotVersion;
     }
 
     /**
@@ -45,5 +52,12 @@ public class AddFileEnumeratorContext {
      */
     public List<AddFile> getAddFiles() {
         return addFiles;
+    }
+
+    /**
+     * @return A Delta Table snapshot version that this context represents.
+     */
+    public long getSnapshotVersion() {
+        return snapshotVersion;
     }
 }

@@ -195,9 +195,10 @@ public abstract class DeltaSourceSplitEnumerator implements
         splitAssigner.addSplits((Collection<FileSourceSplit>) (Collection<?>) splits);
     }
 
-    protected AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles) {
+    protected AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles,
+        long snapshotVersion) {
         String pathString = SourceUtils.pathToString(deltaTablePath);
-        return new AddFileEnumeratorContext(pathString, addFiles);
+        return new AddFileEnumeratorContext(pathString, addFiles, snapshotVersion);
     }
 
     private AssignSplitStatus assignSplits() {

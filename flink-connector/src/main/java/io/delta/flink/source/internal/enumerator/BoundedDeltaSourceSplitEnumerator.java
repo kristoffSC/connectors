@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
-import io.delta.flink.source.internal.exceptions.DeltaSourceExceptionUtils;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
@@ -57,14 +56,11 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
-        try {
-            AddFileEnumeratorContext context = setUpEnumeratorContext(snapshot.getAllFiles());
-            List<DeltaSourceSplit> splits = fileEnumerator
-                .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
-            addSplits(splits);
-        } catch (Exception e) {
-            DeltaSourceExceptionUtils.generalSourceException(e);
-        }
+        AddFileEnumeratorContext context =
+            setUpEnumeratorContext(snapshot.getAllFiles(), snapshot.getVersion());
+        List<DeltaSourceSplit> splits = fileEnumerator
+            .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
+        addSplits(splits);
     }
 
     @Override

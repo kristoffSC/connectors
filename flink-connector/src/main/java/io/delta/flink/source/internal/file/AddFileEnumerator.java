@@ -19,8 +19,8 @@ public interface AddFileEnumerator<SplitT extends DeltaSourceSplit> {
      * Creates {@link DeltaSourceSplit} for the given {@link AddFile}. The {@code splitFilter}
      * decides which AddFiles should be excluded from conversion.
      *
-     * @param context     {@link AddFileEnumeratorContext} input for Split conversion.
-     * @param splitFilter {@link SplitFilter} instance that should be used to filter out {@link
+     * @param context     {@link AddFileEnumeratorContext} input object for Split conversion.
+     * @param splitFilter {@link SplitFilter} instance that will be used to filter out {@link
      *                    AddFile} from split conversion.
      * @return List of Splits.
      */
