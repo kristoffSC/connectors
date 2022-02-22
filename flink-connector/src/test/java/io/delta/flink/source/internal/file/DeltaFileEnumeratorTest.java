@@ -177,7 +177,7 @@ public class DeltaFileEnumeratorTest {
         List<DeltaSourceSplit> splits =
             fileEnumerator.enumerateSplits(context, (Path path) -> true);
 
-        // File has an invalid blocks, so it will be ignored, and we will process file as one.
+        // File has invalid blocks, so it will be ignored, and we will process file as one.
         assertThat(splits.size(), equalTo(1));
         assertThat(splits.get(0).getPartitionValues(), equalTo(DELTA_PARTITIONS));
 

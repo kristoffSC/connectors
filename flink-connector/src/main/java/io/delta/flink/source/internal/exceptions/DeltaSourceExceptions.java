@@ -6,7 +6,7 @@ import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import org.apache.flink.core.fs.Path;
 
 /**
- * An Utility class that provides a factory methods for various cases where {@link
+ * The utility class that provides a factory methods for various cases where {@link
  * DeltaSourceException} has to be thrown.
  */
 public final class DeltaSourceExceptions {
