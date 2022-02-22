@@ -21,7 +21,6 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
     private final FileSplitAssigner.Provider splitAssignerProvider;
 
-    // TODO PR 4 add AddFileEnumerator in with IT bounded tests.
     private final AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider;
 
     /**
