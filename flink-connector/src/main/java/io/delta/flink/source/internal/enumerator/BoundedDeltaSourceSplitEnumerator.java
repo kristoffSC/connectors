@@ -4,12 +4,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import io.delta.flink.source.internal.utils.TransitiveOptional;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -35,18 +37,20 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        DeltaSourceConfiguration sourceConfiguration) {
         this(deltaTablePath, fileEnumerator, splitAssigner, configuration, enumContext,
-            sourceOptions, NO_SNAPSHOT_VERSION, Collections.emptySet());
+            sourceConfiguration, NO_SNAPSHOT_VERSION, Collections.emptySet());
     }
 
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        DeltaSourceConfiguration sourceConfiguration,
         long initialSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
 
-        super(deltaTablePath, splitAssigner, configuration, enumContext, sourceOptions,
+        super(deltaTablePath, splitAssigner, configuration, enumContext, sourceConfiguration,
             initialSnapshotVersion, alreadyDiscoveredPaths);
         this.fileEnumerator = fileEnumerator;
     }
@@ -108,16 +112,15 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
      * <p>
      * <p>
      * Option's mutual exclusion must be guaranteed by other classes like {@code DeltaSourceBuilder}
-     * or {@code DeltaSourceOptions}
+     * or {@code DeltaSourceConfiguration}
      */
     @Override
     protected Snapshot getInitialSnapshot(long checkpointSnapshotVersion) {
 
-        // TODO test all those options PR 5
         // Prefer version from checkpoint over the other ones.
         return getSnapshotFromCheckpoint(checkpointSnapshotVersion)
-            //.or(this::getSnapshotFromVersionAsOfOption) // TODO Add in PR 5
-            //.or(this::getSnapshotFromTimestampAsOfOption) // TODO Add in PR 5
+            .or(this::getSnapshotFromVersionAsOfOption)
+            .or(this::getSnapshotFromTimestampAsOfOption)
             .or(this::getHeadSnapshot)
             .get();
     }
@@ -125,5 +128,22 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     @Override
     protected void handleNoMoreSplits(int subtaskId) {
         enumContext.signalNoMoreSplits(subtaskId);
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromVersionAsOfOption() {
+        Long versionAsOf = sourceConfiguration.getValue(DeltaSourceOptions.VERSION_AS_OF);
+        if (versionAsOf != null) {
+            return TransitiveOptional.ofNullable(deltaLog.getSnapshotForVersionAsOf(versionAsOf));
+        }
+        return TransitiveOptional.empty();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromTimestampAsOfOption() {
+        Long timestampAsOf = sourceConfiguration.getValue(DeltaSourceOptions.TIMESTAMP_AS_OF);
+        if (timestampAsOf != null) {
+            return TransitiveOptional.ofNullable(
+                deltaLog.getSnapshotForTimestampAsOf(timestampAsOf));
+        }
+        return TransitiveOptional.empty();
     }
 }

@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
-import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.internal.file.DeltaFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -164,6 +164,6 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             fileSourceSplitParquetColumnarRowInputFormat,
             new BoundedSplitEnumeratorProvider(
                 LocalityAwareSplitAssigner::new, DeltaFileEnumerator::new),
-            hadoopConf, new DeltaSourceOptions());
+            hadoopConf, new DeltaSourceConfiguration());
     }
 }

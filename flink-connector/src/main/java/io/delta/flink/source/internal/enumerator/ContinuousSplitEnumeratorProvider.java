@@ -1,6 +1,6 @@
 package io.delta.flink.source.internal.enumerator;
 
-import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -39,7 +39,8 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(Path deltaTablePath, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        DeltaSourceConfiguration sourceConfiguration) {
 
         // TODO add in PR 6
         return null;
@@ -49,7 +50,8 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions) {
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        DeltaSourceConfiguration sourceConfiguration) {
 
         // TODO add in PR 6
         return null;

@@ -10,7 +10,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -94,20 +94,22 @@ public abstract class DeltaSourceSplitEnumerator implements
     protected final long initialSnapshotVersion;
 
     /**
-     * A {@link DeltaSourceOptions} used while creating {@link io.delta.flink.source.DeltaSource}
+     * A {@link DeltaSourceConfiguration} used while creating
+     * {@link io.delta.flink.source.DeltaSource}
      */
-    protected final DeltaSourceOptions sourceOptions;
+    protected final DeltaSourceConfiguration sourceConfiguration;
 
     protected DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext, DeltaSourceOptions sourceOptions,
+        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+        DeltaSourceConfiguration sourceConfiguration,
         long checkpointSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
 
         this.splitAssigner = splitAssigner;
         this.enumContext = enumContext;
         this.readersAwaitingSplit = new LinkedHashMap<>();
         this.deltaTablePath = deltaTablePath;
-        this.sourceOptions = sourceOptions;
+        this.sourceConfiguration = sourceConfiguration;
 
         this.deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));

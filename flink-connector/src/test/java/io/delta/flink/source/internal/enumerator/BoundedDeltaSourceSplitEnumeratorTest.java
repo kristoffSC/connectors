@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
-import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
@@ -31,11 +31,13 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
-import static io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerator.NO_SNAPSHOT_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
+import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -65,9 +67,6 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
     private SplitEnumeratorContext<DeltaSourceSplit> enumContext;
 
     @Mock
-    private DeltaSourceOptions sourceOptions;
-
-    @Mock
     private DeltaLog deltaLog;
 
     @Mock
@@ -75,6 +74,12 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
 
     @Mock
     private Snapshot checkpointedSnapshot;
+
+    @Mock
+    private Snapshot versionAsOfSnapshot;
+
+    @Mock
+    private Snapshot timestampAsOfSnapshot;
 
     @Mock
     private ReaderInfo readerInfo;
@@ -91,9 +96,11 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
 
     private MockedStatic<DeltaLog> deltaLogStatic;
 
+    private DeltaSourceConfiguration sourceOptions;
+
     @Before
     public void setUp() {
-
+        sourceOptions = new DeltaSourceConfiguration();
         deltaLogStatic = Mockito.mockStatic(DeltaLog.class);
         deltaLogStatic.when(() -> DeltaLog.forTable(any(Configuration.class), anyString()))
             .thenReturn(this.deltaLog);
@@ -118,17 +125,9 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
             enumContext, sourceOptions);
 
         assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
-    }
-
-    @Test
-    public void shouldUseHeadSnapshotFromCheckpoint() {
-        when(deltaLog.snapshot()).thenReturn(headSnapshot);
-
-        enumerator = new BoundedDeltaSourceSplitEnumerator(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceOptions, NO_SNAPSHOT_VERSION, Collections.emptyList());
-
-        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
+        verify(deltaLog).snapshot();
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
     }
 
     @Test
@@ -143,7 +142,59 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
             enumContext, sourceOptions, checkpointedSnapshotVersion, Collections.emptyList());
 
         assertThat(enumerator.getSnapshot(), equalTo(checkpointedSnapshot));
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog).getSnapshotForVersionAsOf(10);
     }
+
+    @Test
+    public void shouldUseVersionAsOfSnapshot() {
+        long versionAsOf = 77;
+
+        sourceOptions.addOption(VERSION_AS_OF.key(), versionAsOf);
+        when(deltaLog.getSnapshotForVersionAsOf(versionAsOf)).thenReturn(versionAsOfSnapshot);
+
+        enumerator = new BoundedDeltaSourceSplitEnumerator(
+            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceOptions);
+
+        List<DeltaSourceSplit> mockSplits = mockSplits();
+        when(fileEnumerator.enumerateSplits(any(AddFileEnumeratorContext.class),
+            any(SplitFilter.class)))
+            .thenReturn(mockSplits);
+
+        enumerator.start();
+
+        assertThat(enumerator.getSnapshot(), equalTo(versionAsOfSnapshot));
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog).getSnapshotForVersionAsOf(versionAsOf);
+    }
+
+    @Test
+    public void shouldUseTimestampAsOfSnapshot() {
+        long timestampAsOf = System.currentTimeMillis();
+
+        sourceOptions.addOption(TIMESTAMP_AS_OF.key(), timestampAsOf);
+        when(deltaLog.getSnapshotForTimestampAsOf(timestampAsOf)).thenReturn(timestampAsOfSnapshot);
+
+        enumerator = new BoundedDeltaSourceSplitEnumerator(
+            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceOptions);
+
+        List<DeltaSourceSplit> mockSplits = mockSplits();
+        when(fileEnumerator.enumerateSplits(any(AddFileEnumeratorContext.class),
+            any(SplitFilter.class)))
+            .thenReturn(mockSplits);
+
+        enumerator.start();
+
+        assertThat(enumerator.getSnapshot(), equalTo(timestampAsOfSnapshot));
+        verify(deltaLog).getSnapshotForTimestampAsOf(timestampAsOf);
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+    }
+
 
     @Test
     public void shouldHandleFailedReader() {
