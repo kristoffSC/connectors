@@ -75,6 +75,45 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
             pathsAlreadyProcessed);
     }
 
+    /**
+     * The implementation of this method encapsulates the initial snapshot creation logic.
+     * <p>
+     * This method is called from {@code DeltaSourceSplitEnumerator} constructor during object
+     * initialization.
+     *
+     * @param checkpointSnapshotVersion version of snapshot from checkpoint. If the value is equal
+     *                                  to {@link #NO_SNAPSHOT_VERSION} it means that this is the
+     *                                  first Source initialization and not a recovery from a
+     *                                  Flink's checkpoint.
+     * @return A {@link Snapshot} that will be used as an initial Delta Table {@code Snapshot} to
+     * read data from.
+     *
+     * <p>
+     * <p>
+     * @implNote We have 2 cases:
+     * <ul>
+     *      <li>
+     *          checkpointSnapshotVersion is -1. This is either the initial setup of the source,
+     *          or we are recovering from failure yet no checkpoint was found.
+     *      </li>
+     *      <li>
+     *          checkpointSnapshotVersion is not -1. We are recovering from failure and a
+     *          checkpoint was found. Thus, this checkpointSnapshotVersion is the version we
+     *          should load.
+     *      </li>
+     * </ul>
+     * <p>
+     * If a specific versionAsOf/timestampAsOf option is set, we will use that for initial setup
+     * of the source. In case of recovery, if there is a checkpoint available to recover from,
+     * the checkpointSnapshotVersion will be set to versionAsOf/timestampAsOf snapshot version
+     * by Flink using {@link io.delta.flink.source.DeltaSource#restoreEnumerator(
+     *SplitEnumeratorContext, DeltaEnumeratorStateCheckpoint)} method.
+     * <p>
+     * <p>
+     * <p>
+     * Option's mutual exclusion must be guaranteed by other classes like {@code DeltaSourceBuilder}
+     * or {@code DeltaSourceOptions}
+     */
     @Override
     protected Snapshot getInitialSnapshot(long checkpointSnapshotVersion) {
 

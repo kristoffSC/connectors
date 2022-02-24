@@ -158,7 +158,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
     }
 
     @Test
-    public void shouldSignalNoMoreSplitsIfNon() {
+    public void shouldSignalNoMoreSplitsIfNone() {
         int subtaskId = 1;
         setupEnumeratorWithHeadSnapshot();
 
@@ -170,7 +170,6 @@ public class BoundedDeltaSourceSplitEnumeratorTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void shouldAssignSplitToReader() {
         int subtaskId = 1;
         setupEnumeratorWithHeadSnapshot();

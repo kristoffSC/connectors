@@ -155,7 +155,8 @@ public abstract class DeltaSourceSplitEnumerator implements
      * The implementation of this method should handle case, where there is no more splits that
      * could be assigned to Source Readers.
      * <p>
-     * This method is called by {@link DeltaSourceSplitEnumerator#handleNoMoreSplits(int)} method.
+     * This method is called by {@link DeltaSourceSplitEnumerator#handleSplitRequest(int, String)}
+     * method.
      *
      * @param subtaskId the subtask id of the source reader who sent the source spit request event.
      */
@@ -169,7 +170,8 @@ public abstract class DeltaSourceSplitEnumerator implements
      *
      * @param checkpointSnapshotVersion - version of snapshot from checkpoint. If the value is equal
      *                                  to {@link #NO_SNAPSHOT_VERSION} it means that this is first
-     *                                  Source initialization and not recovery from snapshot.
+     *                                  Source initialization and not a recovery from a Flink's
+     *                                  checkpoint.
      * @return A {@link Snapshot} that will be used as an initial Delta Table {@code Snapshot} to
      * read data from.
      */
@@ -198,7 +200,7 @@ public abstract class DeltaSourceSplitEnumerator implements
         return new AddFileEnumeratorContext(pathString, addFiles);
     }
 
-    protected AssignSplitStatus assignSplits() {
+    private AssignSplitStatus assignSplits() {
         final Iterator<Entry<Integer, String>> awaitingReader =
             readersAwaitingSplit.entrySet().iterator();
 
@@ -257,6 +259,6 @@ public abstract class DeltaSourceSplitEnumerator implements
 
     public enum AssignSplitStatus {
         NO_MORE_SPLITS,
-        NO_MORE_READERS;
+        NO_MORE_READERS
     }
 }
