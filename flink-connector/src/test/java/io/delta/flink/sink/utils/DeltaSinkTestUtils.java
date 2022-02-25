@@ -129,7 +129,7 @@ public class DeltaSinkTestUtils {
     public static final String TEST_DELTA_TABLE_INITIAL_STATE_P_DIR =
         "/test-data/test-partitioned-delta-table-initial-state";
     public static final String TEST_DELTA_LARGE_TABLE_INITIAL_STATE_DIR =
-        "/test-data/test-non-partitioned-delta-table_300_records";
+        "/test-data/test-non-partitioned-delta-table_1100_records";
 
     public static void initTestForNonPartitionedTable(String targetTablePath)
         throws IOException {

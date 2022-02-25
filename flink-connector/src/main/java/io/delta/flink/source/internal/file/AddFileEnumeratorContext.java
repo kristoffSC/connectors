@@ -26,11 +26,15 @@ public class AddFileEnumeratorContext {
     private final long snapshotVersion;
 
     /**
-     * Creates AddFileEnumeratorContext for given {@code tablePath} and {@code addFiles} list.
+     * Creates {@code AddFileEnumeratorContext} for given {@code tablePath} and {@code addFiles}
+     * list. The {@code AddFileEnumeratorContext} is expected to have a version scope thus it should
+     * contain {@code AddFile}'s only from one version.
      *
-     * @param tablePath A path for Delta Table for witch this context was created.
-     * @param addFiles  A list of {@link AddFile} that should be converted to Splits and are coming
-     *                  from {@code tablePath}.
+     * @param tablePath       A path for Delta Table for witch this context was created.
+     * @param addFiles        A list of {@link AddFile} that should be converted to Splits and are
+     *                        coming from {@code tablePath}.
+     * @param snapshotVersion A {@link io.delta.standalone.Snapshot} version for which this context
+     *                        was created.
      */
     public AddFileEnumeratorContext(String tablePath, List<AddFile> addFiles,
         long snapshotVersion) {

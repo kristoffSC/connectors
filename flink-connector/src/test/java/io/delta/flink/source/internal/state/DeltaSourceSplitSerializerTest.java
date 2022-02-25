@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.fs.Path;
@@ -13,6 +14,8 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class DeltaSourceSplitSerializerTest {
+
+    public static final String RANDOM_ID = UUID.randomUUID().toString();
 
     static void assertSplitsEqual(DeltaSourceSplit expected, DeltaSourceSplit actual) {
         assertEquals(expected.getPartitionValues(), actual.getPartitionValues());
@@ -38,7 +41,7 @@ public class DeltaSourceSplitSerializerTest {
         DeltaSourceSplit split =
             new DeltaSourceSplit(
                 Collections.emptyMap(),
-                "random-id",
+                RANDOM_ID,
                 new Path("hdfs://namenode:14565/some/path/to/a/file"),
                 100_000_000,
                 64_000_000,

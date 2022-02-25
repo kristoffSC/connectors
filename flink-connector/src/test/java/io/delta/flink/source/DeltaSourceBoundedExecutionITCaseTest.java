@@ -35,7 +35,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     private static final Set<String> EXPECTED_NAMES =
         Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
 
-    private static final int LARGE_TABLE_COUNT = 1100;
+    private static final int LARGE_TABLE_RECORD_COUNT = 1100;
 
     private String nonPartitionedTablePath;
 
@@ -83,8 +83,6 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             equalTo(2));
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
             equalTo(EXPECTED_NAMES));
-
-        //System.out.println(resultData);
     }
 
     @Test
@@ -102,17 +100,17 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // WHEN
         // Fail TM after half of the records.
-        List<RowData> resultData = testBoundDeltaSource(FailoverType.TM, deltaSource,
-            (FailCheck) readRows -> readRows == LARGE_TABLE_COUNT / 2);
+        List<RowData> resultData = testBoundDeltaSource(FailoverType.TASK_MANAGER, deltaSource,
+            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         Set<Long> actualValues =
             resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
-            equalTo(LARGE_TABLE_COUNT));
+            equalTo(LARGE_TABLE_RECORD_COUNT));
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
-            equalTo(LARGE_TABLE_COUNT));
+            equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
     @Test
@@ -127,17 +125,17 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // WHEN
         // Fail TM after half of the records.
-        List<RowData> resultData = testBoundDeltaSource(FailoverType.JM, deltaSource,
-            (FailCheck) readRows -> readRows == LARGE_TABLE_COUNT / 2);
+        List<RowData> resultData = testBoundDeltaSource(FailoverType.JOB_MANAGER, deltaSource,
+            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         Set<Long> actualValues =
             resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
-            equalTo(LARGE_TABLE_COUNT));
+            equalTo(LARGE_TABLE_RECORD_COUNT));
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
-            equalTo(LARGE_TABLE_COUNT));
+            equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
     // TODO ADD Partition tests in later PRs

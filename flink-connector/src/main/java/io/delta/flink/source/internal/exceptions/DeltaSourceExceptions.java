@@ -6,7 +6,7 @@ import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import org.apache.flink.core.fs.Path;
 
 /**
- * A Utility class that provides a factory methods for various cases where {@link
+ * An Utility class that provides a factory methods for various cases where {@link
  * DeltaSourceException} has to be thrown.
  */
 public final class DeltaSourceExceptions {
@@ -26,13 +26,13 @@ public final class DeltaSourceExceptions {
      */
     public static DeltaSourceException generalSourceException(String tablePath,
         long snapshotVersion, Throwable t) {
-        throw new DeltaSourceException(tablePath, snapshotVersion, t);
+        return new DeltaSourceException(tablePath, snapshotVersion, t);
     }
 
 
-    public static void fileEnumerationException(AddFileEnumeratorContext context, Path filePath,
-        IOException e) {
-        throw new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),
+    public static DeltaSourceException fileEnumerationException(AddFileEnumeratorContext context,
+        Path filePath, IOException e) {
+        return new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),
             String.format("An Exception while processing Parquet Files for path %s and version %d",
                 filePath, context.getSnapshotVersion()), e);
     }

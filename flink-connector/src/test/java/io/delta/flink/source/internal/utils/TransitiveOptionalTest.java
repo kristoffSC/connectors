@@ -77,19 +77,19 @@ public class TransitiveOptionalTest {
     public static class NonParametrizedTests {
 
         @Test
-        public void shouldCrateAndGetValue() {
+        public void shouldCreateAndGetValue() {
             TransitiveOptional<String> optional = TransitiveOptional.of("val1");
             assertThat(optional.get(), equalTo("val1"));
         }
 
         @Test(expected = NoSuchElementException.class)
-        public void shouldCrateNullableAndThrow() {
+        public void shouldCreateNullableAndThrow() {
             TransitiveOptional<String> optional = TransitiveOptional.ofNullable(null);
             optional.get();
         }
 
         @Test(expected = NoSuchElementException.class)
-        public void shouldCrateEmptyAndThrow() {
+        public void shouldCreateEmptyAndThrow() {
             TransitiveOptional<String> optional = TransitiveOptional.empty();
             optional.get();
         }

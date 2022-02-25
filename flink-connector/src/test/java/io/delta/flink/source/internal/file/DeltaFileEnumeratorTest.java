@@ -85,7 +85,10 @@ public class DeltaFileEnumeratorTest {
     }
 
     @Test
-    public void shouldCrateSplitWithoutBlocks() throws IOException {
+    public void shouldCreateSplitWithoutBlocks() throws IOException {
+        // Both files are returning no File Blocks. The fileStatusOne returns an empty array of
+        // blocks and fileStatusTwo returns  null. The null means file or region (start + length)
+        // is not existing, null will be returned.
 
         when(fileSystemOne.getFileBlockLocations(fileStatusOne, 0, 10)).thenReturn(
             new BlockLocation[0]);
@@ -107,7 +110,11 @@ public class DeltaFileEnumeratorTest {
     }
 
     @Test
-    public void shouldCrateSplitWithBlocks() throws IOException {
+    public void shouldCreateSplitWithBlocks() throws IOException {
+        // We are creating two blocks (blockOne and blockTwo) for second file (fileStatusTwo).
+        // Sum of block Length should be equal to file length.
+        // In this example blockOne.length = 5 and blockTwo.length = 5, and file length is 10.
+
         when(blockOne.getOffset()).thenReturn(0L);
         when(blockOne.getLength()).thenReturn(5L);
 
@@ -146,13 +153,21 @@ public class DeltaFileEnumeratorTest {
 
     @Test
     public void shouldHandleInvalidBlocks() throws IOException {
+        // This test checks the block length sum condition. If sum of the blocks' length is not
+        // equal to file length,
+        // no block should be created and file should be converted to one split.
 
         // In this case we want to use only one AddFile.
         List<AddFile> addFiles = Collections.singletonList(this.addFiles.get(1));
 
         context = new AddFileEnumeratorContext(TABLE_PATH, addFiles, SNAPSHOT_VERSION);
 
-        // The Block Length sum will not equal to getFileBlockLocations method's length argument.
+        // We are creating two blocks (blockOne and blockTwo) for this file (fileStatusTwo).
+        // Sum of block Length should be equal to file length.
+        // In this example blockOne.length = 10 and blockTwo.length = 10, and file length is also
+        // 10.
+        // The sum of block's length will not be equal to getFileBlockLocations method's length
+        // argument, hence file will be processed as one and not separate blocks.
         when(blockOne.getLength()).thenReturn(10L);
         when(blockTwo.getLength()).thenReturn(10L);
 
@@ -162,7 +177,7 @@ public class DeltaFileEnumeratorTest {
         List<DeltaSourceSplit> splits =
             fileEnumerator.enumerateSplits(context, (Path path) -> true);
 
-        // One File has invalid blocks, so it will be ignored.
+        // File has an invalid blocks, so it will be ignored, and we will process file as one.
         assertThat(splits.size(), equalTo(1));
         assertThat(splits.get(0).getPartitionValues(), equalTo(DELTA_PARTITIONS));
 

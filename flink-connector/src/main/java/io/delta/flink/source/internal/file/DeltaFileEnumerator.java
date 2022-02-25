@@ -39,6 +39,7 @@ public class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> 
      * The current Id as a mutable string representation. This covers more values than the integer
      * value range, so we should never overflow.
      */
+    // This is copied from Flink's NonSplittingRecursiveEnumerator
     private final char[] currentId = "0000000000".toCharArray();
 
     /**
@@ -72,7 +73,7 @@ public class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> 
                 convertToSourceSplits(status, fs, addFile.getPartitionValues(), splitsToReturn);
             }
         } catch (IOException e) {
-            DeltaSourceExceptions.fileEnumerationException(context, path, e);
+            throw DeltaSourceExceptions.fileEnumerationException(context, path, e);
         }
     }
 
