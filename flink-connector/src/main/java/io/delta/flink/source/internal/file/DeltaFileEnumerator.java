@@ -22,7 +22,7 @@ import io.delta.standalone.actions.AddFile;
 /**
  * The implementation of {@link AddFileEnumerator} for {@link DeltaSourceSplit}.
  * <p>
- * This implementation is  converting all discovered Delta's {@link AddFile} objects to set of
+ * This implementation is converting all discovered Delta's {@link AddFile} objects to set of
  * {@link DeltaSourceSplit}. During the conversion, all {@code AddFiles} are filtered using {@link
  * SplitFilter}
  */
