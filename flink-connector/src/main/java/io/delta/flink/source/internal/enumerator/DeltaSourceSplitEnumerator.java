@@ -11,6 +11,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -19,6 +20,7 @@ import io.delta.flink.source.internal.utils.TransitiveOptional;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
+import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -50,8 +52,10 @@ public abstract class DeltaSourceSplitEnumerator implements
      * without any previously taken snapshot.
      */
     protected static final int NO_SNAPSHOT_VERSION = -1;
+
     private static final Logger LOG =
         LoggerFactory.getLogger(DeltaSourceSplitEnumerator.class);
+
     /**
      * Path to Delta Table from which this {@code DeltaSource} should read.
      */
@@ -61,6 +65,12 @@ public abstract class DeltaSourceSplitEnumerator implements
      * A {@link FileSplitAssigner} that should be used by this {@code SourceEnumerator}.
      */
     protected final FileSplitAssigner splitAssigner;
+
+    /**
+     * The {@code AddFileEnumerator}'s to convert all discovered {@link AddFile} to set of {@link
+     * DeltaSourceSplit}.
+     */
+    protected final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
     /**
      * The Delta {@link Snapshot} that we should read data from.
@@ -100,12 +110,14 @@ public abstract class DeltaSourceSplitEnumerator implements
     protected final DeltaSourceConfiguration sourceConfiguration;
 
     protected DeltaSourceSplitEnumerator(
-        Path deltaTablePath, FileSplitAssigner splitAssigner, Configuration configuration,
+        Path deltaTablePath, FileSplitAssigner splitAssigner,
+        AddFileEnumerator<DeltaSourceSplit> fileEnumerator, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration,
         long checkpointSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
 
         this.splitAssigner = splitAssigner;
+        this.fileEnumerator = fileEnumerator;
         this.enumContext = enumContext;
         this.readersAwaitingSplit = new LinkedHashMap<>();
         this.deltaTablePath = deltaTablePath;
@@ -253,6 +265,10 @@ public abstract class DeltaSourceSplitEnumerator implements
             LOG.info("No more splits available for subtasks");
             handleNoMoreSplits(subtaskId);
         }
+    }
+
+    protected <T> T getOptionValue(ConfigOption<T> option) {
+        return this.sourceConfiguration.getValue(option);
     }
 
     @VisibleForTesting

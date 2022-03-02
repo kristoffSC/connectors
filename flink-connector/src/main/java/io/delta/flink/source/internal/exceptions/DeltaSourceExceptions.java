@@ -16,7 +16,9 @@ public final class DeltaSourceExceptions {
     }
 
     /**
-     * Wraps given {@link Throwable} and message with {@link DeltaSourceException}.
+     * Wraps given {@link Throwable} with {@link DeltaSourceException}. The returned exception
+     * object will use {@link Throwable#toString()} on provided {@code Throwable} to get its
+     * exception message.
      *
      * @param tablePath       Path to Delta Table for which this exception occurred.
      * @param snapshotVersion Delta Table Snapshot version for which this exception occurred.
@@ -29,7 +31,20 @@ public final class DeltaSourceExceptions {
         return new DeltaSourceException(tablePath, snapshotVersion, t);
     }
 
-
+    /**
+     * Creates new {@link DeltaSourceException} object that can be used for {@link IOException}
+     * thrown from {@link io.delta.flink.source.internal.file.AddFileEnumerator#enumerateSplits(
+     *AddFileEnumeratorContext, io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter)}
+     * <p>
+     * <p>
+     * Wraps given {@link Throwable} with {@link DeltaSourceException}. The returned exception
+     * object will use defined error message for this case.
+     *
+     * @param context  The {@link AddFileEnumeratorContext} for which this exception occurred.
+     * @param filePath The {@link Path} for Parquet file that caused this exception.
+     * @param e        Wrapped {@link IOException}
+     * @return {@link DeltaSourceException} wrapping original {@code IOException}
+     */
     public static DeltaSourceException fileEnumerationException(AddFileEnumeratorContext context,
         Path filePath, IOException e) {
         return new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),

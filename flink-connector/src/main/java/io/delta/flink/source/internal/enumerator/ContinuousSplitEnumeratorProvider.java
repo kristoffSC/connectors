@@ -1,5 +1,7 @@
 package io.delta.flink.source.internal.enumerator;
 
+import java.util.Collections;
+
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
@@ -42,8 +44,10 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
 
-        // TODO add in PR 6
-        return null;
+        return new ContinuousDeltaSourceSplitEnumerator(
+            deltaTablePath, fileEnumeratorProvider.create(),
+            splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext,
+            sourceConfiguration);
     }
 
     @Override
@@ -53,8 +57,11 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
 
-        // TODO add in PR 6
-        return null;
+        return new ContinuousDeltaSourceSplitEnumerator(
+            checkpoint.getDeltaTablePath(), fileEnumeratorProvider.create(),
+            splitAssignerProvider.create(Collections.emptyList()),
+            configuration, enumContext, sourceConfiguration, checkpoint.getInitialSnapshotVersion(),
+            checkpoint.getCurrentTableVersion(), checkpoint.getAlreadyProcessedPaths());
     }
 
     @Override

@@ -35,6 +35,7 @@ public class DeltaSourceOptions {
      */
     public static final ConfigOption<Long> VERSION_AS_OF =
         ConfigOptions.key("versionAsOf").longType().noDefaultValue();
+
     /**
      * An option that allow time travel to the latest {@link io.delta.standalone.Snapshot} that was
      * generated at or before given timestamp. Applicable for
@@ -47,10 +48,49 @@ public class DeltaSourceOptions {
     public static final ConfigOption<Long> TIMESTAMP_AS_OF =
         ConfigOptions.key("timestampAsOf").longType().noDefaultValue();
 
+    /**
+     * An option to specify a {@link io.delta.standalone.Snapshot} version to only read changes
+     * from. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only.
+     * <p>
+     * <p>
+     * The String representation for this option is <b>startingVersion</b>.
+     */
+    public static final ConfigOption<String> STARTING_VERSION =
+        ConfigOptions.key("startingVersion").stringType().noDefaultValue();
+
+    /**
+     * An option used to read only changes from {@link io.delta.standalone.Snapshot} that was
+     * generated at or before given timestamp. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only.
+     * <p>
+     * <p>
+     * The String representation for this option is <b>startingTimestamp</b>.
+     */
+    public static final ConfigOption<String> STARTING_TIMESTAMP =
+        ConfigOptions.key("startingTimestamp").stringType().defaultValue("latest");
+
+    /**
+     * An option to specify check interval for monitoring Delta table changes used by {@link
+     * io.delta.flink.source.internal.enumerator.ContinuousDeltaSourceSplitEnumerator}. Applicable
+     * for {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode
+     * only.
+     * <p>
+     * <p>
+     * The String representation for this option is <b>updateCheckIntervalMillis</b>.
+     */
+    public static final ConfigOption<Integer> UPDATE_CHECK_INTERVAL =
+        ConfigOptions.key("updateCheckIntervalMillis").intType().defaultValue(5000);
+
     // TODO test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         VALID_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
+        VALID_SOURCE_OPTIONS.put(STARTING_VERSION.key(), STARTING_VERSION);
+        VALID_SOURCE_OPTIONS.put(STARTING_TIMESTAMP.key(), STARTING_TIMESTAMP);
+        VALID_SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
     }
 
     // TODO Add other options in future PRs

@@ -13,7 +13,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 
 @RunWith(MockitoJUnitRunner.class)
-public class BoundedSplitEnumeratorProviderTest {
+public class ContinuousSplitEnumeratorProviderTest {
 
     @Mock
     private FileSplitAssigner.Provider fileSplitAssignerProvider;
@@ -21,16 +21,16 @@ public class BoundedSplitEnumeratorProviderTest {
     @Mock
     private AddFileEnumerator.Provider<DeltaSourceSplit> addFileEnumeratorProvider;
 
-    private BoundedSplitEnumeratorProvider provider;
+    private ContinuousSplitEnumeratorProvider provider;
 
     @Before
     public void setUp() {
-        provider = new BoundedSplitEnumeratorProvider(fileSplitAssignerProvider,
+        provider = new ContinuousSplitEnumeratorProvider(fileSplitAssignerProvider,
             addFileEnumeratorProvider);
     }
 
     @Test
     public void shouldReturnBoundedMode() {
-        assertThat(provider.getBoundedness(), equalTo(Boundedness.BOUNDED));
+        assertThat(provider.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
     }
 }

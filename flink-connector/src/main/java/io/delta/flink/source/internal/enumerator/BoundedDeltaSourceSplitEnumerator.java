@@ -23,16 +23,15 @@ import io.delta.standalone.Snapshot;
  * A SplitEnumerator implementation for bounded/batch {@link io.delta.flink.source.DeltaSource}
  * mode.
  *
- * <p>This enumerator takes all files that are present in the configured input directory and
- * assigns them to the readers. Once all files are processed, the source is finished.
+ * <p>This enumerator takes all files that are present in the configured Delta Table directory,
+ * convert them to {@link DeltaSourceSplit and assigns them to the readers. Once all files are
+ * processed, the source is finished.
  *
- * <p>The implementation of this class is rather thin. The actual logic for creating the set of
+ * <p>The actual logic for creating the set of
  * {@link DeltaSourceSplit} to process, and the logic to decide which reader gets what split can be
  * found {@link DeltaSourceSplitEnumerator} and in {@link FileSplitAssigner}, respectively.
  */
 public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerator {
-
-    private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
     public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
@@ -50,9 +49,9 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
         DeltaSourceConfiguration sourceConfiguration,
         long initialSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
 
-        super(deltaTablePath, splitAssigner, configuration, enumContext, sourceConfiguration,
+        super(deltaTablePath, splitAssigner, fileEnumerator, configuration, enumContext,
+            sourceConfiguration,
             initialSnapshotVersion, alreadyDiscoveredPaths);
-        this.fileEnumerator = fileEnumerator;
     }
 
     @Override
@@ -93,19 +92,23 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
      * @implNote We have 2 cases:
      * <ul>
      *      <li>
-     *          checkpointSnapshotVersion is -1. This is either the initial setup of the source,
-     *          or we are recovering from failure yet no checkpoint was found.
+     *          checkpointSnapshotVersion is equal to
+     *          {@link DeltaSourceSplitEnumerator#NO_SNAPSHOT_VERSION}. This is either the
+     *          initial setup of the source or we are recovering from failure yet no checkpoint
+     *          was found.
      *      </li>
      *      <li>
-     *          checkpointSnapshotVersion is not -1. We are recovering from failure and a
-     *          checkpoint was found. Thus, this checkpointSnapshotVersion is the version we
-     *          should load.
+     *          checkpointSnapshotVersion is not equal to
+     *          {@link DeltaSourceSplitEnumerator#NO_SNAPSHOT_VERSION}. We are recovering from
+     *          failure and a checkpoint was found. Thus, this {@code checkpointSnapshotVersion}
+     *          is the version we should load.
      *      </li>
      * </ul>
      * <p>
-     * If a specific versionAsOf/timestampAsOf option is set, we will use that for initial setup
+     * If a specific versionAsOf or timestampAsOf option is used, we will use that for initial setup
      * of the source. In case of recovery, if there is a checkpoint available to recover from,
-     * the checkpointSnapshotVersion will be set to versionAsOf/timestampAsOf snapshot version
+     * the {@code checkpointSnapshotVersion} will be set to versionAsOf/timestampAsOf snapshot
+     * version
      * by Flink using {@link io.delta.flink.source.DeltaSource#restoreEnumerator(
      *SplitEnumeratorContext, DeltaEnumeratorStateCheckpoint)} method.
      * <p>
@@ -131,7 +134,7 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     }
 
     private TransitiveOptional<Snapshot> getSnapshotFromVersionAsOfOption() {
-        Long versionAsOf = sourceConfiguration.getValue(DeltaSourceOptions.VERSION_AS_OF);
+        Long versionAsOf = getOptionValue(DeltaSourceOptions.VERSION_AS_OF);
         if (versionAsOf != null) {
             return TransitiveOptional.ofNullable(deltaLog.getSnapshotForVersionAsOf(versionAsOf));
         }
@@ -139,7 +142,7 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     }
 
     private TransitiveOptional<Snapshot> getSnapshotFromTimestampAsOfOption() {
-        Long timestampAsOf = sourceConfiguration.getValue(DeltaSourceOptions.TIMESTAMP_AS_OF);
+        Long timestampAsOf = getOptionValue(DeltaSourceOptions.TIMESTAMP_AS_OF);
         if (timestampAsOf != null) {
             return TransitiveOptional.ofNullable(
                 deltaLog.getSnapshotForTimestampAsOf(timestampAsOf));
