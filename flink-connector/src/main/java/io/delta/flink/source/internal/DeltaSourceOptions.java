@@ -7,9 +7,9 @@ import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 
 /**
- * This class contains all available options for {@link io.delta.flink.source.DeltaSource} along
- * with their type and default values if any. configuration. It may be viewed as a kind of
- * dictionary class. This class will be used both by Streaming and Table source.
+ * This class contains all available options for {@link io.delta.flink.source.DeltaSource} with
+ * their type and default values. It may be viewed as a kind of dictionary class. This class will be
+ * used both by Streaming and Table source.
  *
  * @implNote This class is used as a dictionary to work with {@link DeltaSourceConfiguration} class
  * that contains an actual configuration options used for particular {@code DeltaSource} instance.
