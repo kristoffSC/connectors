@@ -7,10 +7,9 @@ import java.util.List;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
-import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
-import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import io.delta.flink.source.internal.utils.SourceUtils;
 import io.delta.flink.source.internal.utils.TransitiveOptional;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
@@ -24,7 +23,7 @@ import io.delta.standalone.Snapshot;
  * mode.
  *
  * <p>This enumerator takes all files that are present in the configured Delta Table directory,
- * convert them to {@link DeltaSourceSplit and assigns them to the readers. Once all files are
+ * convert them to {@link DeltaSourceSplit} and assigns them to the readers. Once all files are
  * processed, the source is finished.
  *
  * <p>The actual logic for creating the set of
@@ -59,10 +58,11 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
-        AddFileEnumeratorContext context =
-            setUpEnumeratorContext(snapshot.getAllFiles(), snapshot.getVersion());
-        List<DeltaSourceSplit> splits = fileEnumerator
-            .enumerateSplits(context, (SplitFilter<Path>) pathsAlreadyProcessed::add);
+        List<DeltaSourceSplit> splits =
+            prepareSplits(ActionsPerVersion.of(
+                SourceUtils.pathToString(deltaTablePath),
+                snapshot.getVersion(),
+                snapshot.getAllFiles()));
         addSplits(splits);
     }
 

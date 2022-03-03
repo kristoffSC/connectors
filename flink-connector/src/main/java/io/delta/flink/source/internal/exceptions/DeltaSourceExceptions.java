@@ -3,6 +3,7 @@ package io.delta.flink.source.internal.exceptions;
 import java.io.IOException;
 
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
+import io.delta.flink.source.internal.utils.SourceUtils;
 import org.apache.flink.core.fs.Path;
 
 /**
@@ -10,6 +11,8 @@ import org.apache.flink.core.fs.Path;
  * DeltaSourceException} has to be thrown.
  */
 public final class DeltaSourceExceptions {
+
+    private static final String EMPTY_STRUNG = "";
 
     private DeltaSourceExceptions() {
 
@@ -26,9 +29,9 @@ public final class DeltaSourceExceptions {
      *                        DeltaSourceException}
      * @return {@link DeltaSourceException} wrapping original {@link Throwable}
      */
-    public static DeltaSourceException generalSourceException(String tablePath,
+    public static DeltaSourceException generalSourceException(String tablePath, String filePath,
         long snapshotVersion, Throwable t) {
-        return new DeltaSourceException(tablePath, snapshotVersion, t);
+        return new DeltaSourceException(tablePath, filePath, snapshotVersion, t);
     }
 
     /**
@@ -47,9 +50,41 @@ public final class DeltaSourceExceptions {
      */
     public static DeltaSourceException fileEnumerationException(AddFileEnumeratorContext context,
         Path filePath, IOException e) {
-        return new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),
+        String stringFilePath = SourceUtils.pathToString(filePath);
+        return new DeltaSourceException(context.getTablePath(), stringFilePath,
+            context.getSnapshotVersion(),
             String.format("An Exception while processing Parquet Files for path %s and version %d",
-                filePath, context.getSnapshotVersion()), e);
+                stringFilePath, context.getSnapshotVersion()), e);
+    }
+
+    public static DeltaSourceException tableMonitorException(String deltaTablePath,
+        Throwable error) {
+        if (error instanceof DeltaSourceException) {
+            return (DeltaSourceException) error;
+        }
+
+        return new DeltaSourceException(deltaTablePath,
+            String.format("Exception during monitoring Delta Table [%s] for changes",
+                deltaTablePath), error);
+    }
+
+    public static void deltaSourceIgnoreChangesException(String deltaTablePath,
+        long snapshotVersion) {
+
+        throw new DeltaSourceException(deltaTablePath,
+            String.format("Detected a data update in the source table at version "
+                + "%d. This is currently not supported. If you'd like to ignore updates, set "
+                + "the option 'ignoreChanges' to 'true'. If you would like the data update to "
+                + "be reflected, please restart this query with a fresh Delta checkpoint "
+                + "directory.", snapshotVersion), snapshotVersion);
+    }
+
+    public static void deltaSourceIgnoreDeleteException(String deltaTablePath,
+        long snapshotVersion) {
+        throw new DeltaSourceException(deltaTablePath,
+            String.format("Detected deleted data (for example $removedFile) from streaming source "
+                + "at version %d. This is currently not supported. If you'd like to ignore deletes "
+                + "set the option 'ignoreDeletes' to 'true'.", snapshotVersion), snapshotVersion);
     }
 
     // Add other methods in future PRs.

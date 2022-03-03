@@ -58,7 +58,7 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>startingVersion</b>.
      */
     public static final ConfigOption<String> STARTING_VERSION =
-        ConfigOptions.key("startingVersion").stringType().noDefaultValue();
+        ConfigOptions.key("startingVersion").stringType().defaultValue("latest");
 
     /**
      * An option used to read only changes from {@link io.delta.standalone.Snapshot} that was
@@ -70,7 +70,7 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>startingTimestamp</b>.
      */
     public static final ConfigOption<String> STARTING_TIMESTAMP =
-        ConfigOptions.key("startingTimestamp").stringType().defaultValue("latest");
+        ConfigOptions.key("startingTimestamp").stringType().noDefaultValue();
 
     /**
      * An option to specify check interval for monitoring Delta table changes used by {@link
@@ -84,6 +84,19 @@ public class DeltaSourceOptions {
     public static final ConfigOption<Integer> UPDATE_CHECK_INTERVAL =
         ConfigOptions.key("updateCheckIntervalMillis").intType().defaultValue(5000);
 
+    public static final ConfigOption<Integer> UPDATE_CHECK_INITIAL_DELAY =
+        ConfigOptions.key("updateCheckDelayMillis").intType().defaultValue(1000)
+            .withDescription(
+                "Time interval value used for periodical table update checks.");
+
+    public static final ConfigOption<Boolean> IGNORE_DELETES =
+        ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false)
+            .withDescription("Allow for Delete only versions");
+
+    public static final ConfigOption<Boolean> IGNORE_CHANGES =
+        ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false)
+            .withDescription("Allow for versions with deletes and updates.");
+
     // TODO test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
@@ -91,6 +104,9 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(STARTING_VERSION.key(), STARTING_VERSION);
         VALID_SOURCE_OPTIONS.put(STARTING_TIMESTAMP.key(), STARTING_TIMESTAMP);
         VALID_SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
+        VALID_SOURCE_OPTIONS.put(UPDATE_CHECK_INITIAL_DELAY.key(), UPDATE_CHECK_INITIAL_DELAY);
+        VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
+        VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
     }
 
     // TODO Add other options in future PRs

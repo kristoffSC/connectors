@@ -56,8 +56,8 @@ public class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> 
         ArrayList<DeltaSourceSplit> splitsToReturn = new ArrayList<>();
 
         for (AddFile addFile : context.getAddFiles()) {
-            Path path = acquireFilePath(context.getTablePath(), addFile);
-            tryConvertToSourceSplits(context, splitFilter, splitsToReturn, addFile, path);
+            Path filePath = acquireFilePath(context.getTablePath(), addFile);
+            tryConvertToSourceSplits(context, splitFilter, splitsToReturn, addFile, filePath);
         }
 
         return splitsToReturn;
@@ -65,15 +65,15 @@ public class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> 
 
     private void tryConvertToSourceSplits(AddFileEnumeratorContext context,
         SplitFilter<Path> splitFilter, ArrayList<DeltaSourceSplit> splitsToReturn, AddFile addFile,
-        Path path) {
+        Path filePath) {
         try {
-            if (splitFilter.test(path)) {
-                FileSystem fs = path.getFileSystem();
-                FileStatus status = fs.getFileStatus(path);
+            if (splitFilter.test(filePath)) {
+                FileSystem fs = filePath.getFileSystem();
+                FileStatus status = fs.getFileStatus(filePath);
                 convertToSourceSplits(status, fs, addFile.getPartitionValues(), splitsToReturn);
             }
         } catch (IOException e) {
-            throw DeltaSourceExceptions.fileEnumerationException(context, path, e);
+            throw DeltaSourceExceptions.fileEnumerationException(context, filePath, e);
         }
     }
 

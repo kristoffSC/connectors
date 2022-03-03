@@ -6,11 +6,15 @@ import java.util.List;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.enumerator.monitor.ActionProcessor;
+import io.delta.flink.source.internal.enumerator.monitor.MonitorTableResult;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
+import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
-import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
-import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import io.delta.flink.source.internal.utils.SourceUtils;
+import io.delta.flink.source.internal.utils.TransitiveOptional;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
@@ -18,11 +22,16 @@ import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
+import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY;
+import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
+import static io.delta.flink.source.internal.enumerator.TimestampFormatConverter.convertToTimestamp;
 
 import io.delta.standalone.Snapshot;
-import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.actions.Action;
 
 /**
  * A SplitEnumerator implementation for continuous {@link io.delta.flink.source.DeltaSource} mode.
@@ -51,14 +60,9 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     /**
      * The {@link TableMonitor} instance used to monitor Delta Table for changes.
      */
-    // TODO PR 7 Will be used in monitor for changes.
     private final TableMonitor tableMonitor;
 
-    // TODO PR 7 Add monitor for changes.
-    // private final boolean ignoreChanges;
-
-    // TODO PR 7 Add monitor for changes.
-    // private final boolean ignoreDeletes;
+    private final ActionProcessor actionProcessor;
 
     /**
      * The current {@link Snapshot} version that is used by this enumerator to read data from. This
@@ -96,6 +100,9 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
                 deltaLog,
                 this.currentSnapshotVersion + 1,
                 getOptionValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL));
+
+        this.actionProcessor =
+            ActionProcessor.create(getOptionValue(IGNORE_CHANGES), getOptionValue(IGNORE_DELETES));
     }
 
     private static long chooseVersion(long initialSnapshotVersion,
@@ -113,7 +120,13 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             readTableInitialContent();
         }
 
-        // TODO PR 7 Add monitor for changes here.
+        // TODO add tests to check split creation//assignment granularity is in scope of VersionLog.
+        //monitor for changes
+        enumContext.callAsync(
+            tableMonitor, // executed sequentially by ScheduledPool Thread.
+            this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
+            getOptionValue(UPDATE_CHECK_INITIAL_DELAY),
+            getOptionValue(UPDATE_CHECK_INTERVAL));
     }
 
     @Override
@@ -169,11 +182,11 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     @Override
     protected Snapshot getInitialSnapshot(long checkpointSnapshotVersion) {
 
-        // TODO test all those options
+        // TODO PR 7 test all those options
         // Prefer version from checkpoint over other ones.
         return getSnapshotFromCheckpoint(checkpointSnapshotVersion)
-            //.or(this::getSnapshotFromStartingVersionOption) // TODO Add in PR 7
-            //.or(this::getSnapshotFromStartingTimestampOption) // TODO Add in PR 7
+            .or(this::getSnapshotFromStartingVersionOption)
+            .or(this::getSnapshotFromStartingTimestampOption)
             .or(this::getHeadSnapshot)
             .get();
     }
@@ -183,10 +196,30 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         // We should do nothing, since we are continuously monitoring Delta Table.
     }
 
-    private List<DeltaSourceSplit> prepareSplits(List<AddFile> addFiles, long snapshotVersion) {
-        AddFileEnumeratorContext context = setUpEnumeratorContext(addFiles, snapshotVersion);
-        return fileEnumerator.enumerateSplits(context,
-            (SplitFilter<Path>) pathsAlreadyProcessed::add);
+    private TransitiveOptional<Snapshot> getSnapshotFromStartingVersionOption() {
+        if (isChangeStreamOnly()) {
+            String startingVersion = getOptionValueSkipDefault(STARTING_VERSION);
+            if (startingVersion != null) {
+                if (startingVersion.equalsIgnoreCase(STARTING_VERSION.defaultValue())) {
+                    return TransitiveOptional.ofNullable(deltaLog.snapshot());
+                } else {
+                    return TransitiveOptional.ofNullable(deltaLog.getSnapshotForVersionAsOf(
+                        Long.parseLong(startingVersion)));
+                }
+            }
+        }
+        return TransitiveOptional.empty();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromStartingTimestampOption() {
+        if (isChangeStreamOnly()) {
+            String startingTimestamp = getOptionValue(STARTING_TIMESTAMP);
+            if (startingTimestamp != null) {
+                return TransitiveOptional.ofNullable(deltaLog.getSnapshotForTimestampAsOf(
+                    convertToTimestamp(startingTimestamp)));
+            }
+        }
+        return TransitiveOptional.empty();
     }
 
     @VisibleForTesting
@@ -197,9 +230,30 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         if (this.initialSnapshotVersion == this.currentSnapshotVersion) {
             LOG.info("Getting data for start version - {}", snapshot.getVersion());
             List<DeltaSourceSplit> splits =
-                prepareSplits(snapshot.getAllFiles(), snapshot.getVersion());
+                prepareSplits(ActionsPerVersion.of(
+                    SourceUtils.pathToString(deltaTablePath),
+                    snapshot.getVersion(),
+                    snapshot.getAllFiles()));
             addSplits(splits);
         }
+    }
+
+    private void processDiscoveredVersions(MonitorTableResult monitorTableResult, Throwable error) {
+        if (error != null) {
+            LOG.error("Failed to enumerate files", error);
+            throw DeltaSourceExceptions.tableMonitorException(
+                SourceUtils.pathToString(deltaTablePath), error);
+        }
+
+        this.currentSnapshotVersion = monitorTableResult.getHighestSeenVersion();
+        List<ActionsPerVersion<Action>> newActions = monitorTableResult.getChanges();
+
+        newActions.stream()
+            .map(actionProcessor::processActions)
+            .map(this::prepareSplits)
+            .forEachOrdered(this::addSplits);
+
+        assignSplits();
     }
 
     private boolean isChangeStreamOnly() {

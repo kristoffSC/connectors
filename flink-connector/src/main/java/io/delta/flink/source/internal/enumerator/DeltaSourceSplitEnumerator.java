@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
+import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -215,7 +216,7 @@ public abstract class DeltaSourceSplitEnumerator implements
         return new AddFileEnumeratorContext(pathString, addFiles, snapshotVersion);
     }
 
-    private AssignSplitStatus assignSplits() {
+    protected AssignSplitStatus assignSplits() {
         final Iterator<Entry<Integer, String>> awaitingReader =
             readersAwaitingSplit.entrySet().iterator();
 
@@ -269,6 +270,17 @@ public abstract class DeltaSourceSplitEnumerator implements
 
     protected <T> T getOptionValue(ConfigOption<T> option) {
         return this.sourceConfiguration.getValue(option);
+    }
+
+    protected <T> T getOptionValueSkipDefault(ConfigOption<T> option) {
+        return this.sourceConfiguration.getValueSkipDefault(option);
+    }
+
+    protected List<DeltaSourceSplit> prepareSplits(ActionsPerVersion<AddFile> changes) {
+        AddFileEnumeratorContext context =
+            setUpEnumeratorContext(changes.getChanges(), changes.getSnapshotVersion());
+        return fileEnumerator.enumerateSplits(context,
+            (SplitFilter<Path>) pathsAlreadyProcessed::add);
     }
 
     @VisibleForTesting

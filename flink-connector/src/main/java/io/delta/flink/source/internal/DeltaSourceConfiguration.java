@@ -1,11 +1,10 @@
 package io.delta.flink.source.internal;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.Configuration;
 
 /**
  * This class keeps {@link DeltaSourceOptions} used for {@link io.delta.flink.source.DeltaSource}
@@ -25,23 +24,29 @@ public class DeltaSourceConfiguration implements Serializable {
      * serializable as well. The {@link ConfigOption} is not a serializable object, and therefore it
      * cannot be used as a map entry key.
      */
-    private final Map<String, Object> usedSourceOptions = new HashMap<>();
+    //private final Map<String, Object> usedSourceOptions = new HashMap<>();
+
+    private final Configuration usedSourceOptions = new Configuration();
 
     // TODO those methods here will be used by DeltaSourceBuilder.
     public DeltaSourceConfiguration addOption(String name, String value) {
-        return addOptionObject(name, value);
+        this.usedSourceOptions.setString(name, value);
+        return this;
     }
 
     public DeltaSourceConfiguration addOption(String name, boolean value) {
-        return addOptionObject(name, value);
+        this.usedSourceOptions.setBoolean(name, value);
+        return this;
     }
 
     public DeltaSourceConfiguration addOption(String name, int value) {
-        return addOptionObject(name, value);
+        this.usedSourceOptions.setInteger(name, value);
+        return this;
     }
 
     public DeltaSourceConfiguration addOption(String name, long value) {
-        return addOptionObject(name, value);
+        this.usedSourceOptions.setLong(name, value);
+        return this;
     }
 
     public boolean hasOption(ConfigOption<?> option) {
@@ -57,20 +62,29 @@ public class DeltaSourceConfiguration implements Serializable {
      * @param option The {@code DeltaSourceOption} for which we want to get the value.
      * @param <T>    Type of returned value. It will be same type used in {@link DeltaSourceOptions}
      *               definition.
-     * @return A value for given option if used or a default value if defined or null if none.
+     * @return A value for given option if used or a default value if defined, or null if no default
+     * value is defined.
      */
-    @SuppressWarnings("unchecked")
     public <T> T getValue(ConfigOption<T> option) {
-        return (T) getValue(option.key()).orElse(option.defaultValue());
+        return getOptionalValue(option).orElse(option.defaultValue());
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> Optional<T> getValue(String optionName) {
-        return (Optional<T>) Optional.ofNullable(this.usedSourceOptions.get(optionName));
+    /**
+     * This method returns a value for used {@code DeltaSourceOption}. The type of returned value
+     * will be cast to the the same type that was used in {@link DeltaSourceOptions} definition.
+     * Using {@code DeltaSourceOption} object as an argument rather than option's string key
+     * guaranties type safety.
+     *
+     * @param option The {@code DeltaSourceOption} for which we want to get the value.
+     * @param <T>    Type of returned value. It will be same type used in {@link DeltaSourceOptions}
+     *               definition.
+     * @return A value for given option if used or null.
+     */
+    public <T> T getValueSkipDefault(ConfigOption<T> option) {
+        return getOptionalValue(option).orElse(null);
     }
 
-    private DeltaSourceConfiguration addOptionObject(String name, Object value) {
-        this.usedSourceOptions.put(name, value);
-        return this;
+    private <T> Optional<T> getOptionalValue(ConfigOption<T> option) {
+        return this.usedSourceOptions.getOptional(option);
     }
 }

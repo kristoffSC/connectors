@@ -74,6 +74,12 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
     private Snapshot checkpointedSnapshot;
 
     @Mock
+    private Snapshot startingVersionSnapshot;
+
+    @Mock
+    private Snapshot startingTimestampSnapshot;
+
+    @Mock
     private ReaderInfo readerInfo;
 
     @Mock
@@ -92,6 +98,8 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
 
     @Before
     public void setUp() {
+        when(deltaLog.getPath()).thenReturn(new org.apache.hadoop.fs.Path(TEST_PATH));
+
         sourceConfiguration = new DeltaSourceConfiguration();
         deltaLogStatic = Mockito.mockStatic(DeltaLog.class);
         deltaLogStatic.when(() -> DeltaLog.forTable(any(Configuration.class), anyString()))
@@ -110,11 +118,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
 
     @Test
     public void shouldUseHeadSnapshot() {
-        when(deltaLog.snapshot()).thenReturn(headSnapshot);
-
-        enumerator = new ContinuousDeltaSourceSplitEnumerator(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration);
+        enumerator = setUpSpyEnumeratorWithHeadSnapshot();
 
         assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
         verify(deltaLog).snapshot();
@@ -141,7 +145,58 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
         verify(deltaLog).getSnapshotForVersionAsOf(checkpointedSnapshotVersion);
     }
 
-    // TODO PR 7 Add tests for startingVersion and startingTimestamp
+    @Test
+    public void shouldUseStartingVersionSnapshot() {
+        int startingVersion = 10;
+        sourceConfiguration.addOption(DeltaSourceOptions.STARTING_VERSION.key(), startingVersion);
+        when(deltaLog.getSnapshotForVersionAsOf(startingVersion)).thenReturn(
+            startingVersionSnapshot);
+
+        enumerator = new ContinuousDeltaSourceSplitEnumerator(
+            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceConfiguration);
+
+        assertThat(enumerator.getSnapshot(), equalTo(startingVersionSnapshot));
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+        verify(deltaLog).getSnapshotForVersionAsOf(anyLong());
+    }
+
+    @Test
+    public void shouldUseLatestStartingVersionSnapshot() {
+        String startingVersion = "latest";
+        sourceConfiguration.addOption(DeltaSourceOptions.STARTING_VERSION.key(), startingVersion);
+        when(deltaLog.snapshot()).thenReturn(startingVersionSnapshot);
+
+        enumerator = new ContinuousDeltaSourceSplitEnumerator(
+            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceConfiguration);
+
+        assertThat(enumerator.getSnapshot(), equalTo(startingVersionSnapshot));
+        verify(deltaLog).snapshot();
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+    }
+
+    @Test
+    public void shouldUseStartingTimestampSnapshot() {
+
+        String startingTimestamp = "2019-01-01T00:00:00.000Z";
+
+        sourceConfiguration.addOption(DeltaSourceOptions.STARTING_TIMESTAMP.key(),
+            startingTimestamp);
+
+        when(deltaLog.getSnapshotForTimestampAsOf(anyLong())).thenReturn(startingTimestampSnapshot);
+
+        enumerator = new ContinuousDeltaSourceSplitEnumerator(
+            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceConfiguration);
+
+        assertThat(enumerator.getSnapshot(), equalTo(startingTimestampSnapshot));
+        verify(deltaLog).getSnapshotForTimestampAsOf(anyLong());
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+    }
 
     @Test
     public void shouldHandleFailedReader() {
@@ -265,7 +320,8 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
     @Test
     public void shouldReadChangesOnlyWhenStartingTimestampOption() {
         sourceConfiguration.addOption(DeltaSourceOptions.STARTING_TIMESTAMP.key(),
-            System.currentTimeMillis());
+            "2022-02-24T04:55:00.001Z");
+
         enumerator = setUpSpyEnumeratorWithHeadSnapshot();
 
         enumerator.start();
