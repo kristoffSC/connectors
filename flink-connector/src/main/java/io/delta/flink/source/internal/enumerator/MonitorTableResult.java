@@ -18,7 +18,7 @@ public class MonitorTableResult {
     private final long highestSeenVersion;
 
     /**
-     * An ordered list of {@link ChangesPerVersion}. Elements o this list represents Delta Table
+     * An ordered list of {@link ChangesPerVersion}. Elements of this list represents Delta Table
      * changes per version in ASC version order.
      */
     private final List<ChangesPerVersion> changesPerVersion;

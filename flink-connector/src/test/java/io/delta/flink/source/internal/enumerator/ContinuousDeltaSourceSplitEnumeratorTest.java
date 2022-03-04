@@ -1,162 +1,102 @@
 package io.delta.flink.source.internal.enumerator;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import static java.util.Collections.emptyList;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
-import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
-import io.delta.flink.source.internal.file.AddFileEnumerator;
-import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
-import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
-import io.delta.flink.source.internal.utils.SourceUtils;
-import org.apache.flink.api.connector.source.ReaderInfo;
-import org.apache.flink.api.connector.source.SplitEnumeratorContext;
-import org.apache.flink.connector.file.src.FileSourceSplit;
-import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
-import org.apache.flink.core.fs.Path;
-import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import static io.delta.flink.source.internal.enumerator.SourceSplitEnumeratorTestUtils.mockFileEnumerator;
-import static io.delta.flink.source.internal.enumerator.SourceSplitEnumeratorTestUtils.mockSplits;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.delta.standalone.DeltaLog;
-import io.delta.standalone.Snapshot;
-import io.delta.standalone.actions.AddFile;
-
 @RunWith(MockitoJUnitRunner.class)
-public class ContinuousDeltaSourceSplitEnumeratorTest {
-
-    private static final String TEST_PATH = "/some/path/file.txt";
-
-    @Mock
-    private AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
-
-    @Mock
-    private DeltaLog deltaLog;
-
-    @Mock
-    private Path deltaTablePath;
-
-    @Mock
-    private FileSplitAssigner splitAssigner;
-
-    @Mock
-    private SplitEnumeratorContext<DeltaSourceSplit> enumContext;
-
-    @Mock
-    private Snapshot headSnapshot;
-
-    @Mock
-    private Snapshot checkpointedSnapshot;
-
-    @Mock
-    private ReaderInfo readerInfo;
-
-    @Mock
-    private DeltaSourceSplit split;
-
-    @Captor
-    private ArgumentCaptor<List<FileSourceSplit>> splitsCaptor;
+public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnumeratorTestBase {
 
     private ContinuousDeltaSourceSplitEnumerator enumerator;
 
-    private MockedStatic<SourceUtils> sourceUtils;
-
-    private MockedStatic<DeltaLog> deltaLogStatic;
-
-    private DeltaSourceConfiguration sourceConfiguration;
-
     @Before
     public void setUp() {
-        sourceConfiguration = new DeltaSourceConfiguration();
-        deltaLogStatic = Mockito.mockStatic(DeltaLog.class);
-        deltaLogStatic.when(() -> DeltaLog.forTable(any(Configuration.class), anyString()))
-            .thenReturn(this.deltaLog);
-
-        sourceUtils = Mockito.mockStatic(SourceUtils.class);
-        sourceUtils.when(() -> SourceUtils.pathToString(deltaTablePath))
-            .thenReturn(TEST_PATH);
+        super.setUp();
     }
 
     @After
     public void after() {
-        sourceUtils.close();
-        deltaLogStatic.close();
+        super.after();
     }
 
     @Test
-    public void shouldUseHeadSnapshot() {
-        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+    public void shouldNotReadInitialSnapshotIfRecoveryFromNewVersion() {
+        long initialSnapshotVersion = 1;
+        long currentSnapshotVersion = 10;
 
-        enumerator = new ContinuousDeltaSourceSplitEnumerator(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration);
+        when(deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion)).thenReturn(headSnapshot);
+        when(headSnapshot.getVersion()).thenReturn(initialSnapshotVersion);
 
-        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
-        verify(deltaLog).snapshot();
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>
+            checkpoint = DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath,
+            initialSnapshotVersion, currentSnapshotVersion, emptyList(), emptyList());
+
+        enumerator = spy(ContinuousDeltaSourceSplitEnumerator.createForCheckpoint(
+            checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceConfiguration));
+
+        enumerator.start();
+
+        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+
+        verify(enumerator, never()).readTableInitialContent();
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
-        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+
+        // The snapshot is initialized from initial version. The snapshot is used only for initial
+        // table load and not for monitoring for changes.
+        verify(deltaLog).getSnapshotForVersionAsOf(initialSnapshotVersion);
     }
 
     @Test
-    public void shouldUseCheckpointSnapshot() {
-        int initialSnapshotVersion = 1;
-        int checkpointedSnapshotVersion = 10;
+    public void shouldReadInitialSnapshotAgainIfRecoveryFromInitialVersion() {
+        long initialSnapshotVersion = 1;
+        long currentSnapshotVersion = 1;
 
-        when(deltaLog.getSnapshotForVersionAsOf(checkpointedSnapshotVersion)).thenReturn(
-            checkpointedSnapshot);
+        when(deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion)).thenReturn(headSnapshot);
+        when(headSnapshot.getVersion()).thenReturn(initialSnapshotVersion);
 
-        enumerator = new ContinuousDeltaSourceSplitEnumerator(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration, initialSnapshotVersion, checkpointedSnapshotVersion,
-            Collections.emptyList());
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>
+            checkpoint = DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath,
+            initialSnapshotVersion, currentSnapshotVersion, emptyList(), emptyList());
 
-        assertThat(enumerator.getSnapshot(), equalTo(checkpointedSnapshot));
+        enumerator = spy(ContinuousDeltaSourceSplitEnumerator.createForCheckpoint(
+            checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceConfiguration));
+
+        enumerator.start();
+
+        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+
+        verify(enumerator).readTableInitialContent();
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
-        verify(deltaLog, never()).snapshot();
-        verify(deltaLog).getSnapshotForVersionAsOf(checkpointedSnapshotVersion);
+
+        // The snapshot is initialized from initial version. The snapshot is used only for initial
+        // table load and not for monitoring for changes.
+        verify(deltaLog).getSnapshotForVersionAsOf(initialSnapshotVersion);
     }
 
     // TODO PR 7 Add tests for startingVersion and startingTimestamp
 
     @Test
-    public void shouldHandleFailedReader() {
-        enumerator = setUpSpyEnumeratorWithHeadSnapshot();
-
-        // Mock reader failure.
-        when(enumContext.registeredReaders()).thenReturn(Collections.emptyMap());
-
-        int subtaskId = 1;
-        enumerator.handleSplitRequest(subtaskId, "testHost");
-        verify(enumContext, never()).assignSplit(any(DeltaSourceSplit.class), anyInt());
-    }
-
-    @Test
-    public void shouldSignalNoMoreSplitsIfNone() {
+    public void shouldNotSignalNoMoreSplitsIfNone() {
         int subtaskId = 1;
         enumerator = setUpSpyEnumeratorWithHeadSnapshot();
 
@@ -164,113 +104,31 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
             Collections.singletonMap(subtaskId, readerInfo));
 
         enumerator.handleSplitRequest(subtaskId, "testHost");
+
         verify(enumerator).handleNoMoreSplits(subtaskId);
         verify(enumContext, never()).signalNoMoreSplits(subtaskId);
     }
 
     @Test
-    public void shouldAssignSplitToReader() {
-        int subtaskId = 1;
-        enumerator = setUpSpyEnumeratorWithHeadSnapshot();
-
-        when(enumContext.registeredReaders()).thenReturn(
-            Collections.singletonMap(subtaskId, readerInfo));
-
-        String host = "testHost";
-        when(splitAssigner.getNext(host)).thenReturn(Optional.of(split))
-            .thenReturn(Optional.empty());
-
-        // handle request split when there is a split to assign
-        enumerator.handleSplitRequest(subtaskId, host);
-        verify(enumContext).assignSplit(split, subtaskId);
-        verify(enumContext, never()).signalNoMoreSplits(anyInt());
-
-        // check that we clear split from enumerator after assigning them.
-        enumerator.handleSplitRequest(subtaskId, host);
-        verify(enumContext).assignSplit(split, subtaskId); // the one from previous assignment.
-        verify(enumerator).handleNoMoreSplits(subtaskId);
-    }
-
-    @Test
-    public void shouldAddSplitBack() {
-        int subtaskId = 1;
-        enumerator = setUpSpyEnumeratorWithHeadSnapshot();
-
-        when(enumContext.registeredReaders()).thenReturn(
-            Collections.singletonMap(subtaskId, readerInfo));
-
-        String testHost = "testHost";
-        enumerator.handleSplitRequest(subtaskId, testHost);
-        verify(enumerator).handleNoMoreSplits(subtaskId);
-
-        enumerator.addSplitsBack(Collections.singletonList(split), subtaskId);
-
-        //capture the assigned split to mock assigner and use it in getNext mock
-        verify(splitAssigner).addSplits(splitsCaptor.capture());
-
-        when(splitAssigner.getNext(testHost)).thenReturn(
-            Optional.ofNullable(splitsCaptor.getValue().get(0)));
-        enumerator.handleSplitRequest(subtaskId, testHost);
-        verify(enumContext).assignSplit(split, subtaskId);
-    }
-
-    @Test
-    public void shouldReadInitialSnapshot() {
-        enumerator = setUpSpyEnumeratorWithHeadSnapshot();
-
-        List<DeltaSourceSplit> mockSplits = mockSplits();
-        when(fileEnumerator.enumerateSplits(any(AddFileEnumeratorContext.class),
-            any(SplitFilter.class)))
-            .thenReturn(mockSplits);
-
-        enumerator.start();
-
-        verify(splitAssigner).addSplits(splitsCaptor.capture());
-        assertThat(splitsCaptor.getValue(), equalTo(mockSplits));
-    }
-
-    @Test
-    public void shouldNotProcessAlreadyProcessedPaths() {
-        enumerator = setUpSpyEnumeratorWithHeadSnapshot();
-
-        AddFile mockAddFile = mock(AddFile.class);
-        when(mockAddFile.getPath()).thenReturn("add/file/path.parquet");
-        when(headSnapshot.getAllFiles()).thenReturn(Collections.singletonList(mockAddFile));
-
-        mockFileEnumerator(fileEnumerator);
-
-        enumerator.start();
-
-        verify(splitAssigner).addSplits(splitsCaptor.capture());
-        assertThat(splitsCaptor.getValue().size(), equalTo(1));
-
-        // Reprocess the same data again
-        enumerator.start();
-
-        verify(splitAssigner, times(2)).addSplits(splitsCaptor.capture());
-        assertThat(splitsCaptor.getValue().isEmpty(), equalTo(true));
-    }
-
-    @Test
-    public void shouldReadChangesOnlyWhenStartingVersionOption() {
+    public void shouldOnlyReadChangesWhenStartingVersionOption() {
         sourceConfiguration.addOption(DeltaSourceOptions.STARTING_VERSION.key(), 10);
         enumerator = setUpSpyEnumeratorWithHeadSnapshot();
 
         enumerator.start();
 
-        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
         verify(enumerator, never()).readTableInitialContent();
     }
 
     @Test
-    public void shouldReadChangesOnlyWhenStartingTimestampOption() {
+    public void shouldOnlyReadChangesWhenStartingTimestampOption() {
         sourceConfiguration.addOption(DeltaSourceOptions.STARTING_TIMESTAMP.key(),
             System.currentTimeMillis());
         enumerator = setUpSpyEnumeratorWithHeadSnapshot();
 
         enumerator.start();
 
-        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
         verify(enumerator, never()).readTableInitialContent();
     }
 
@@ -282,32 +140,48 @@ public class ContinuousDeltaSourceSplitEnumeratorTest {
      */
     @Test
     public void shouldNotReadTableContentIfNotOnInitialVersion() {
+        long initialSnapshotVersion = 1;
+        long currentSnapshotVersion = 10;
+
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>
+            checkpoint = DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath,
+            initialSnapshotVersion, currentSnapshotVersion, emptyList(), emptyList());
+
+        when(headSnapshot.getVersion()).thenReturn(initialSnapshotVersion);
         when(deltaLog.snapshot()).thenReturn(headSnapshot);
 
         // Enumerator that is first time created thus it should read initial table content from
         // initial snapshot version.
-        enumerator = new ContinuousDeltaSourceSplitEnumerator(
+        enumerator = ContinuousDeltaSourceSplitEnumerator.create(
             deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
             enumContext, sourceConfiguration);
 
-        enumerator.readTableInitialContent();
+        enumerator.start();
         verify(splitAssigner).addSplits(any());
 
         // Enumerator that is recreated from Snapshot hence it has initial snapshot version and
         // checkpoint snapshot version.
-        enumerator = new ContinuousDeltaSourceSplitEnumerator(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration, 1, 10, Collections.emptyList());
+        when(deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion)).thenReturn(headSnapshot);
+        enumerator = ContinuousDeltaSourceSplitEnumerator.createForCheckpoint(
+            checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
+            enumContext, sourceConfiguration);
 
         Mockito.reset(splitAssigner);
-        enumerator.readTableInitialContent();
+        enumerator.start();
         verify(splitAssigner, never()).addSplits(any());
+    }
+
+    @Override
+    protected DeltaSourceSplitEnumerator createEnumerator() {
+        return ContinuousDeltaSourceSplitEnumerator.create(
+            deltaTablePath, fileEnumerator, splitAssigner,
+            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
     }
 
     private ContinuousDeltaSourceSplitEnumerator setUpSpyEnumeratorWithHeadSnapshot() {
         when(deltaLog.snapshot()).thenReturn(headSnapshot);
 
-        return spy(new ContinuousDeltaSourceSplitEnumerator(
+        return spy(ContinuousDeltaSourceSplitEnumerator.create(
             deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
             enumContext, sourceConfiguration));
     }

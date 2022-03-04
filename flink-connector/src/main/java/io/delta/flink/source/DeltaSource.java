@@ -147,7 +147,8 @@ public final class DeltaSource<T>
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumerator(
         SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        return splitEnumeratorProvider.createEnumerator(tablePath, serializableConf.conf(),
+        return splitEnumeratorProvider.createInitialStateEnumerator(tablePath,
+            serializableConf.conf(),
             enumContext, sourceConfiguration);
     }
 
@@ -156,7 +157,7 @@ public final class DeltaSource<T>
         restoreEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
 
-        return splitEnumeratorProvider.createEnumerator(
+        return splitEnumeratorProvider.createEnumeratorForCheckpoint(
             checkpoint, serializableConf.conf(), enumContext, sourceConfiguration);
     }
 

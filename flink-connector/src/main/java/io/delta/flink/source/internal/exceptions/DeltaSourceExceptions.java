@@ -34,7 +34,7 @@ public final class DeltaSourceExceptions {
     /**
      * Creates new {@link DeltaSourceException} object that can be used for {@link IOException}
      * thrown from {@link io.delta.flink.source.internal.file.AddFileEnumerator#enumerateSplits(
-     *AddFileEnumeratorContext, io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter)}
+     * AddFileEnumeratorContext, io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter)}
      * <p>
      * <p>
      * Wraps given {@link Throwable} with {@link DeltaSourceException}. The returned exception

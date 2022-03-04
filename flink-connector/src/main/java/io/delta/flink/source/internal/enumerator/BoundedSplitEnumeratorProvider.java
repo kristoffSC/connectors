@@ -1,6 +1,6 @@
 package io.delta.flink.source.internal.enumerator;
 
-import java.util.Collections;
+import static java.util.Collections.emptyList;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
@@ -40,29 +40,27 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumerator(
+        createInitialStateEnumerator(
         Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
 
-        return new BoundedDeltaSourceSplitEnumerator(
+        return BoundedDeltaSourceSplitEnumerator.create(
             deltaTablePath, fileEnumeratorProvider.create(),
-            splitAssignerProvider.create(Collections.emptyList()), configuration, enumContext,
+            splitAssignerProvider.create(emptyList()), configuration, enumContext,
             sourceConfiguration);
     }
 
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumerator(
+        createEnumeratorForCheckpoint(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
 
-        return new BoundedDeltaSourceSplitEnumerator(
-            checkpoint.getDeltaTablePath(), fileEnumeratorProvider.create(),
-            splitAssignerProvider.create(Collections.emptyList()),
-            configuration, enumContext, sourceConfiguration, checkpoint.getInitialSnapshotVersion(),
-            checkpoint.getAlreadyProcessedPaths());
+        return BoundedDeltaSourceSplitEnumerator.createForCheckpoint(
+            checkpoint, fileEnumeratorProvider.create(), splitAssignerProvider.create(emptyList()),
+            configuration, enumContext, sourceConfiguration);
     }
 
     @Override

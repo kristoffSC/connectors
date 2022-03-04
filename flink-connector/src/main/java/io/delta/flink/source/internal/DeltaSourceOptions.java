@@ -73,10 +73,10 @@ public class DeltaSourceOptions {
         ConfigOptions.key("startingTimestamp").stringType().defaultValue("latest");
 
     /**
-     * An option to specify check interval for monitoring Delta table changes used by {@link
-     * io.delta.flink.source.internal.enumerator.ContinuousDeltaSourceSplitEnumerator}. Applicable
-     * for {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode
-     * only.
+     * An option to specify check interval (in milliseconds) for monitoring Delta table changes used
+     * by {@link io.delta.flink.source.internal.enumerator.ContinuousDeltaSourceSplitEnumerator}.
+     * Applicable for {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only.
      * <p>
      * <p>
      * The String representation for this option is <b>updateCheckIntervalMillis</b>.

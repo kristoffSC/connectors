@@ -73,9 +73,9 @@ public abstract class DeltaSourceSplitEnumerator implements
     protected final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
     /**
-     * The Delta {@link Snapshot} that we should read data from.
+     * The initial Delta {@link Snapshot} that was used for first Source initialization.
      */
-    protected final Snapshot snapshot;
+    protected final Snapshot initialSnapshot;
 
     /**
      * A {@link SplitEnumeratorContext} assigned to this {@code SourceEnumerator}.
@@ -109,12 +109,18 @@ public abstract class DeltaSourceSplitEnumerator implements
      */
     protected final DeltaSourceConfiguration sourceConfiguration;
 
+    /**
+     * @param initialSnapshotVersionHint this parameter is used by {@link #getInitialSnapshot(long)}
+     *                                   method to initilize the initial {@link Snapshot}. From that
+     *                                   snapshot the {@link #initialSnapshotVersion} field is set
+     *                                   by calling {@code snapshot.vetVersion()}.
+     */
     protected DeltaSourceSplitEnumerator(
         Path deltaTablePath, FileSplitAssigner splitAssigner,
         AddFileEnumerator<DeltaSourceSplit> fileEnumerator, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration,
-        long checkpointSnapshotVersion, Collection<Path> alreadyDiscoveredPaths) {
+        long initialSnapshotVersionHint, Collection<Path> alreadyDiscoveredPaths) {
 
         this.splitAssigner = splitAssigner;
         this.fileEnumerator = fileEnumerator;
@@ -125,9 +131,9 @@ public abstract class DeltaSourceSplitEnumerator implements
 
         this.deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
-        this.snapshot = getInitialSnapshot(checkpointSnapshotVersion);
+        this.initialSnapshot = getInitialSnapshot(initialSnapshotVersionHint);
 
-        this.initialSnapshotVersion = snapshot.getVersion();
+        this.initialSnapshotVersion = initialSnapshot.getVersion();
         this.pathsAlreadyProcessed = new HashSet<>(alreadyDiscoveredPaths);
     }
 
@@ -182,14 +188,32 @@ public abstract class DeltaSourceSplitEnumerator implements
      * This method is called from {@code DeltaSourceSplitEnumerator} constructor during object
      * initialization.
      *
-     * @param checkpointSnapshotVersion - version of snapshot from checkpoint. If the value is equal
-     *                                  to {@link #NO_SNAPSHOT_VERSION} it means that this is first
-     *                                  Source initialization and not a recovery from a Flink's
-     *                                  checkpoint.
+     * @param initialSnapshotVersionHint version of snapshot from checkpoint. If the value is equal
+     *                                  to {@link #NO_SNAPSHOT_VERSION} it means that this is the
+     *                                  first Source initialization and not a recovery from a
+     *                                  Flink's checkpoint.
      * @return A {@link Snapshot} that will be used as an initial Delta Table {@code Snapshot} to
      * read data from.
+     *
+     * <p>
+     * <p>
+     * We have 2 cases:
+     * <ul>
+     *      <li>
+     *          {@code initialSnapshotVersionHint} is equal to
+     *          {@link DeltaSourceSplitEnumerator#NO_SNAPSHOT_VERSION}. This is either the
+     *          initial setup of the source or we are recovering from failure yet no checkpoint
+     *          was found.
+     *      </li>
+     *      <li>
+     *          {@code initialSnapshotVersionHint} is not equal to
+     *          {@link DeltaSourceSplitEnumerator#NO_SNAPSHOT_VERSION}. We are recovering from
+     *          failure and a checkpoint was found. Thus, this {@code initialSnapshotVersionHint}
+     *          is the version we should load.
+     *      </li>
+     * </ul>
      */
-    protected abstract Snapshot getInitialSnapshot(long checkpointSnapshotVersion);
+    protected abstract Snapshot getInitialSnapshot(long initialSnapshotVersionHint);
 
     @SuppressWarnings("unchecked")
     protected Collection<DeltaSourceSplit> getRemainingSplits() {
@@ -272,8 +296,8 @@ public abstract class DeltaSourceSplitEnumerator implements
     }
 
     @VisibleForTesting
-    Snapshot getSnapshot() {
-        return this.snapshot;
+    Snapshot getInitialSnapshot() {
+        return this.initialSnapshot;
     }
 
     public enum AssignSplitStatus {
