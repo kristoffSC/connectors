@@ -68,12 +68,12 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             initialSnapshotVersion, alreadyDiscoveredPaths);
 
         this.fileEnumerator = fileEnumerator;
-        this.currentSnapshotVersion = (initialSnapshotVersion == NO_SNAPSHOT_VERSION) ?
-            this.initialSnapshotVersion : currentSnapshotVersion;
+        this.currentSnapshotVersion =
+            computeCurrentSnapshotVersion(this.initialSnapshotVersion, currentSnapshotVersion);
 
         // Maybe we could inject it from the provider.
         this.tableMonitor =
-            new TableMonitor(deltaLog, this.currentSnapshotVersion + 1, sourceOptions);
+            new TableMonitor(deltaLog, computeTableMonitorInitialSnapshotVersion(), sourceOptions);
 
         this.ignoreChanges = sourceOptions.getValue(IGNORE_CHANGES);
         this.ignoreDeletes = this.ignoreChanges || sourceOptions.getValue(IGNORE_DELETES);
@@ -84,7 +84,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
-        if (isNotChangeStreamOnly()) {
+        if (isNotChangeStreamOnly() && isInitialVersionNotProcessed()) {
             readTableInitialContent();
         }
 
@@ -95,6 +95,13 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
             this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
             sourceOptions.getValue(UPDATE_CHECK_INITIAL_DELAY),
             sourceOptions.getValue(UPDATE_CHECK_INTERVAL));
+    }
+
+    private boolean isInitialVersionNotProcessed() {
+        // Get data for start version only if we did not already process it,
+        // hence if currentSnapshotVersion is == initialSnapshotVersion;
+        // So do not read the initial data if we recovered from checkpoint.
+        return this.initialSnapshotVersion == this.currentSnapshotVersion;
     }
 
     @Override
@@ -222,18 +229,45 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
     }
 
     private void readTableInitialContent() {
-        // get data for start version only if we did not already process is,
-        // hence if currentSnapshotVersion is == initialSnapshotVersion;
-        // So do not read the initial data if we recovered from checkpoint.
-        if (this.initialSnapshotVersion == this.currentSnapshotVersion) {
-            try {
-                LOG.info("Getting data for start version - {}", snapshot.getVersion());
-                List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
-                addSplits(splits);
-            } catch (Exception e) {
-                DeltaSourceExceptionUtils.generalSourceException(e);
-            }
+        try {
+            LOG.info("Getting data for start version - {}", snapshot.getVersion());
+            List<DeltaSourceSplit> splits = prepareSplits(snapshot.getAllFiles());
+            addSplits(splits);
+        } catch (Exception e) {
+            DeltaSourceExceptionUtils.generalSourceException(e);
         }
+    }
+
+    /**
+     * This method is used to set the {@link #currentSnapshotVersion} field. The {@code
+     * ContinuousDeltaSourceSplitEnumerator}, since it reads table changes continuously needs an
+     * additional field that will be mutable and will represent a current snapshot version that this
+     * source currently uses, thus {@link #currentSnapshotVersion} field.
+     * <p>
+     * The {@link #initialSnapshotVersion} is declared as final in parent class, and it is shared
+     * between both by {@link BoundedDeltaSourceSplitEnumerator} and {@code
+     * ContinuousDeltaSourceSplitEnumerator} implementations. This field represents an "initial"
+     * Snapshot version that this Source start reading from.
+     * <p>
+     * During the recovery, in
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode we do not want to read the initial table content once again (if we did it already). We
+     * can automatically "switch" to read changes only.
+     * <p></p>
+     *
+     * @param initialSnapshotVersion
+     * @param currentSnapshotVersion
+     * @return
+     */
+    private long computeCurrentSnapshotVersion(long initialSnapshotVersion,
+        long currentSnapshotVersion) {
+        return (currentSnapshotVersion == NO_SNAPSHOT_VERSION) ?
+            initialSnapshotVersion : currentSnapshotVersion;
+    }
+
+    private long computeTableMonitorInitialSnapshotVersion() {
+        return (this.currentSnapshotVersion == this.initialSnapshotVersion) ?
+            this.currentSnapshotVersion + 1 : this.currentSnapshotVersion;
     }
 
     private boolean isChangeStreamOnly() {
