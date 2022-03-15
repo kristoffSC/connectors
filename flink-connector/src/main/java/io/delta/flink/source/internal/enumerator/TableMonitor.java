@@ -44,7 +44,7 @@ public class TableMonitor implements Callable<MonitorTableResult> {
      *
      * @param deltaLog                      The {@link DeltaLog} to monitor for changes from.
      * @param initialMonitorSnapshotVersion The initial {@link io.delta.standalone.Snapshot} version
-     *                                      form which this instance will monitor for changes.
+     *                                      from which this instance will monitor for changes.
      * @param maxDurationMillis             The
      */
     public static TableMonitor create(DeltaLog deltaLog, long initialMonitorSnapshotVersion,
