@@ -12,7 +12,7 @@ import io.delta.standalone.DeltaLog;
  * io.delta.standalone.Snapshot} version to check as next. This class is also NOT Thread safe. Each
  * thread calling {@link #call()} method should have its own {@code TableMonitor} instance.
  */
-public class TableMonitor implements Callable<MonitorTableResult> {
+public class TableMonitor implements Callable<TableMonitorResult> {
 
     /**
      * The Delta Log/Delta Table that this instance monitor for changes.
@@ -58,11 +58,11 @@ public class TableMonitor implements Callable<MonitorTableResult> {
      * per each {@link io.delta.standalone.Snapshot} version that was detected. If the {@link
      * #maxDurationMillis} limit is exceeded, logic will return.
      *
-     * @return {@link MonitorTableResult} object that contains list of {@link
+     * @return {@link TableMonitorResult} object that contains list of {@link
      * io.delta.standalone.actions.Action} per version.
      */
     @Override
-    public MonitorTableResult call() throws Exception {
+    public TableMonitorResult call() throws Exception {
         // TODO PR 7 Add monitor implementation and tests, for now return null.
         return null;
     }

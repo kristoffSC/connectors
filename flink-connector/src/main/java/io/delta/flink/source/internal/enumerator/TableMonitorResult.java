@@ -9,7 +9,7 @@ import io.delta.standalone.actions.Action;
  * The result object for {@link TableMonitor#call()} method. It contains Lists of {@link Action} per
  * {@link io.delta.standalone.Snapshot} versions for monitored Delta Table.
  */
-public class MonitorTableResult {
+public class TableMonitorResult {
 
     /**
      * The highest found {@link io.delta.standalone.Snapshot} version in given set of discovered
@@ -23,7 +23,7 @@ public class MonitorTableResult {
      */
     private final List<ChangesPerVersion> changesPerVersion;
 
-    public MonitorTableResult(long snapshotVersion, List<ChangesPerVersion> changesPerVersion) {
+    public TableMonitorResult(long snapshotVersion, List<ChangesPerVersion> changesPerVersion) {
         this.highestSeenVersion = snapshotVersion;
         this.changesPerVersion = changesPerVersion;
     }
