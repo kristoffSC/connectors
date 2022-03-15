@@ -6,7 +6,7 @@ import java.util.List;
 import io.delta.standalone.actions.Action;
 
 /**
- * The Result object for {@link TableMonitor#call()} method. It contains Lists of {@link Action} per
+ * The result object for {@link TableMonitor#call()} method. It contains Lists of {@link Action} per
  * {@link io.delta.standalone.Snapshot} versions for monitored Delta Table.
  */
 public class MonitorTableResult {
