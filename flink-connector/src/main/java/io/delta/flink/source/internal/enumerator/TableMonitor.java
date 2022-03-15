@@ -45,7 +45,11 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      * @param deltaLog                      The {@link DeltaLog} to monitor for changes from.
      * @param initialMonitorSnapshotVersion The initial {@link io.delta.standalone.Snapshot} version
      *                                      from which this instance will monitor for changes.
-     * @param maxDurationMillis             The
+     * @param maxDurationMillis             The "maximal" duration that each subsequent call to
+     *                                      {@link #call()} method should take. This is a soft
+     *                                      limit, which means that implementation will try to
+     *                                      guarantee that overall call is * no longer that this
+     *                                      limit. See {@link #call()} method for details.
      */
     public static TableMonitor create(DeltaLog deltaLog, long initialMonitorSnapshotVersion,
         long maxDurationMillis) {
