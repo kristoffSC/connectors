@@ -37,7 +37,7 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
      * @param initialSnapshotVersionHint this parameter is used by {@link #getInitialSnapshot(long)}
      *                                   method to initilize the initial {@link Snapshot}. From that
      *                                   snapshot the {@link #initialSnapshotVersion} field is set
-     *                                   by calling {@code snapshot.vetVersion()}.
+     *                                   by calling {@code snapshot.getVersion()}.
      */
     private BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
