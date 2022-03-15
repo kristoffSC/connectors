@@ -253,7 +253,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
      * <p>
      * The {@link #initialSnapshotVersion} however, which is declared as final in a parent class,
      * and it is shared between all {@link DeltaSourceSplitEnumerator} implementations, represents
-     * an "initial" Snapshot version that this Source starts reading from.
+     * an "initial" snapshot version that this Source starts reading from.
      * <p>
      * For initial Source setup or for recovery without a checkpoint, the condition in this method
      * will be true, setting  {@link #currentSnapshotVersion} to the same value as {@link
