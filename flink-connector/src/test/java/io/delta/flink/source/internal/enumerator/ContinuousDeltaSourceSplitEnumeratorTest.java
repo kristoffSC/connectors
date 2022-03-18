@@ -49,13 +49,13 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
             checkpoint = DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath,
             initialSnapshotVersion, currentSnapshotVersion, emptyList(), emptyList());
 
-        enumerator = spy(ContinuousDeltaSourceSplitEnumerator.createForCheckpoint(
+        enumerator = spy(ContinuousDeltaSourceSplitEnumerator.create(
             checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
             enumContext, sourceConfiguration));
 
         enumerator.start();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
 
         verify(enumerator, never()).readTableInitialContent();
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
@@ -83,7 +83,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         enumerator.start();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
 
         verify(enumerator).readTableInitialContent();
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
@@ -116,7 +116,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         enumerator.start();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
         verify(enumerator, never()).readTableInitialContent();
     }
 
@@ -128,7 +128,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         enumerator.start();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
         verify(enumerator, never()).readTableInitialContent();
     }
 
@@ -162,7 +162,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         // Enumerator that is recreated from Snapshot hence it has initial snapshot version and
         // checkpoint snapshot version.
         when(deltaLog.getSnapshotForVersionAsOf(initialSnapshotVersion)).thenReturn(headSnapshot);
-        enumerator = ContinuousDeltaSourceSplitEnumerator.createForCheckpoint(
+        enumerator = ContinuousDeltaSourceSplitEnumerator.create(
             checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
             enumContext, sourceConfiguration);
 

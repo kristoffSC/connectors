@@ -64,7 +64,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
             checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
             enumContext, sourceConfiguration);
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(checkpointedSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(checkpointedSnapshot));
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
         verify(deltaLog, never()).snapshot();
         verify(deltaLog).getSnapshotForVersionAsOf(checkpointedSnapshotVersion);
@@ -88,7 +88,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
 
         enumerator.start();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(versionAsOfSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(versionAsOfSnapshot));
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
         verify(deltaLog, never()).snapshot();
         verify(deltaLog).getSnapshotForVersionAsOf(versionAsOf);
@@ -112,7 +112,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
 
         enumerator.start();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(timestampAsOfSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(timestampAsOfSnapshot));
         verify(deltaLog).getSnapshotForTimestampAsOf(timestampAsOf);
         verify(deltaLog, never()).snapshot();
         verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());

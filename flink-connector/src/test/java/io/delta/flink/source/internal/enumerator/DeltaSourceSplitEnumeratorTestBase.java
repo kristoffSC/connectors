@@ -105,7 +105,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     public void shouldUseHeadSnapshot() {
         enumerator = setupEnumeratorWithHeadSnapshot();
 
-        assertThat(enumerator.getInitialSnapshot(), equalTo(headSnapshot));
+        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
         verify(deltaLog).snapshot();
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
         verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
