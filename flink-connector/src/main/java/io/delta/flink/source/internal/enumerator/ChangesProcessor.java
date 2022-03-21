@@ -43,7 +43,7 @@ public class ChangesProcessor implements ContinuousTableProcessor {
         this.tableMonitor = tableMonitor;
         this.enumContext = enumContext;
         this.alreadyProcessedPaths = new HashSet<>(alreadyProcessedPaths);
-        this.currentSnapshotVersion = this.tableMonitor.getChangesFromVersion();
+        this.currentSnapshotVersion = this.tableMonitor.getMonitorVersion();
     }
 
     @Override

@@ -36,13 +36,14 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
     private final long snapshotVersion;
 
     /**
-     * Flag indicating that files from snapshot created during first source initialization were
-     * processed by {@link io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerator}
-     *
-     * <p> This flag is useful in {@link Boundedness#CONTINUOUS_UNBOUNDED} mode, where recreating
-     * the initial snapshot is not needed after it was already processed.
+     * Flag indicating that source start monitoring Delta Table for changes.
+     * <p>
+     * This field is mapped from
+     * {@link io.delta.flink.source.internal.enumerator.ContinuousTableProcessor
+     * #isMonitoringForChanges()}
+     * method.
      */
-    private final boolean startedMonitoringForChanges;
+    private final boolean monitoringForChanges;
 
     /**
      * Decorated {@link PendingSplitsCheckpoint} that keeps details about checkpointed splits in
@@ -51,11 +52,11 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
     private final PendingSplitsCheckpoint<SplitT> pendingSplitsCheckpoint;
 
     private DeltaEnumeratorStateCheckpoint(Path deltaTablePath,
-        long snapshotVersion, boolean startedMonitoringForChanges,
+        long snapshotVersion, boolean monitoringForChanges,
         PendingSplitsCheckpoint<SplitT> pendingSplitsCheckpoint) {
         this.deltaTablePath = deltaTablePath;
         this.snapshotVersion = snapshotVersion;
-        this.startedMonitoringForChanges = startedMonitoringForChanges;
+        this.monitoringForChanges = monitoringForChanges;
         this.pendingSplitsCheckpoint = pendingSplitsCheckpoint;
     }
 
@@ -67,20 +68,19 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      * A factory method for creating {@code DeltaEnumeratorStateCheckpoint} from given parameters
      * including split and already process paths collections.
      *
-     * @param deltaTablePath              A {@link Path} to Delta Table.
-     * @param snapshotVersion             The initial version of Delta Table from which we started
-     *                                    reading the Delta Table.
-     * @param startedMonitoringForChanges The Delta Table snapshot version at moment when snapshot
-     *                                    was taken.
-     * @param splits                      A collection of splits that were unassigned to any readers
-     *                                    at moment of taking the checkpoint.
-     * @param alreadyProcessedPaths       The paths to Parquet files that have already been
-     *                                    processed and thus can be ignored during recovery.
+     * @param deltaTablePath        A {@link Path} to Delta Table.
+     * @param snapshotVersion       The initial version of Delta Table from which we started reading
+     *                              the Delta Table.
+     * @param monitoringForChanges
+     * @param splits                A collection of splits that were unassigned to any readers at
+     *                              moment of taking the checkpoint.
+     * @param alreadyProcessedPaths The paths to Parquet files that have already been processed and
+     *                              thus can be ignored during recovery.
      * @return DeltaEnumeratorStateCheckpoint for given T Split type.
      */
     public static <T extends DeltaSourceSplit> DeltaEnumeratorStateCheckpoint<T>
         fromCollectionSnapshot(
-        Path deltaTablePath, long snapshotVersion, boolean startedMonitoringForChanges,
+        Path deltaTablePath, long snapshotVersion, boolean monitoringForChanges,
         Collection<T> splits, Collection<Path> alreadyProcessedPaths) {
 
         checkArguments(deltaTablePath, snapshotVersion);
@@ -89,7 +89,7 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
             PendingSplitsCheckpoint.fromCollectionSnapshot(splits, alreadyProcessedPaths);
 
         return new DeltaEnumeratorStateCheckpoint<>(
-            deltaTablePath, snapshotVersion, startedMonitoringForChanges, splitsCheckpoint);
+            deltaTablePath, snapshotVersion, monitoringForChanges, splitsCheckpoint);
     }
 
     // ------------------------------------------------------------------------
@@ -132,8 +132,8 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      * @return Boolean flag indicating that {@code DeltaSourceSplitEnumerator} started monitoring
      * for changes on Delta Table.
      */
-    public boolean isStartedMonitoringForChanges() {
-        return startedMonitoringForChanges;
+    public boolean isMonitoringForChanges() {
+        return monitoringForChanges;
     }
 
     // Package protected For (De)Serializer only

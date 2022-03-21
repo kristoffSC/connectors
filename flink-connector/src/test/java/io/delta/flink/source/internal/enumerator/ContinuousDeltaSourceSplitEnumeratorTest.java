@@ -1,6 +1,8 @@
 package io.delta.flink.source.internal.enumerator;
 
 import java.util.Collections;
+import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
@@ -9,8 +11,14 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,9 +28,20 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
     private ContinuousDeltaSourceSplitEnumerator enumerator;
 
+    private ContinuousSplitEnumeratorProvider provider;
+
+    @Captor
+    private ArgumentCaptor<TableMonitor> tableMonitorArgumentCaptor;
+
     @Before
     public void setUp() {
         super.setUp();
+
+        when(splitAssignerProvider.create(Mockito.any())).thenReturn(splitAssigner);
+        when(fileEnumeratorProvider.create()).thenReturn(fileEnumerator);
+
+        provider =
+            new ContinuousSplitEnumeratorProvider(splitAssignerProvider, fileEnumeratorProvider);
     }
 
     @After
@@ -31,16 +50,68 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     }
 
     @Test
-    public void shouldNotReadInitialSnapshotIfRecoveryFromNewVersion() {
+    public void shouldNotReadInitialSnapshotWhenMonitoringForChanges() {
 
+        long snapshotVersion = 10;
+
+        Mockito.doAnswer(invocation -> {
+            TableMonitor tableMonitor = invocation.getArgument(0, TableMonitor.class);
+            assertThat(tableMonitor.getMonitorVersion(), equalTo(snapshotVersion));
+            tableMonitor.call();
+            return new TableMonitorResult(snapshotVersion, Collections.emptyList());
+        }).when(enumContext)
+            .callAsync(any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
+            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath, snapshotVersion,
+                true,
+                Collections.emptyList(), Collections.emptyList());
+
+        enumerator = setupEnumeratorFromCheckpoint(checkpoint);
+        enumerator.start();
+
+        // verify that we did not create any snapshot, we only need to get changes from deltaLog.
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+
+        // verify that we try to get changes from Delta Log.
+        verify(enumContext).callAsync(any(Callable.class), any(BiConsumer.class), anyLong(),
+            anyLong());
+
+        // TODO PR 7 - uncomment after implementing TableMonitor::call
+        //verify(deltaLog).getChanges(snapshotVersion, true);
     }
 
     @Test
-    public void shouldReadInitialSnapshotAgainIfRecoveryFromInitialVersion() {
+    public void shouldReadInitialSnapshotWhenNotMonitoringForChanges() {
+        long snapshotVersion = 10;
 
+        when(deltaLog.getSnapshotForVersionAsOf(snapshotVersion)).thenReturn(checkpointedSnapshot);
+        when(checkpointedSnapshot.getVersion()).thenReturn(snapshotVersion);
+
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
+            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath, snapshotVersion,
+                false,
+                Collections.emptyList(), Collections.emptyList());
+
+        enumerator = setupEnumeratorFromCheckpoint(checkpoint);
+        enumerator.start();
+
+        // verify that snapshot was created using version from checkpoint and not head or timestamp.
+        verify(deltaLog).getSnapshotForVersionAsOf(snapshotVersion);
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+
+        // verify that we tried to read initial snapshot content.
+        verify(checkpointedSnapshot).getAllFiles();
+
+        // verify TableMonitor starting version
+        verify(enumContext).callAsync(tableMonitorArgumentCaptor.capture(), any(),
+            anyLong(), anyLong());
+        assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
+            equalTo(snapshotVersion + 1));
     }
-
-    // TODO PR 7 Add tests for startingVersion and startingTimestamp
 
     @Test
     public void shouldNotSignalNoMoreSplitsIfNone() {
@@ -79,21 +150,14 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
     @Override
     protected DeltaSourceSplitEnumerator createEnumerator() {
-
-        when(splitAssignerProvider.create(Mockito.any())).thenReturn(splitAssigner);
-        when(fileEnumeratorProvider.create()).thenReturn(fileEnumerator);
-
-        BoundedSplitEnumeratorProvider provider =
-            new BoundedSplitEnumeratorProvider(splitAssignerProvider, fileEnumeratorProvider);
-
         return (DeltaSourceSplitEnumerator) provider.createInitialStateEnumerator(deltaTablePath,
             DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
-
     }
 
     @Override
     protected DeltaSourceSplitEnumerator createEnumerator(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) {
-        return null;
+        return (DeltaSourceSplitEnumerator) provider.createEnumeratorForCheckpoint(checkpoint,
+            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
     }
 }

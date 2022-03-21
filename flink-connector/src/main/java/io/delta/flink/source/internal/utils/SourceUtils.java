@@ -26,11 +26,6 @@ public final class SourceUtils {
         return path.toUri().normalize().toString();
     }
 
-    public static DeltaLog createDeltaLog(String deltaTablePath,
-        Configuration hadoopConfiguration) {
-        return DeltaLog.forTable(hadoopConfiguration, deltaTablePath);
-    }
-
     public static DeltaLog createDeltaLog(Path deltaTablePath, Configuration hadoopConfiguration) {
         return DeltaLog.forTable(hadoopConfiguration, SourceUtils.pathToString(deltaTablePath));
     }

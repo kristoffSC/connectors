@@ -9,22 +9,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.delta.standalone.Snapshot;
-
 @RunWith(MockitoJUnitRunner.class)
 public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnumeratorTestBase {
-
-    @Mock
-    private Snapshot versionAsOfSnapshot;
-
-    @Mock
-    private Snapshot timestampAsOfSnapshot;
 
     private BoundedDeltaSourceSplitEnumerator enumerator;
 
@@ -36,21 +27,6 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
     @After
     public void after() {
         super.after();
-    }
-
-    @Test
-    public void shouldUseCheckpointSnapshot() {
-
-    }
-
-    @Test
-    public void shouldUseVersionAsOfSnapshot() {
-
-    }
-
-    @Test
-    public void shouldUseTimestampAsOfSnapshot() {
-
     }
 
     @Test
@@ -71,8 +47,8 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
         when(splitAssignerProvider.create(Mockito.any())).thenReturn(splitAssigner);
         when(fileEnumeratorProvider.create()).thenReturn(fileEnumerator);
 
-        ContinuousSplitEnumeratorProvider provider =
-            new ContinuousSplitEnumeratorProvider(splitAssignerProvider, fileEnumeratorProvider);
+        BoundedSplitEnumeratorProvider provider =
+            new BoundedSplitEnumeratorProvider(splitAssignerProvider, fileEnumeratorProvider);
 
         return (DeltaSourceSplitEnumerator) provider.createInitialStateEnumerator(deltaTablePath,
             DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);

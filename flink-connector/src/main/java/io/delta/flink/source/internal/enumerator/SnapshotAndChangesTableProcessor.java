@@ -23,7 +23,6 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
 
     @Override
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
-
         snapshotProcessor.process(processCallback);
         monitoringForChanges = true;
         changesProcessor.process(processCallback);

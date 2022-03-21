@@ -49,7 +49,8 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
 
-        DeltaLog deltaLog = SourceUtils.createDeltaLog(deltaTablePath, configuration);
+        DeltaLog deltaLog =
+            DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
         BoundedSourceSnapshotSupplier snapshotSupplier =
             new BoundedSourceSnapshotSupplier(deltaLog, sourceConfiguration);

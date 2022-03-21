@@ -80,8 +80,8 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
         assertEquals(expected.getDeltaTablePath(), actual.getDeltaTablePath());
         assertEquals(expected.getSnapshotVersion(), actual.getSnapshotVersion());
-        assertEquals(expected.isStartedMonitoringForChanges(),
-            actual.isStartedMonitoringForChanges());
+        assertEquals(expected.isMonitoringForChanges(),
+            actual.isMonitoringForChanges());
 
         assertOrderedCollectionEquals(
             expected.getSplits(),

@@ -209,6 +209,12 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
         return (T) spy(createEnumerator());
     }
 
+    @SuppressWarnings("unchecked")
+    protected <T> T setupEnumeratorFromCheckpoint(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) {
+        return (T) spy(createEnumerator(checkpoint));
+    }
+
     protected abstract DeltaSourceSplitEnumerator createEnumerator();
 
     protected abstract DeltaSourceSplitEnumerator createEnumerator(

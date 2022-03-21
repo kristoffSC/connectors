@@ -85,7 +85,7 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
             outputWrapper.writeInt(decoratedBytes.length);
             outputWrapper.write(decoratedBytes);
             outputWrapper.writeLong(state.getSnapshotVersion());
-            outputWrapper.writeBoolean(state.isStartedMonitoringForChanges());
+            outputWrapper.writeBoolean(state.isMonitoringForChanges());
 
             final byte[] serPath =
                 SourceUtils.pathToString(state.getDeltaTablePath())
