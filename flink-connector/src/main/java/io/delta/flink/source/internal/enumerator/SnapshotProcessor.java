@@ -3,6 +3,7 @@ package io.delta.flink.source.internal.enumerator;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.Consumer;
 
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
@@ -14,7 +15,7 @@ import org.apache.flink.core.fs.Path;
 import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
 
-public class SnapshotProcessor {
+public class SnapshotProcessor implements TableProcessor {
 
     private final Path deltaTablePath;
 
@@ -41,14 +42,16 @@ public class SnapshotProcessor {
         this.alreadyProcessedPaths = new HashSet<>(alreadyProcessedPaths);
     }
 
-    public List<DeltaSourceSplit> process() {
+    public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
         AddFileEnumeratorContext context =
             setUpEnumeratorContext(snapshot.getAllFiles(), snapshot.getVersion());
-        return fileEnumerator
+        List<DeltaSourceSplit> splits = fileEnumerator
             .enumerateSplits(context, (SplitFilter<Path>) alreadyProcessedPaths::add);
+
+        processCallback.accept(splits);
     }
 
     private AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles,

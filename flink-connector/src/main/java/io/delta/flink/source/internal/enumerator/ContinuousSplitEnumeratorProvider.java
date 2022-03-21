@@ -149,7 +149,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             new SnapshotProcessor(deltaTablePath, snapshot,
                 fileEnumeratorProvider.create(), Collections.emptySet());
 
-        return new ContentAndChangesTableProcessor(snapshotProcessor, changesProcessor);
+        return new SnapshotAndChangesTableProcessor(snapshotProcessor, changesProcessor);
     }
 
     @Override

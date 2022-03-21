@@ -1,7 +1,5 @@
 package io.delta.flink.source.internal.enumerator;
 
-import java.util.List;
-
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
@@ -22,7 +20,7 @@ import org.apache.flink.core.fs.Path;
  */
 public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerator {
 
-    private final SnapshotProcessor snapshotProcessor;
+    private final TableProcessor snapshotProcessor;
 
     private BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, SnapshotProcessor snapshotProcessor,
@@ -42,8 +40,7 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
 
     @Override
     public void start() {
-        List<DeltaSourceSplit> splits = snapshotProcessor.process();
-        addSplits(splits);
+        snapshotProcessor.process(this::addSplits);
     }
 
     @Override

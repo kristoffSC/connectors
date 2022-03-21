@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.core.fs.Path;
 
-public class ContentAndChangesTableProcessor implements ContinuousTableProcessor {
+public class SnapshotAndChangesTableProcessor implements ContinuousTableProcessor {
 
     private final SnapshotProcessor snapshotProcessor;
 
@@ -15,7 +15,7 @@ public class ContentAndChangesTableProcessor implements ContinuousTableProcessor
 
     private boolean startedMonitoringForChanges;
 
-    public ContentAndChangesTableProcessor(
+    public SnapshotAndChangesTableProcessor(
         SnapshotProcessor snapshotProcessor, ContinuousTableProcessor changesProcessor) {
         this.snapshotProcessor = snapshotProcessor;
         this.changesProcessor = changesProcessor;
@@ -24,11 +24,8 @@ public class ContentAndChangesTableProcessor implements ContinuousTableProcessor
     @Override
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
 
-        List<DeltaSourceSplit> snapshotContent = snapshotProcessor.process();
-        processCallback.accept(snapshotContent);
-
+        snapshotProcessor.process(processCallback);
         startedMonitoringForChanges = true;
-
         changesProcessor.process(processCallback);
     }
 
