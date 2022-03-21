@@ -7,7 +7,7 @@ import io.delta.standalone.actions.Action;
 
 /**
  * The result object for {@link TableMonitor#call()} method. It contains Lists of {@link Action} per
- * {@link io.delta.standalone.Snapshot} versions for monitored Delta Table.
+ * {@link io.delta.standalone.Snapshot} versions for monitored Delta table.
  */
 public class TableMonitorResult {
 
@@ -18,7 +18,7 @@ public class TableMonitorResult {
     private final long highestSeenVersion;
 
     /**
-     * An ordered list of {@link ChangesPerVersion}. Elements of this list represents Delta Table
+     * An ordered list of {@link ChangesPerVersion}. Elements of this list represents Delta table
      * changes per version in ASC version order.
      */
     private final List<ChangesPerVersion> changesPerVersion;
@@ -37,7 +37,7 @@ public class TableMonitorResult {
     }
 
     /**
-     * A container object that represents Delta Table changes per one {@link
+     * A container object that represents Delta table changes per one {@link
      * io.delta.standalone.Snapshot} version.
      */
     public static class ChangesPerVersion {

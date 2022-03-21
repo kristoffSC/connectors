@@ -16,7 +16,7 @@ import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
 
 /**
- * This implementation of {@link TableProcessor} process data from Delta Table {@link Snapshot}.
+ * This implementation of {@link TableProcessor} process data from Delta table {@link Snapshot}.
  */
 public class SnapshotProcessor implements TableProcessor {
 

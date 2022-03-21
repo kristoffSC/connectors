@@ -23,7 +23,7 @@ public interface SplitEnumeratorProvider extends Serializable {
      * time or without a Flink's checkpoint data. This method will be called from {@link
      * org.apache.flink.api.connector.source.Source#createEnumerator(SplitEnumeratorContext)}.
      *
-     * @param deltaTablePath      {@link Path} for Delta Table.
+     * @param deltaTablePath      {@link Path} for Delta table.
      * @param configuration       Hadoop Configuration that should be used to read Parquet files.
      * @param enumContext         {@link SplitEnumeratorContext}.
      * @param sourceConfiguration {@link DeltaSourceConfiguration} used for creating Delta Source.

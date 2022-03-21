@@ -17,7 +17,7 @@ import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
 
 /**
- * This implementation of {@link TableProcessor} process only Delta Table changes starting from
+ * This implementation of {@link TableProcessor} process only Delta table changes starting from
  * specified {@link io.delta.standalone.Snapshot} version. This implementation does not read {@code
  * Snapshot} content.
  *
@@ -30,7 +30,7 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(ChangesProcessor.class);
 
     /**
-     * The {@link TableMonitor} instance used to monitor Delta Table for changes.
+     * The {@link TableMonitor} instance used to monitor Delta table for changes.
      */
     // TODO PR 7 Will be used in monitor for changes.
     private final TableMonitor tableMonitor;
@@ -56,9 +56,9 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     // private final boolean ignoreDeletes;
 
     /**
-     * A Delta Table {@link io.delta.standalone.Snapshot} version currently used by this {@link
+     * A Delta table {@link io.delta.standalone.Snapshot} version currently used by this {@link
      * ChangesProcessor} to read changes from. This value will be updated after discovering new
-     * versions on Delta Table.
+     * versions on Delta table.
      */
     // TODO PR 7 version will be updated by processDiscoveredVersions method after discovering new
     //  changes.
@@ -74,13 +74,13 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     }
 
     /**
-     * Starts processing changes that were added to Delta Table starting from version specified by
+     * Starts processing changes that were added to Delta table starting from version specified by
      * {@link #currentSnapshotVersion} field.
      *
      * @param processCallback A {@link Consumer} callback that will be called after processing all
      *                        {@link io.delta.standalone.actions.Action} and converting them to
      *                        {@link DeltaSourceSplit}. This callback will be executed for every new
-     *                        discovered Delta Table version.
+     *                        discovered Delta table version.
      */
     @Override
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
@@ -98,7 +98,7 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     /**
      * @return A {@link Snapshot} version that this processor reads changes from. The method can
      * return different values for every method call, depending whether there were any changes on
-     * Delta Table.
+     * Delta table.
      */
     @Override
     public long getSnapshotVersion() {

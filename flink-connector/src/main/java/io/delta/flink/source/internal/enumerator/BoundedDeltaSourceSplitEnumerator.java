@@ -7,10 +7,11 @@ import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 
 /**
- * A SplitEnumerator implementation for bounded/batch {@link io.delta.flink.source.DeltaSource}
+ * A SplitEnumerator implementation for
+ * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED}
  * mode.
  *
- * <p>This enumerator takes all files that are present in the configured Delta Table directory,
+ * <p>This enumerator takes all files that are present in the configured Delta table directory,
  * converts them to {@link DeltaSourceSplit} and assigns them to the readers. Once all files are
  * processed, the source is finished.
  *
@@ -20,6 +21,9 @@ import org.apache.flink.core.fs.Path;
  */
 public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerator {
 
+    /**
+     * The {@link TableProcessor} used to process Delta table data.
+     */
     private final TableProcessor snapshotProcessor;
 
     public BoundedDeltaSourceSplitEnumerator(
@@ -30,6 +34,9 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
         this.snapshotProcessor = snapshotProcessor;
     }
 
+    /**
+     * Starts Delta table processing.
+     */
     @Override
     public void start() {
         snapshotProcessor.process(this::addSplits);

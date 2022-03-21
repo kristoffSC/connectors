@@ -35,7 +35,7 @@ public abstract class DeltaSourceSplitEnumerator implements
         LoggerFactory.getLogger(DeltaSourceSplitEnumerator.class);
 
     /**
-     * Path to Delta Table that should be processed.
+     * Path to Delta table that should be processed.
      */
     protected final Path deltaTablePath;
 

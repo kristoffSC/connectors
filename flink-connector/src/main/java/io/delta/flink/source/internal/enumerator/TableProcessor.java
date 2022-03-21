@@ -8,17 +8,17 @@ import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.core.fs.Path;
 
 /**
- * A processor for Delta Table data.
+ * A processor for Delta table data.
  * <p>
- * The implementations of this interface should encapsulate logic for processing Delta Table Changes
+ * The implementations of this interface should encapsulate logic for processing Delta table Changes
  * and Add Files.
  */
 public interface TableProcessor {
 
     /**
-     * Process Delta Table data. Can call {@code processCallback} during this process.
+     * Process Delta table data. Can call {@code processCallback} during this process.
      *
-     * @param processCallback A {@link Consumer} callback that can be called during Delta Table
+     * @param processCallback A {@link Consumer} callback that can be called during Delta table
      *                        processing. The exact condition when this callback will be called
      *                        depends on {@code TableProcessor} implementation.
      */

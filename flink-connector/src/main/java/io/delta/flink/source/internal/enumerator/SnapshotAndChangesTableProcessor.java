@@ -11,7 +11,7 @@ import io.delta.standalone.Snapshot;
 
 /**
  * This implementation of {@link TableProcessor} process both, content of {@link
- * io.delta.standalone.Snapshot} and changes applied to monitored Delta Table.
+ * io.delta.standalone.Snapshot} and changes applied to monitored Delta table.
  *
  * <p>
  * This implementation uses both {@link SnapshotProcessor} to read {@code Snapshot} content and
@@ -26,13 +26,13 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
     private final SnapshotProcessor snapshotProcessor;
 
     /**
-     * The {@link ChangesProcessor} used to read changes applied to Delta Table after {@link
+     * The {@link ChangesProcessor} used to read changes applied to Delta table after {@link
      * io.delta.standalone.Snapshot} read by {@link #snapshotProcessor}.
      */
     private final ChangesProcessor changesProcessor;
 
     /**
-     * Flag to indicate whether this processor started processing Delta Table changes.
+     * Flag to indicate whether this processor started processing Delta table changes.
      */
     private boolean monitoringForChanges;
 
@@ -44,13 +44,13 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
 
     /**
      * Starts processing content of {@link io.delta.standalone.Snapshot} defined by {@link
-     * #snapshotProcessor} and Delta Table changes applied after that snapshot.
+     * #snapshotProcessor} and Delta table changes applied after that snapshot.
      *
      * @param processCallback A {@link Consumer} callback that will be called after processing
      *                        {@link Snapshot} content by {@link #snapshotProcessor} and all {@link
      *                        io.delta.standalone.actions.Action} after converting them to {@link
      *                        DeltaSourceSplit}. This callback will be executed for every new
-     *                        discovered Delta Table version.
+     *                        discovered Delta table version.
      */
     @Override
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
@@ -72,7 +72,7 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
     /**
      * @return {@link Snapshot} version that this processor currently process. The value returned by
      * this method can be different for every call, since this processor also process changes
-     * applied to monitored Delta Table.
+     * applied to monitored Delta table.
      */
     public long getSnapshotVersion() {
         return (monitoringForChanges) ? changesProcessor.getSnapshotVersion()

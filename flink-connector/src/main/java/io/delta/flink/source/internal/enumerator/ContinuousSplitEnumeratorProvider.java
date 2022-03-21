@@ -88,6 +88,16 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             checkpointSplits), enumContext);
     }
 
+    /**
+     * @return A {@link ContinuousTableProcessor} instance using
+     * {@link DeltaEnumeratorStateCheckpoint}
+     * data.
+     * <p>
+     * @implNote If {@link DeltaSourceOptions#STARTING_VERSION} or {@link
+     * DeltaSourceOptions#STARTING_TIMESTAMP} options were defined or if Enumerator already
+     * processed initial Snapshot, the returned ContinuousTableProcessor instance will process only
+     * changes applied to monitored Delta table.
+     */
     private ContinuousTableProcessor setUpTableProcessorFromCheckpoint(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
@@ -108,6 +118,14 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         }
     }
 
+    /**
+     * @return A {@link ContinuousTableProcessor} instance.
+     * <p>
+     * @implNote If {@link DeltaSourceOptions#STARTING_VERSION} or {@link
+     * DeltaSourceOptions#STARTING_TIMESTAMP} options were defined the returned
+     * ContinuousTableProcessor instance will process only changes applied to monitored Delta
+     * table.
+     */
     private ContinuousTableProcessor setUpTableProcessor(Path deltaTablePath,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot) {

@@ -5,7 +5,7 @@ import java.util.concurrent.Callable;
 import io.delta.standalone.DeltaLog;
 
 /**
- * This class implements a logic for monitoring Delta Table for changes. The logic is implemented in
+ * This class implements a logic for monitoring Delta table for changes. The logic is implemented in
  * {@link #call()} method which should be called periodically.
  *
  * @implNote This class is stateful and mutable, meaning it keep {@link
@@ -15,7 +15,7 @@ import io.delta.standalone.DeltaLog;
 public class TableMonitor implements Callable<TableMonitorResult> {
 
     /**
-     * The Delta Log/Delta Table that this instance monitor for changes.
+     * The Delta Log/Delta table that this instance monitor for changes.
      */
     private final DeltaLog deltaLog;
 
@@ -27,13 +27,13 @@ public class TableMonitor implements Callable<TableMonitorResult> {
     private final long maxDurationMillis;
 
     /**
-     * The Delta Table {@link io.delta.standalone.Snapshot} version that should be used to read data
+     * The Delta table {@link io.delta.standalone.Snapshot} version that should be used to read data
      * in next {@link #call()} method call. This value is mutable.
      */
     private long monitorVersion;
 
     /**
-     * Creates new instance of TableMonitor class to monitor Delta Table Changes.
+     * Creates new instance of TableMonitor class to monitor Delta table Changes.
      *
      * @param deltaLog          The {@link DeltaLog} to monitor for changes from.
      * @param monitorVersion    The initial {@link io.delta.standalone.Snapshot} version from which
@@ -51,7 +51,7 @@ public class TableMonitor implements Callable<TableMonitorResult> {
     }
 
     /**
-     * Monitor underlying Delta Table for changes. The {@link TableMonitor} will try to limit
+     * Monitor underlying Delta table for changes. The {@link TableMonitor} will try to limit
      * execution time for this method to {@link #maxDurationMillis} value. Limit check will be done
      * per each {@link io.delta.standalone.Snapshot} version that was detected. If the {@link
      * #maxDurationMillis} limit is exceeded, logic will return.
