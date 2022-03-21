@@ -6,8 +6,6 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 
-import io.delta.standalone.Snapshot;
-
 /**
  * A SplitEnumerator implementation for continuous {@link io.delta.flink.source.DeltaSource} mode.
  *
@@ -31,29 +29,13 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     private final ContinuousTableProcessor continuousTableProcessor;
 
-    private ContinuousDeltaSourceSplitEnumerator(
+    public ContinuousDeltaSourceSplitEnumerator(
         Path deltaTablePath, ContinuousTableProcessor continuousTableProcessor,
         FileSplitAssigner splitAssigner, SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
 
         super(deltaTablePath, splitAssigner, enumContext);
 
         this.continuousTableProcessor = continuousTableProcessor;
-    }
-
-    /**
-     * Method used to create a new {@link ContinuousDeltaSourceSplitEnumerator} instance. The
-     * instance created with this method will have its Delta {@link Snapshot} created from version:
-     * <ul>
-     *     <li>Specified by startingVersion/startingTimestamp options.</li>
-     *     <li>The Delta Table current head version at the time this object was created.</li>
-     * </ul>
-     */
-    public static ContinuousDeltaSourceSplitEnumerator create(Path deltaTablePath,
-        ContinuousTableProcessor continuousTableProcessor, FileSplitAssigner splitAssigner,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-
-        return new ContinuousDeltaSourceSplitEnumerator(deltaTablePath, continuousTableProcessor,
-            splitAssigner, enumContext);
     }
 
     @Override

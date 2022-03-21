@@ -63,7 +63,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             setUpTableProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
                 snapshot);
 
-        return ContinuousDeltaSourceSplitEnumerator.create(
+        return new ContinuousDeltaSourceSplitEnumerator(
             deltaTablePath, tableProcessor, splitAssignerProvider.create(emptyList()), enumContext);
     }
 
@@ -82,7 +82,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         Collection<FileSourceSplit> checkpointSplits =
             (Collection<FileSourceSplit>) (Collection<?>) checkpoint.getSplits();
 
-        return ContinuousDeltaSourceSplitEnumerator.create(
+        return new ContinuousDeltaSourceSplitEnumerator(
             checkpoint.getDeltaTablePath(), tableProcessor, splitAssignerProvider.create(
                 checkpointSplits), enumContext);
     }

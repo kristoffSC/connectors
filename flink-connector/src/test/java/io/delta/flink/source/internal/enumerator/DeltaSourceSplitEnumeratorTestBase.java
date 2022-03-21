@@ -8,6 +8,7 @@ import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.utils.SourceUtils;
 import org.apache.flink.api.connector.source.ReaderInfo;
@@ -28,7 +29,6 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -58,6 +58,12 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
 
     @Mock
     protected AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
+
+    @Mock
+    protected AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider;
+
+    @Mock
+    protected FileSplitAssigner.Provider splitAssignerProvider;
 
     @Mock
     protected FileSplitAssigner splitAssigner;
@@ -99,16 +105,6 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     protected void after() {
         sourceUtils.close();
         deltaLogStatic.close();
-    }
-
-    @Test
-    public void shouldUseHeadSnapshot() {
-        enumerator = setupEnumeratorWithHeadSnapshot();
-
-        assertThat(enumerator.getSnapshot(), equalTo(headSnapshot));
-        verify(deltaLog).snapshot();
-        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
-        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
     }
 
     @Test
@@ -207,10 +203,14 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
         assertThat(splitsCaptor.getValue().isEmpty(), equalTo(true));
     }
 
-    private DeltaSourceSplitEnumerator setupEnumeratorWithHeadSnapshot() {
+    @SuppressWarnings("unchecked")
+    protected <T> T setupEnumeratorWithHeadSnapshot() {
         when(deltaLog.snapshot()).thenReturn(headSnapshot);
-        return spy(createEnumerator());
+        return (T) spy(createEnumerator());
     }
 
     protected abstract DeltaSourceSplitEnumerator createEnumerator();
+
+    protected abstract DeltaSourceSplitEnumerator createEnumerator(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint);
 }

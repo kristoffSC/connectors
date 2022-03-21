@@ -58,7 +58,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
             new SnapshotProcessor(deltaTablePath, snapshotSupplier.getSnapshot(),
                 fileEnumeratorProvider.create(), Collections.emptySet());
 
-        return BoundedDeltaSourceSplitEnumerator.create(
+        return new BoundedDeltaSourceSplitEnumerator(
             deltaTablePath, snapshotProcessor, splitAssignerProvider.create(emptyList()),
             enumContext);
     }
@@ -80,7 +80,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
             new SnapshotProcessor(checkpoint.getDeltaTablePath(), snapshotSupplier.getSnapshot(),
                 fileEnumeratorProvider.create(), checkpoint.getAlreadyProcessedPaths());
 
-        return BoundedDeltaSourceSplitEnumerator.create(
+        return new BoundedDeltaSourceSplitEnumerator(
             checkpoint.getDeltaTablePath(), snapshotProcessor,
             splitAssignerProvider.create(emptyList()), enumContext);
     }

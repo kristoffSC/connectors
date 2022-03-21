@@ -1,12 +1,8 @@
 package io.delta.flink.source.internal.enumerator;
 
 import java.util.Collections;
-import java.util.List;
-import static java.util.Collections.emptyList;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
-import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
-import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.junit.After;
@@ -14,15 +10,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
-import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
-import static io.delta.flink.source.internal.enumerator.SourceSplitEnumeratorTestUtils.mockSplits;
-import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,71 +40,17 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
 
     @Test
     public void shouldUseCheckpointSnapshot() {
-        int checkpointedSnapshotVersion = 10;
 
-        when(deltaLog.getSnapshotForVersionAsOf(checkpointedSnapshotVersion)).thenReturn(
-            checkpointedSnapshot);
-
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>
-            checkpoint = DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath,
-            checkpointedSnapshotVersion, checkpointedSnapshotVersion, emptyList(), emptyList());
-
-        enumerator = BoundedDeltaSourceSplitEnumerator.createForCheckpoint(
-            checkpoint, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration);
-
-        assertThat(enumerator.getSnapshot(), equalTo(checkpointedSnapshot));
-        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
-        verify(deltaLog, never()).snapshot();
-        verify(deltaLog).getSnapshotForVersionAsOf(checkpointedSnapshotVersion);
     }
 
     @Test
     public void shouldUseVersionAsOfSnapshot() {
-        long versionAsOf = 77;
 
-        sourceConfiguration.addOption(VERSION_AS_OF.key(), versionAsOf);
-        when(deltaLog.getSnapshotForVersionAsOf(versionAsOf)).thenReturn(versionAsOfSnapshot);
-
-        enumerator = BoundedDeltaSourceSplitEnumerator.create(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration);
-
-        List<DeltaSourceSplit> mockSplits = mockSplits();
-        when(fileEnumerator.enumerateSplits(any(AddFileEnumeratorContext.class),
-            any(SplitFilter.class)))
-            .thenReturn(mockSplits);
-
-        enumerator.start();
-
-        assertThat(enumerator.getSnapshot(), equalTo(versionAsOfSnapshot));
-        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
-        verify(deltaLog, never()).snapshot();
-        verify(deltaLog).getSnapshotForVersionAsOf(versionAsOf);
     }
 
     @Test
     public void shouldUseTimestampAsOfSnapshot() {
-        long timestampAsOf = System.currentTimeMillis();
 
-        sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), timestampAsOf);
-        when(deltaLog.getSnapshotForTimestampAsOf(timestampAsOf)).thenReturn(timestampAsOfSnapshot);
-
-        enumerator = BoundedDeltaSourceSplitEnumerator.create(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration);
-
-        List<DeltaSourceSplit> mockSplits = mockSplits();
-        when(fileEnumerator.enumerateSplits(any(AddFileEnumeratorContext.class),
-            any(SplitFilter.class)))
-            .thenReturn(mockSplits);
-
-        enumerator.start();
-
-        assertThat(enumerator.getSnapshot(), equalTo(timestampAsOfSnapshot));
-        verify(deltaLog).getSnapshotForTimestampAsOf(timestampAsOf);
-        verify(deltaLog, never()).snapshot();
-        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
     }
 
     @Test
@@ -131,19 +66,22 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
         verify(enumContext).signalNoMoreSplits(subtaskId);
     }
 
-    private BoundedDeltaSourceSplitEnumerator setupEnumeratorWithHeadSnapshot() {
-        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+    @Override
+    protected DeltaSourceSplitEnumerator createEnumerator() {
+        when(splitAssignerProvider.create(Mockito.any())).thenReturn(splitAssigner);
+        when(fileEnumeratorProvider.create()).thenReturn(fileEnumerator);
 
-        return BoundedDeltaSourceSplitEnumerator.create(
-            deltaTablePath, fileEnumerator, splitAssigner, DeltaSinkTestUtils.getHadoopConf(),
-            enumContext, sourceConfiguration);
+        ContinuousSplitEnumeratorProvider provider =
+            new ContinuousSplitEnumeratorProvider(splitAssignerProvider, fileEnumeratorProvider);
+
+        return (DeltaSourceSplitEnumerator) provider.createInitialStateEnumerator(deltaTablePath,
+            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
     }
 
     @Override
-    protected DeltaSourceSplitEnumerator createEnumerator() {
-        return BoundedDeltaSourceSplitEnumerator.create(
-            deltaTablePath, fileEnumerator, splitAssigner,
-            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
+    protected DeltaSourceSplitEnumerator createEnumerator(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) {
+        return null;
     }
 }
 

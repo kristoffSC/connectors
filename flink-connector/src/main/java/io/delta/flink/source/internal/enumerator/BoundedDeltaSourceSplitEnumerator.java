@@ -22,20 +22,12 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
 
     private final TableProcessor snapshotProcessor;
 
-    private BoundedDeltaSourceSplitEnumerator(
+    public BoundedDeltaSourceSplitEnumerator(
         Path deltaTablePath, SnapshotProcessor snapshotProcessor,
         FileSplitAssigner splitAssigner, SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
 
         super(deltaTablePath, splitAssigner, enumContext);
         this.snapshotProcessor = snapshotProcessor;
-    }
-
-    public static BoundedDeltaSourceSplitEnumerator create(
-        Path deltaTablePath, SnapshotProcessor snapshotProcessor, FileSplitAssigner splitAssigner,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-
-        return new BoundedDeltaSourceSplitEnumerator(deltaTablePath, snapshotProcessor,
-            splitAssigner, enumContext);
     }
 
     @Override
