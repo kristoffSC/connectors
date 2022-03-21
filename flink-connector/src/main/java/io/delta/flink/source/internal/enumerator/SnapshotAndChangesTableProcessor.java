@@ -13,7 +13,7 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
 
     private final ContinuousTableProcessor changesProcessor;
 
-    private boolean startedMonitoringForChanges;
+    private boolean monitoringForChanges;
 
     public SnapshotAndChangesTableProcessor(
         SnapshotProcessor snapshotProcessor, ContinuousTableProcessor changesProcessor) {
@@ -25,23 +25,23 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
 
         snapshotProcessor.process(processCallback);
-        startedMonitoringForChanges = true;
+        monitoringForChanges = true;
         changesProcessor.process(processCallback);
     }
 
     @Override
-    public boolean isStartedMonitoringForChanges() {
-        return this.startedMonitoringForChanges;
+    public boolean isMonitoringForChanges() {
+        return this.monitoringForChanges;
     }
 
     public long getSnapshotVersion() {
-        return (startedMonitoringForChanges) ? changesProcessor.getSnapshotVersion()
+        return (monitoringForChanges) ? changesProcessor.getSnapshotVersion()
             : snapshotProcessor.getSnapshotVersion();
     }
 
     @Override
     public Collection<Path> getAlreadyProcessedPaths() {
-        return (startedMonitoringForChanges) ? changesProcessor.getAlreadyProcessedPaths()
+        return (monitoringForChanges) ? changesProcessor.getAlreadyProcessedPaths()
             : snapshotProcessor.getAlreadyProcessedPaths();
     }
 }

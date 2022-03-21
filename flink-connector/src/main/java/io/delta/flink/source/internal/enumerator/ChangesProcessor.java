@@ -1,13 +1,17 @@
 package io.delta.flink.source.internal.enumerator;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.delta.flink.source.internal.enumerator.TableMonitorResult.ChangesPerVersion;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.core.fs.Path;
+
+import io.delta.standalone.actions.AddFile;
 
 public class ChangesProcessor implements ContinuousTableProcessor {
 
@@ -31,12 +35,15 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     //  changes.
     private long snapshotVersion;
 
+    private long currentSnapshotVersion;
+
     public ChangesProcessor(TableMonitor tableMonitor,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         Collection<Path> alreadyProcessedPaths) {
         this.tableMonitor = tableMonitor;
         this.enumContext = enumContext;
         this.alreadyProcessedPaths = new HashSet<>(alreadyProcessedPaths);
+        this.currentSnapshotVersion = this.tableMonitor.getChangesFromVersion();
     }
 
     @Override
@@ -44,11 +51,12 @@ public class ChangesProcessor implements ContinuousTableProcessor {
         // TODO PR 7 add tests to check split creation//assignment granularity is in scope of
         //  VersionLog.
         //monitor for changes
-        /*enumContext.callAsync(
+        enumContext.callAsync(
             tableMonitor, // executed sequentially by ScheduledPool Thread.
-            this::processDiscoveredVersions, // executed by Flink's Source-Coordinator Thread.
-            getOptionValue(UPDATE_CHECK_INITIAL_DELAY),
-            getOptionValue(UPDATE_CHECK_INTERVAL));*/
+            (tableMonitorResult, throwable) -> processDiscoveredVersions(tableMonitorResult,
+                processCallback, throwable), // executed by Flink's Source-Coordinator Thread.
+            5000, // PR 7 Take from DeltaSourceConfiguration
+            5000); // PR 7 Take from DeltaSourceConfiguration
     }
 
     @Override
@@ -62,7 +70,32 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     }
 
     @Override
-    public boolean isStartedMonitoringForChanges() {
+    public boolean isMonitoringForChanges() {
         return true;
+    }
+
+
+    private void processDiscoveredVersions(TableMonitorResult monitorTableResult,
+        Consumer<List<DeltaSourceSplit>> processCallback, Throwable error) {
+        /*        if (error != null) {
+            LOG.error("Failed to enumerate files", error);
+            DeltaSourceExceptionUtils.generalSourceException(error);
+        }*/
+
+        this.currentSnapshotVersion = monitorTableResult.getHighestSeenVersion();
+        List<ChangesPerVersion> newActions = monitorTableResult.getChanges();
+
+        newActions.stream()
+            .map(this::processActions)
+            .map(this::prepareSplits)
+            .forEachOrdered(processCallback);
+    }
+
+    private List<AddFile> processActions(ChangesPerVersion changes) {
+        return Collections.emptyList();
+    }
+
+    private List<DeltaSourceSplit> prepareSplits(List<AddFile> addFiles) {
+        return Collections.emptyList();
     }
 }

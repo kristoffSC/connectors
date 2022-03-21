@@ -58,7 +58,10 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     @Override
     public void start() {
-        continuousTableProcessor.process(this::addSplits);
+        continuousTableProcessor.process(deltaSourceSplits -> {
+            addSplits(deltaSourceSplits);
+            assignSplits();
+        });
     }
 
     @Override
@@ -66,7 +69,7 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
         throws Exception {
         return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
             deltaTablePath, continuousTableProcessor.getSnapshotVersion(),
-            continuousTableProcessor.isStartedMonitoringForChanges(), getRemainingSplits(),
+            continuousTableProcessor.isMonitoringForChanges(), getRemainingSplits(),
             continuousTableProcessor.getAlreadyProcessedPaths());
     }
 

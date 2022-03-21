@@ -32,28 +32,27 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      */
     private long changesFromVersion;
 
-    private TableMonitor(DeltaLog deltaLog, long initialMonitorSnapshotVersion,
+    private TableMonitor(DeltaLog deltaLog, long changesFromVersion,
         long maxDurationMillis) {
         this.deltaLog = deltaLog;
-        this.changesFromVersion = initialMonitorSnapshotVersion;
+        this.changesFromVersion = changesFromVersion;
         this.maxDurationMillis = maxDurationMillis;
     }
 
     /**
      * Creates new instance of TableMonitor class to monitor Delta Table Changes.
      *
-     * @param deltaLog                      The {@link DeltaLog} to monitor for changes from.
-     * @param initialMonitorSnapshotVersion The initial {@link io.delta.standalone.Snapshot} version
-     *                                      from which this instance will monitor for changes.
-     * @param maxDurationMillis             The "maximal" duration that each subsequent call to
-     *                                      {@link #call()} method should take. This is a soft
-     *                                      limit, which means that implementation will try to
-     *                                      guarantee that overall call is * no longer that this
-     *                                      limit. See {@link #call()} method for details.
+     * @param deltaLog           The {@link DeltaLog} to monitor for changes from.
+     * @param changesFromVersion The initial {@link io.delta.standalone.Snapshot} version from which
+     *                           this instance will monitor for changes.
+     * @param maxDurationMillis  The "maximal" duration that each subsequent call to {@link #call()}
+     *                           method should take. This is a soft limit, which means that
+     *                           implementation will try to guarantee that overall call is * no
+     *                           longer that this limit. See {@link #call()} method for details.
      */
-    public static TableMonitor create(DeltaLog deltaLog, long initialMonitorSnapshotVersion,
+    public static TableMonitor create(DeltaLog deltaLog, long changesFromVersion,
         long maxDurationMillis) {
-        return new TableMonitor(deltaLog, initialMonitorSnapshotVersion, maxDurationMillis);
+        return new TableMonitor(deltaLog, changesFromVersion, maxDurationMillis);
     }
 
     /**
@@ -69,5 +68,9 @@ public class TableMonitor implements Callable<TableMonitorResult> {
     public TableMonitorResult call() throws Exception {
         // TODO PR 7 Add monitor implementation and tests, for now return null.
         return null;
+    }
+
+    public long getChangesFromVersion() {
+        return changesFromVersion;
     }
 }

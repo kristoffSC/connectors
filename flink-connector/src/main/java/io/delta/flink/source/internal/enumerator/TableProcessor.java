@@ -14,5 +14,4 @@ public interface TableProcessor {
     long getSnapshotVersion();
 
     Collection<Path> getAlreadyProcessedPaths();
-
 }

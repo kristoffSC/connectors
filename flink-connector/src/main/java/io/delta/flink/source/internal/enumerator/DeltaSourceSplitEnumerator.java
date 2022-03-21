@@ -128,7 +128,7 @@ public abstract class DeltaSourceSplitEnumerator implements
         splitAssigner.addSplits((Collection<FileSourceSplit>) (Collection<?>) splits);
     }
 
-    private AssignSplitStatus assignSplits() {
+    protected AssignSplitStatus assignSplits() {
         final Iterator<Entry<Integer, String>> awaitingReader =
             readersAwaitingSplit.entrySet().iterator();
 
