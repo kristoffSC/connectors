@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
@@ -109,7 +110,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
 
     @Test
     public void shouldHandleFailedReader() {
-        enumerator = setupEnumeratorWithHeadSnapshot();
+        enumerator = setUpEnumeratorWithHeadSnapshot();
 
         // Mock reader failure.
         when(enumContext.registeredReaders()).thenReturn(Collections.emptyMap());
@@ -122,7 +123,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     @Test
     public void shouldAssignSplitToReader() {
         int subtaskId = 1;
-        enumerator = setupEnumeratorWithHeadSnapshot();
+        enumerator = setUpEnumeratorWithHeadSnapshot();
 
         when(enumContext.registeredReaders()).thenReturn(
             Collections.singletonMap(subtaskId, readerInfo));
@@ -145,7 +146,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     @Test
     public void shouldAddSplitBack() {
         int subtaskId = 1;
-        enumerator = setupEnumeratorWithHeadSnapshot();
+        enumerator = setUpEnumeratorWithHeadSnapshot();
 
         when(enumContext.registeredReaders()).thenReturn(
             Collections.singletonMap(subtaskId, readerInfo));
@@ -168,7 +169,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     @Test
     public void shouldReadInitialSnapshot() {
 
-        enumerator = setupEnumeratorWithHeadSnapshot();
+        enumerator = setUpEnumeratorWithHeadSnapshot();
 
         List<DeltaSourceSplit> mockSplits = mockSplits();
         when(fileEnumerator.enumerateSplits(any(AddFileEnumeratorContext.class),
@@ -183,7 +184,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
 
     @Test
     public void shouldNotProcessAlreadyProcessedPaths() {
-        enumerator = setupEnumeratorWithHeadSnapshot();
+        enumerator = setUpEnumeratorWithHeadSnapshot();
 
         AddFile mockAddFile = mock(AddFile.class);
         when(mockAddFile.getPath()).thenReturn("add/file/path.parquet");
@@ -204,19 +205,33 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> T setupEnumeratorWithHeadSnapshot() {
+    protected <T> T setUpEnumeratorWithHeadSnapshot() {
         when(deltaLog.snapshot()).thenReturn(headSnapshot);
         return (T) spy(createEnumerator());
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> T setupEnumeratorFromCheckpoint(
+    protected <T> T setUpEnumerator() {
+        return (T) spy(createEnumerator());
+    }
+
+    @SuppressWarnings("unchecked")
+    protected <T> T setUpEnumeratorFromCheckpoint(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) {
         return (T) spy(createEnumerator(checkpoint));
     }
 
-    protected abstract DeltaSourceSplitEnumerator createEnumerator();
+    protected abstract SplitEnumeratorProvider getProvider();
 
-    protected abstract DeltaSourceSplitEnumerator createEnumerator(
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint);
+    protected DeltaSourceSplitEnumerator createEnumerator() {
+        return (DeltaSourceSplitEnumerator) getProvider().createInitialStateEnumerator(
+            deltaTablePath,
+            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
+    }
+
+    protected DeltaSourceSplitEnumerator createEnumerator(
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) {
+        return (DeltaSourceSplitEnumerator) getProvider().createEnumeratorForCheckpoint(checkpoint,
+            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
+    }
 }

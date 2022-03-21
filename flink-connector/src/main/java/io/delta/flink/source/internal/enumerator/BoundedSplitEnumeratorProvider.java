@@ -71,14 +71,12 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
 
-        DeltaLog deltaLog =
-            SourceUtils.createDeltaLog(checkpoint.getDeltaTablePath(), configuration);
-
-        BoundedSourceSnapshotSupplier snapshotSupplier =
-            new BoundedSourceSnapshotSupplier(deltaLog, sourceConfiguration);
+        DeltaLog deltaLog = DeltaLog.forTable(configuration,
+            SourceUtils.pathToString(checkpoint.getDeltaTablePath()));
 
         SnapshotProcessor snapshotProcessor =
-            new SnapshotProcessor(checkpoint.getDeltaTablePath(), snapshotSupplier.getSnapshot(),
+            new SnapshotProcessor(checkpoint.getDeltaTablePath(),
+                deltaLog.getSnapshotForVersionAsOf(checkpoint.getSnapshotVersion()),
                 fileEnumeratorProvider.create(), checkpoint.getAlreadyProcessedPaths());
 
         return new BoundedDeltaSourceSplitEnumerator(

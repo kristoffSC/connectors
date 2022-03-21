@@ -111,7 +111,6 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     private ContinuousTableProcessor setUpTableProcessor(Path deltaTablePath,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot) {
-        ContinuousTableProcessor tableProcessor;
 
         if (isChangeStreamOnly(sourceConfiguration)) {
             return

@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 
-import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.junit.After;
@@ -67,7 +66,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
                 true,
                 Collections.emptyList(), Collections.emptyList());
 
-        enumerator = setupEnumeratorFromCheckpoint(checkpoint);
+        enumerator = setUpEnumeratorFromCheckpoint(checkpoint);
         enumerator.start();
 
         // verify that we did not create any snapshot, we only need to get changes from deltaLog.
@@ -95,7 +94,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
                 false,
                 Collections.emptyList(), Collections.emptyList());
 
-        enumerator = setupEnumeratorFromCheckpoint(checkpoint);
+        enumerator = setUpEnumeratorFromCheckpoint(checkpoint);
         enumerator.start();
 
         // verify that snapshot was created using version from checkpoint and not head or timestamp.
@@ -116,7 +115,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     @Test
     public void shouldNotSignalNoMoreSplitsIfNone() {
         int subtaskId = 1;
-        enumerator = setupEnumeratorWithHeadSnapshot();
+        enumerator = setUpEnumeratorWithHeadSnapshot();
 
         when(enumContext.registeredReaders()).thenReturn(
             Collections.singletonMap(subtaskId, readerInfo));
@@ -127,37 +126,21 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         verify(enumContext, never()).signalNoMoreSplits(subtaskId);
     }
 
-    @Test
+    // TODO Add in PR 7
+    //@Test
     public void shouldOnlyReadChangesWhenStartingVersionOption() {
 
     }
 
-    @Test
+    // TODO Add in PR 7
+    //@Test
     public void shouldOnlyReadChangesWhenStartingTimestampOption() {
 
     }
 
-    /**
-     * In this test check that we do not read the table state after recovery from a checkpoint. The
-     * table content should be read only for the initial Source setup or when recovering without a
-     * checkpoint. Otherwise, Source should read only changes from provided checkpointVersion and no
-     * entire table content for this version.
-     */
-    @Test
-    public void shouldNotReadTableContentIfNotOnInitialVersion() {
-
-    }
-
     @Override
-    protected DeltaSourceSplitEnumerator createEnumerator() {
-        return (DeltaSourceSplitEnumerator) provider.createInitialStateEnumerator(deltaTablePath,
-            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
+    protected SplitEnumeratorProvider getProvider() {
+        return this.provider;
     }
 
-    @Override
-    protected DeltaSourceSplitEnumerator createEnumerator(
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) {
-        return (DeltaSourceSplitEnumerator) provider.createEnumeratorForCheckpoint(checkpoint,
-            DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
-    }
 }
