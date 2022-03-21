@@ -15,10 +15,19 @@ import org.apache.flink.core.fs.Path;
 import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
 
+/**
+ * This implementation of {@link TableProcessor} process data from Delta Table {@link Snapshot}.
+ */
 public class SnapshotProcessor implements TableProcessor {
 
+    /**
+     * A {@link Path} to Delta Table that this processor reads.
+     */
     private final Path deltaTablePath;
 
+    /**
+     * A {@link Snapshot} that is processed by this processor.
+     */
     private final Snapshot snapshot;
 
     /**
@@ -28,8 +37,11 @@ public class SnapshotProcessor implements TableProcessor {
     private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
     /**
-     * Set with already processed paths for Parquet Files. This map is used during recovery from
-     * checkpoint.
+     * Set with already processed paths for Parquet Files. Processor will skip not process parquet
+     * files from this set.
+     * <p>
+     * The use case for this set is a recovery from checkpoint scenario, where we don't want to
+     * reprocess already processed Parquet files.
      */
     private final HashSet<Path> alreadyProcessedPaths;
 
@@ -42,6 +54,14 @@ public class SnapshotProcessor implements TableProcessor {
         this.alreadyProcessedPaths = new HashSet<>(alreadyProcessedPaths);
     }
 
+    /**
+     * Process all {@link AddFile} from {@link Snapshot} passed to this {@code SnapshotProcessor}
+     * constructor.
+     *
+     * @param processCallback A {@link Consumer} callback that will be called after converting all
+     *                        {@link AddFile} to {@link DeltaSourceSplit}.
+     */
+    @Override
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
@@ -54,17 +74,26 @@ public class SnapshotProcessor implements TableProcessor {
         processCallback.accept(splits);
     }
 
-    private AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles,
-        long snapshotVersion) {
-        String pathString = SourceUtils.pathToString(deltaTablePath);
-        return new AddFileEnumeratorContext(pathString, addFiles, snapshotVersion);
-    }
-
+    /**
+     * @return Collection of {@link Path} objects that corresponds to Parquet files processed by
+     * this processor.
+     */
+    @Override
     public Collection<Path> getAlreadyProcessedPaths() {
         return alreadyProcessedPaths;
     }
 
+    /**
+     * @return A {@link Snapshot} version that this processor reads.
+     */
+    @Override
     public long getSnapshotVersion() {
         return snapshot.getVersion();
+    }
+
+    private AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles,
+        long snapshotVersion) {
+        String pathString = SourceUtils.pathToString(deltaTablePath);
+        return new AddFileEnumeratorContext(pathString, addFiles, snapshotVersion);
     }
 }
