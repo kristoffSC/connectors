@@ -40,6 +40,7 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
         SnapshotProcessor snapshotProcessor, ChangesProcessor changesProcessor) {
         this.snapshotProcessor = snapshotProcessor;
         this.changesProcessor = changesProcessor;
+        this.monitoringForChanges = false;
     }
 
     /**

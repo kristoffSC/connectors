@@ -47,6 +47,7 @@ public class ChangesProcessor implements ContinuousTableProcessor {
      * The use case for this set is a recovery from checkpoint scenario, where we don't want to
      * reprocess already processed Parquet files.
      */
+    // TODO PR 7 - update this set in prepareSplits method.
     private final HashSet<Path> alreadyProcessedPaths;
 
     // TODO PR 7 Add monitor for changes.

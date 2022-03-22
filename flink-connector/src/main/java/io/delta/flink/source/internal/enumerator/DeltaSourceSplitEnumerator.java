@@ -25,8 +25,8 @@ import static io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerat
 /**
  * A base class for {@link SplitEnumerator} used by {@link io.delta.flink.source.DeltaSource}
  * <p>
- * The implementations that will choose to extend this class will have to implement abstract
- * method {@link DeltaSourceSplitEnumerator#handleNoMoreSplits(int)}
+ * The implementations that will choose to extend this class will have to implement abstract method
+ * {@link DeltaSourceSplitEnumerator#handleNoMoreSplits(int)}
  */
 public abstract class DeltaSourceSplitEnumerator implements
     SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>> {
@@ -51,6 +51,14 @@ public abstract class DeltaSourceSplitEnumerator implements
 
     /**
      * Map containing all readers that have requested the split.
+     * <p>
+     * The key is the subtask id of the source reader who sent the source event. requesterHostname
+     * <p>
+     * The value is an optional hostname where the requesting task is running. This can be used to
+     * make split assignments locality-aware.
+     *
+     * @implNote The type contract for this map comes from {@link #handleSplitRequest(int, String)}
+     * method.
      */
     protected final LinkedHashMap<Integer, String> readersAwaitingSplit;
 

@@ -156,6 +156,9 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot) {
 
+        // Since this is the processor for both snapshot and changes, the version for which we
+        // should start monitoring for changes is snapshot.version + 1. We don't want to get
+        // changes from snapshot.version.
         ChangesProcessor changesProcessor =
             setUpChangesProcessor(enumContext, sourceConfiguration, deltaLog,
                 snapshot.getVersion() + 1);
