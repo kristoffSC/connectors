@@ -56,7 +56,7 @@ public class SnapshotProcessor implements TableProcessor {
 
     /**
      * Process all {@link AddFile} from {@link Snapshot} passed to this {@code SnapshotProcessor}
-     * constructor.
+     * constructor by converting them to {@link DeltaSourceSplit} objects.
      *
      * @param processCallback A {@link Consumer} callback that will be called after converting all
      *                        {@link AddFile} to {@link DeltaSourceSplit}.

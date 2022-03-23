@@ -11,7 +11,8 @@ import io.delta.standalone.Snapshot;
 
 /**
  * This implementation of {@link TableProcessor} process both, content of {@link
- * io.delta.standalone.Snapshot} and changes applied to monitored Delta table.
+ * io.delta.standalone.Snapshot} and changes applied to monitored Delta table by converting them to
+ * {@link DeltaSourceSplit} objects.
  *
  * <p>
  * This implementation uses both {@link SnapshotProcessor} to read {@code Snapshot} content and

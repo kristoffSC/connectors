@@ -76,7 +76,7 @@ public class ChangesProcessor implements ContinuousTableProcessor {
 
     /**
      * Starts processing changes that were added to Delta table starting from version specified by
-     * {@link #currentSnapshotVersion} field.
+     * {@link #currentSnapshotVersion} field by converting them to {@link DeltaSourceSplit} objects.
      *
      * @param processCallback A {@link Consumer} callback that will be called after processing all
      *                        {@link io.delta.standalone.actions.Action} and converting them to
