@@ -22,8 +22,8 @@ import io.delta.standalone.actions.AddFile;
  * Snapshot} content.
  *
  * <p>
- * The {@code Snapshot} version is specified by {@link TableMonitor} used during creating an instance
- * of {@code ChangesProcessor}.
+ * The {@code Snapshot} version is specified by {@link TableMonitor} used during creating an
+ * instance of {@code ChangesProcessor}.
  */
 public class ChangesProcessor implements ContinuousTableProcessor {
 
