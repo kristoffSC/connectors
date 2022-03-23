@@ -31,7 +31,7 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
     private final Path deltaTablePath;
 
     /**
-     * The Delta Table snapshot version used to create this snapshot.
+     * The Delta Table snapshot version used to create this checkpoint.
      */
     private final long snapshotVersion;
 
