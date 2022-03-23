@@ -13,7 +13,8 @@ public abstract class SnapshotSupplier {
 
     protected final DeltaSourceConfiguration sourceConfiguration;
 
-    protected SnapshotSupplier(DeltaLog deltaLog,
+    protected SnapshotSupplier(
+        DeltaLog deltaLog,
         DeltaSourceConfiguration sourceConfiguration) {
         this.deltaLog = deltaLog;
         this.sourceConfiguration = sourceConfiguration;

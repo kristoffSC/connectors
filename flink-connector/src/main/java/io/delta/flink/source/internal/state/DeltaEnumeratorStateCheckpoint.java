@@ -40,8 +40,7 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      * <p>
      * This field is mapped from
      * {@link io.delta.flink.source.internal.enumerator.ContinuousTableProcessor
-     * #isMonitoringForChanges()}
-     * method.
+     * #isMonitoringForChanges()} method.
      */
     private final boolean monitoringForChanges;
 
@@ -71,7 +70,8 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      * @param deltaTablePath        A {@link Path} to Delta Table.
      * @param snapshotVersion       The initial version of Delta Table from which we started reading
      *                              the Delta Table.
-     * @param monitoringForChanges
+     * @param monitoringForChanges  indicates whether source started monitoring Delta table for
+     *                              changes.
      * @param splits                A collection of splits that were unassigned to any readers at
      *                              moment of taking the checkpoint.
      * @param alreadyProcessedPaths The paths to Parquet files that have already been processed and
@@ -83,7 +83,8 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
         Path deltaTablePath, long snapshotVersion, boolean monitoringForChanges,
         Collection<T> splits, Collection<Path> alreadyProcessedPaths) {
 
-        checkArguments(deltaTablePath, snapshotVersion);
+        checkNotNull(deltaTablePath);
+        checkNotNull(snapshotVersion);
 
         PendingSplitsCheckpoint<T> splitsCheckpoint =
             PendingSplitsCheckpoint.fromCollectionSnapshot(splits, alreadyProcessedPaths);
@@ -93,11 +94,6 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
     }
 
     // ------------------------------------------------------------------------
-
-    private static void checkArguments(Path deltaTablePath, long snapshotVersion) {
-        checkNotNull(deltaTablePath);
-        checkNotNull(snapshotVersion);
-    }
 
     /**
      * @return The initial version of Delta Table from witch we started reading the Delta Table.

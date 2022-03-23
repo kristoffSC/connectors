@@ -17,6 +17,13 @@ import org.apache.flink.configuration.ConfigOptions;
 public class DeltaSourceOptions {
 
     /**
+     * The constant that represents a value for {@link #STARTING_VERSION} option which indicates
+     * that source connector should stream changes starting from the latest {@link
+     * io.delta.standalone.Snapshot} version.
+     */
+    public static final String STARTING_VERSION_LATEST = "latest";
+
+    /**
      * A map of all valid {@code DeltaSource} options. This map can be used for example by {@code
      * DeltaSourceBuilder} to do configuration sanity check.
      *
@@ -70,7 +77,7 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>startingTimestamp</b>.
      */
     public static final ConfigOption<String> STARTING_TIMESTAMP =
-        ConfigOptions.key("startingTimestamp").stringType().defaultValue("latest");
+        ConfigOptions.key("startingTimestamp").stringType().noDefaultValue();
 
     /**
      * An option to specify check interval (in milliseconds) for monitoring Delta table changes.
