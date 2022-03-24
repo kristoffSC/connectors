@@ -7,10 +7,21 @@ import org.apache.flink.configuration.ConfigOption;
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
 
+/**
+ * This class abstract's logic needed to acquirer Delta table {@link Snapshot} based on {@link
+ * DeltaSourceConfiguration} and any other implementation specific logic.
+ */
 public abstract class SnapshotSupplier {
 
+    /**
+     * The {@link DeltaLog} instance that will be used to get the desire {@link Snapshot} instance.
+     */
     protected final DeltaLog deltaLog;
 
+    /**
+     * The {@link DeltaSourceConfiguration} with used
+     * {@link io.delta.flink.source.internal.DeltaSourceOptions}.
+     */
     protected final DeltaSourceConfiguration sourceConfiguration;
 
     protected SnapshotSupplier(
@@ -20,12 +31,43 @@ public abstract class SnapshotSupplier {
         this.sourceConfiguration = sourceConfiguration;
     }
 
+    /**
+     * @return A {@link Snapshot} instance acquired from {@link #deltaLog}. Every implementation of
+     * {@link SnapshotSupplier} class can have its own rules about how snapshot should be acquired.
+     */
     public abstract Snapshot getSnapshot();
 
+    /**
+     * A helper method that returns the latest {@link Snapshot} at moment when this method was
+     * called.
+     * <p>
+     * If underlying Delta table, represented by {@link #deltaLog} field is changing, for example a
+     * new data is being added to the table, every call to this method can return different {@link
+     * Snapshot}.
+     */
     protected TransitiveOptional<Snapshot> getHeadSnapshot() {
         return TransitiveOptional.ofNullable(deltaLog.snapshot());
     }
 
+    /**
+     * A helper method to get the value of {@link io.delta.flink.source.internal.DeltaSourceOptions}
+     * from {@link #sourceConfiguration}.
+     *
+     * <p>
+     * The purpose of this method is to avoid using for example longish:
+     * <pre>
+     *     this.sourceConfiguration.getValue(DeltaSourceOptions.VERSION_AS_OF)
+     * </pre>
+     * and replace it with shorter:
+     * <pre>
+     *     getOptionValue(DeltaSourceOptions.VERSION_AS_OF)
+     * </pre>
+     * <p>
+     * which might be better for logic that has to get more option values and access {@link
+     * #sourceConfiguration} many times.
+     *
+     * @return Value for provided option.
+     */
     protected <T> T getOptionValue(ConfigOption<T> option) {
         return this.sourceConfiguration.getValue(option);
     }
