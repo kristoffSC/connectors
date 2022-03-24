@@ -20,8 +20,8 @@ public class ContinuousSourceSnapshotSupplier extends SnapshotSupplier {
 
     /**
      * This method returns a {@link Snapshot} instance acquired from {@link #deltaLog}. This
-     * implementation tries to quire the {@code Snapshot} in below order, stopping at first none
-     * empty result:
+     * implementation tries to query the {@code Snapshot} in below order, stopping at first
+     * non-empty result:
      * <ul>
      *     <li>If {@link DeltaSourceOptions#STARTING_VERSION} was specified, use it to call
      *     {@link DeltaLog#getSnapshotForVersionAsOf(long)}.</li>

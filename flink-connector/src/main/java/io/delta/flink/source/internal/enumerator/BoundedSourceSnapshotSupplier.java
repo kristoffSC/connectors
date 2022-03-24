@@ -21,8 +21,8 @@ public class BoundedSourceSnapshotSupplier extends SnapshotSupplier {
 
     /**
      * This method returns a {@link Snapshot} instance acquired from {@link #deltaLog}. This
-     * implementation tries to quire the {@code Snapshot} in below order, stopping at first none
-     * empty result:
+     * implementation tries to quire the {@code Snapshot} in below order, stopping at first
+     * non-empty result:
      * <ul>
      *     <li>If {@link DeltaSourceOptions#VERSION_AS_OF} was specified, use it to call
      *     {@link DeltaLog#getSnapshotForVersionAsOf(long)}.</li>

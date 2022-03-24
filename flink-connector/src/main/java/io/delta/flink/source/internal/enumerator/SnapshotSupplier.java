@@ -52,21 +52,6 @@ public abstract class SnapshotSupplier {
     /**
      * A helper method to get the value of {@link io.delta.flink.source.internal.DeltaSourceOptions}
      * from {@link #sourceConfiguration}.
-     *
-     * <p>
-     * The purpose of this method is to avoid using for example longish:
-     * <pre>
-     *     this.sourceConfiguration.getValue(DeltaSourceOptions.VERSION_AS_OF)
-     * </pre>
-     * and replace it with shorter:
-     * <pre>
-     *     getOptionValue(DeltaSourceOptions.VERSION_AS_OF)
-     * </pre>
-     * <p>
-     * which might be better for logic that has to get more option values and access {@link
-     * #sourceConfiguration} many times.
-     *
-     * @return Value for provided option.
      */
     protected <T> T getOptionValue(ConfigOption<T> option) {
         return this.sourceConfiguration.getValue(option);
