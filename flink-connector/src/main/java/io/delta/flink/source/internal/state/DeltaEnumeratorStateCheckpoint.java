@@ -2,6 +2,7 @@ package io.delta.flink.source.internal.state;
 
 import java.util.Collection;
 
+import io.delta.flink.source.internal.enumerator.processor.ContinuousTableProcessor;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.SourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumerator;
@@ -39,7 +40,7 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      * Flag indicating that source start monitoring Delta Table for changes.
      * <p>
      * This field is mapped from
-     * {@link io.delta.flink.source.internal.enumerator.ContinuousTableProcessor
+     * {@link ContinuousTableProcessor
      * #isMonitoringForChanges()} method.
      */
     private final boolean monitoringForChanges;

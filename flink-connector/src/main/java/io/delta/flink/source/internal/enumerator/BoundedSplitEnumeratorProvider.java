@@ -4,6 +4,8 @@ import java.util.Collections;
 import static java.util.Collections.emptyList;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.enumerator.processor.SnapshotProcessor;
+import io.delta.flink.source.internal.enumerator.supplier.BoundedSourceSnapshotSupplier;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;

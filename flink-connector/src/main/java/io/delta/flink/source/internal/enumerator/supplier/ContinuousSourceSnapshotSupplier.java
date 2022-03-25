@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal.enumerator;
+package io.delta.flink.source.internal.enumerator.supplier;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;

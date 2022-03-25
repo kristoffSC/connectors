@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal.enumerator;
+package io.delta.flink.source.internal.enumerator.monitor;
 
 import java.util.Collections;
 import java.util.List;

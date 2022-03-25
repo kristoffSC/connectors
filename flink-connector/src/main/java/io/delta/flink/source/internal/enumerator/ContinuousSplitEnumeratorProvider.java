@@ -6,6 +6,12 @@ import static java.util.Collections.emptyList;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
+import io.delta.flink.source.internal.enumerator.processor.ChangesProcessor;
+import io.delta.flink.source.internal.enumerator.processor.ContinuousTableProcessor;
+import io.delta.flink.source.internal.enumerator.processor.SnapshotAndChangesTableProcessor;
+import io.delta.flink.source.internal.enumerator.processor.SnapshotProcessor;
+import io.delta.flink.source.internal.enumerator.supplier.ContinuousSourceSnapshotSupplier;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;

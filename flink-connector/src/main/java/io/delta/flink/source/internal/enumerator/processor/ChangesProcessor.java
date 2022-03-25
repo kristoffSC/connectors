@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal.enumerator;
+package io.delta.flink.source.internal.enumerator.processor;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -6,7 +6,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.function.Consumer;
 
-import io.delta.flink.source.internal.enumerator.TableMonitorResult.ChangesPerVersion;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult.ChangesPerVersion;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.core.fs.Path;

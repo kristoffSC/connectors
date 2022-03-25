@@ -1,5 +1,6 @@
 package io.delta.flink.source.internal.enumerator;
 
+import io.delta.flink.source.internal.enumerator.processor.ContinuousTableProcessor;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;

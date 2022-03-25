@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal.enumerator;
+package io.delta.flink.source.internal.enumerator.processor;
 
 /**
  * Extension of {@link TableProcessor} for

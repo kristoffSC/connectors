@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal.enumerator;
+package io.delta.flink.source.internal.enumerator.processor;
 
 import java.util.Collection;
 import java.util.List;

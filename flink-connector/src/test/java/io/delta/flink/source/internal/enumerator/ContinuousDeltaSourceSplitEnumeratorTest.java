@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.junit.After;

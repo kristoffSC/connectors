@@ -1,5 +1,7 @@
 package io.delta.flink.source.internal.enumerator;
 
+import io.delta.flink.source.internal.enumerator.processor.SnapshotProcessor;
+import io.delta.flink.source.internal.enumerator.processor.TableProcessor;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
