@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.SimpleVersionedSerialization;
 import org.junit.Assert;
@@ -17,14 +18,18 @@ import static org.junit.Assert.assertEquals;
 
 public class DeltaPendingSplitsCheckpointSerializerTest {
 
-    private static final long INITIAL_SNAPSHOT_VERSION = 1L;
     private static final Path TABLE_PATH = new Path("some/path");
 
     @Test
     public void serializeEmptyCheckpoint() throws Exception {
+
+        PendingSplitsCheckpoint<DeltaSourceSplit> pendingSplits =
+            PendingSplitsCheckpoint.fromCollectionSnapshot(Collections.emptyList(),
+                Collections.emptyList());
+
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(TABLE_PATH, -1, true,
-                Collections.emptyList(), Collections.emptyList());
+            new DeltaEnumeratorStateCheckpoint<>(
+                TABLE_PATH, 2, true, 12, pendingSplits);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
@@ -34,11 +39,17 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
     @Test
     public void serializeSomeSplits() throws Exception {
+
+        PendingSplitsCheckpoint<DeltaSourceSplit> pendingSplits =
+            PendingSplitsCheckpoint.fromCollectionSnapshot(
+                Arrays.asList(
+                    testSplitNoPartitions(), testSplitSinglePartition(),
+                    testSplitMultiplePartitions()),
+                Collections.emptyList());
+
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-                TABLE_PATH, INITIAL_SNAPSHOT_VERSION, true,
-                Arrays.asList(testSplitNoPartitions(), testSplitSinglePartition(),
-                    testSplitMultiplePartitions()), Collections.emptyList());
+            new DeltaEnumeratorStateCheckpoint<>(
+                TABLE_PATH, 100, true, 0, pendingSplits);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
@@ -48,15 +59,19 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
     @Test
     public void serializeSplitsAndProcessedPaths() throws Exception {
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-                TABLE_PATH, INITIAL_SNAPSHOT_VERSION, true,
-                Arrays.asList(testSplitNoPartitions(), testSplitSinglePartition(),
+        PendingSplitsCheckpoint<DeltaSourceSplit> pendingSplits =
+            PendingSplitsCheckpoint.fromCollectionSnapshot(
+                Arrays.asList(
+                    testSplitNoPartitions(), testSplitSinglePartition(),
                     testSplitMultiplePartitions()),
                 Arrays.asList(
                     new Path("file:/some/path"),
                     new Path("s3://bucket/key/and/path"),
                     new Path("hdfs://namenode:12345/path")));
+
+        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
+            new DeltaEnumeratorStateCheckpoint<>(
+                TABLE_PATH, 1410, true, 100, pendingSplits);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);

@@ -1,13 +1,18 @@
 package io.delta.flink.source.internal.enumerator;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
+import static java.util.Collections.singletonList;
 
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpointBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,9 +25,13 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import io.delta.standalone.VersionLog;
+import io.delta.standalone.actions.AddFile;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnumeratorTestBase {
@@ -63,10 +72,20 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         }).when(enumContext)
             .callAsync(any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
 
+        AddFile fileOne = mock(AddFile.class);
+        AddFile fileTwo = mock(AddFile.class);
+
+        List<VersionLog> changes = Arrays.asList(new VersionLog(10, singletonList(fileOne)),
+            new VersionLog(11, singletonList(fileTwo)));
+
+        when(deltaLog.getChanges(snapshotVersion, true)).thenReturn(changes.iterator());
+        when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
+
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath, snapshotVersion,
-                true,
-                Collections.emptyList(), Collections.emptyList());
+            DeltaEnumeratorStateCheckpointBuilder
+                .builder(deltaTablePath, snapshotVersion, Collections.emptyList())
+                .withMonitoringForChanges(true)
+                .build();
 
         enumerator = setUpEnumeratorFromCheckpoint(checkpoint);
         enumerator.start();
@@ -92,9 +111,10 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         when(checkpointedSnapshot.getVersion()).thenReturn(snapshotVersion);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
-            DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(deltaTablePath, snapshotVersion,
-                false,
-                Collections.emptyList(), Collections.emptyList());
+            DeltaEnumeratorStateCheckpointBuilder
+                .builder(deltaTablePath, snapshotVersion, Collections.emptyList())
+                .withMonitoringForChanges(false)
+                .build();
 
         enumerator = setUpEnumeratorFromCheckpoint(checkpoint);
         enumerator.start();

@@ -22,8 +22,8 @@ import io.delta.standalone.actions.AddFile;
 /**
  * The implementation of {@link AddFileEnumerator} for {@link DeltaSourceSplit}.
  * <p>
- * This implementation is converting all discovered Delta's {@link AddFile} objects to set of
- * {@link DeltaSourceSplit}. During the conversion, all {@code AddFiles} are filtered using {@link
+ * This implementation is converting all discovered Delta's {@link AddFile} objects to set of {@link
+ * DeltaSourceSplit}. During the conversion, all {@code AddFiles} are filtered using {@link
  * SplitFilter}
  */
 public class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> {
@@ -50,28 +50,28 @@ public class DeltaFileEnumerator implements AddFileEnumerator<DeltaSourceSplit> 
      * @return List of {@link DeltaSourceSplit} objects.
      */
     @Override
-    public List<DeltaSourceSplit> enumerateSplits(AddFileEnumeratorContext context,
-        SplitFilter<Path> splitFilter) {
+    public List<DeltaSourceSplit> enumerateSplits(
+        AddFileEnumeratorContext context, SplitFilter<Path> splitFilter) {
 
-        ArrayList<DeltaSourceSplit> splitsToReturn = new ArrayList<>();
+        ArrayList<DeltaSourceSplit> splitsToReturn = new ArrayList<>(context.getAddFiles().size());
 
         for (AddFile addFile : context.getAddFiles()) {
             Path path = acquireFilePath(context.getTablePath(), addFile);
-            tryConvertToSourceSplits(context, splitFilter, splitsToReturn, addFile, path);
+            if (splitFilter.test(path)) {
+                tryConvertToSourceSplits(context, splitsToReturn, addFile, path);
+            }
         }
 
         return splitsToReturn;
     }
 
-    private void tryConvertToSourceSplits(AddFileEnumeratorContext context,
-        SplitFilter<Path> splitFilter, ArrayList<DeltaSourceSplit> splitsToReturn, AddFile addFile,
-        Path path) {
+    private void tryConvertToSourceSplits(
+        AddFileEnumeratorContext context, ArrayList<DeltaSourceSplit> splitsToReturn,
+        AddFile addFile, Path path) {
         try {
-            if (splitFilter.test(path)) {
-                FileSystem fs = path.getFileSystem();
-                FileStatus status = fs.getFileStatus(path);
-                convertToSourceSplits(status, fs, addFile.getPartitionValues(), splitsToReturn);
-            }
+            FileSystem fs = path.getFileSystem();
+            FileStatus status = fs.getFileStatus(path);
+            convertToSourceSplits(status, fs, addFile.getPartitionValues(), splitsToReturn);
         } catch (IOException e) {
             throw DeltaSourceExceptions.fileEnumerationException(context, path, e);
         }

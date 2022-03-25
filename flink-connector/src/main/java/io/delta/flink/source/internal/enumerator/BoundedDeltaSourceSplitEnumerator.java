@@ -3,6 +3,7 @@ package io.delta.flink.source.internal.enumerator;
 import io.delta.flink.source.internal.enumerator.processor.SnapshotProcessor;
 import io.delta.flink.source.internal.enumerator.processor.TableProcessor;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpointBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
@@ -47,9 +48,14 @@ public class BoundedDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumerato
     @Override
     public DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> snapshotState(long checkpointId)
         throws Exception {
-        return DeltaEnumeratorStateCheckpoint.fromCollectionSnapshot(
-            deltaTablePath, snapshotProcessor.getSnapshotVersion(), false, getRemainingSplits(),
-            snapshotProcessor.getAlreadyProcessedPaths());
+
+        DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder =
+            DeltaEnumeratorStateCheckpointBuilder
+                .builder(
+                    deltaTablePath, snapshotProcessor.getSnapshotVersion(), getRemainingSplits());
+
+        checkpointBuilder = snapshotProcessor.snapshotState(checkpointBuilder);
+        return checkpointBuilder.build();
     }
 
     @Override

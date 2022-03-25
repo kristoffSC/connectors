@@ -1,11 +1,10 @@
 package io.delta.flink.source.internal.enumerator.processor;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpointBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
-import org.apache.flink.core.fs.Path;
 
 import io.delta.standalone.Snapshot;
 
@@ -81,15 +80,18 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
             : snapshotProcessor.getSnapshotVersion();
     }
 
-    /**
-     * @return Collection of {@link Path} objects that corresponds to Parquet files processed by
-     * this processor. The collection can be different for every call since this method can return
-     * paths from {@link Snapshot} processed by {@link #snapshotProcessor} or paths for changes from
-     * currently processed version.
-     */
     @Override
-    public Collection<Path> getAlreadyProcessedPaths() {
-        return (monitoringForChanges) ? changesProcessor.getAlreadyProcessedPaths()
-            : snapshotProcessor.getAlreadyProcessedPaths();
+    public DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> snapshotState(
+        DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
+
+        checkpointBuilder.withMonitoringForChanges(isMonitoringForChanges());
+
+        if (isMonitoringForChanges()) {
+            checkpointBuilder = changesProcessor.snapshotState(checkpointBuilder);
+        } else {
+            checkpointBuilder = snapshotProcessor.snapshotState(checkpointBuilder);
+        }
+
+        return checkpointBuilder;
     }
 }

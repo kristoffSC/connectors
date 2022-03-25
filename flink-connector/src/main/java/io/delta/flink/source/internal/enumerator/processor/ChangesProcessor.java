@@ -1,14 +1,15 @@
 package io.delta.flink.source.internal.enumerator.processor;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
-import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult.ChangesPerVersion;
+import io.delta.flink.source.internal.file.AddFileEnumerator;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpointBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.core.fs.Path;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.delta.standalone.Snapshot;
+import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
 
 /**
@@ -24,17 +26,16 @@ import io.delta.standalone.actions.AddFile;
  * Snapshot} content.
  *
  * <p>
- * The {@code Snapshot} version is specified by {@link TableMonitor} used when creating an
- * instance of {@code ChangesProcessor}.
+ * The {@code Snapshot} version is specified by {@link TableMonitor} used when creating an instance
+ * of {@code ChangesProcessor}.
  */
-public class ChangesProcessor implements ContinuousTableProcessor {
+public class ChangesProcessor extends BaseTableProcessor implements ContinuousTableProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChangesProcessor.class);
 
     /**
      * The {@link TableMonitor} instance used to monitor Delta table for changes.
      */
-    // TODO PR 7 Will be used for monitoring for changes.
     private final TableMonitor tableMonitor;
 
     /**
@@ -42,43 +43,36 @@ public class ChangesProcessor implements ContinuousTableProcessor {
      */
     private final SplitEnumeratorContext<DeltaSourceSplit> enumContext;
 
-    /**
-     * Set with already processed paths for Parquet Files. Processor will skip not process parquet
-     * files from this set.
-     * <p>
-     * The use case for this set is a recovery from checkpoint scenario, where we don't want to
-     * reprocess already processed Parquet files.
-     */
-    // TODO PR 7 - update this set in prepareSplits method.
-    private final HashSet<Path> alreadyProcessedPaths;
+    private final ActionProcessor actionProcessor;
 
-    // TODO PR 7 Will be used for monitoring for changes.
-    // private final boolean ignoreChanges;
+    private final long changesInitialOffset;
 
-    // TODO PR 7 Will be used for monitoring for changes.
-    // private final boolean ignoreDeletes;
-
-    /**
-     * A Delta table {@link io.delta.standalone.Snapshot} version currently used by this {@link
-     * ChangesProcessor} to read changes from. This value will be updated after discovering new
-     * versions on Delta table.
-     */
-    // TODO PR 7 version will be updated by processDiscoveredVersions method after discovering new
-    //  changes.
     private long currentSnapshotVersion;
 
-    public ChangesProcessor(TableMonitor tableMonitor,
+    private long processedFilesForCurrentVersionCount;
+
+    private boolean ignoreOffset;
+
+    public ChangesProcessor(
+        Path deltaTablePath, TableMonitor tableMonitor,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        Collection<Path> alreadyProcessedPaths) {
+        AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
+        DeltaSourceConfiguration sourceConfiguration, long changesInitialOffset) {
+        super(deltaTablePath, fileEnumerator);
         this.tableMonitor = tableMonitor;
         this.enumContext = enumContext;
-        this.alreadyProcessedPaths = new HashSet<>(alreadyProcessedPaths);
         this.currentSnapshotVersion = this.tableMonitor.getMonitorVersion();
+        this.changesInitialOffset = changesInitialOffset;
+        this.actionProcessor = new ActionProcessor(
+            sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_CHANGES),
+            sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_CHANGES)
+                || sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_DELETES));
     }
 
     /**
      * Starts processing changes that were added to Delta table starting from version specified by
-     * {@link #currentSnapshotVersion} field by converting them to {@link DeltaSourceSplit} objects.
+     * {@link #currentSnapshotVersion} field by converting them to {@link DeltaSourceSplit}
+     * objects.
      *
      * @param processCallback A {@link Consumer} callback that will be called after processing all
      *                        {@link io.delta.standalone.actions.Action} and converting them to
@@ -108,13 +102,15 @@ public class ChangesProcessor implements ContinuousTableProcessor {
         return this.currentSnapshotVersion;
     }
 
-    /**
-     * @return Collection of {@link Path} objects that corresponds to Parquet files processed by
-     * this processor in scope of {@link #getSnapshotVersion()}.
-     */
     @Override
-    public Collection<Path> getAlreadyProcessedPaths() {
-        return alreadyProcessedPaths;
+    public DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> snapshotState(
+        DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
+
+        checkpointBuilder.withChangesOffset(
+            (ignoreOffset) ? processedFilesForCurrentVersionCount : changesInitialOffset);
+        checkpointBuilder.withMonitoringForChanges(isMonitoringForChanges());
+
+        return checkpointBuilder;
     }
 
     /**
@@ -134,21 +130,25 @@ public class ChangesProcessor implements ContinuousTableProcessor {
         }
 
         this.currentSnapshotVersion = monitorTableResult.getHighestSeenVersion();
-        List<ChangesPerVersion> newActions = monitorTableResult.getChanges();
-
-        newActions.stream()
-            .map(this::processActions)
-            .map(this::prepareSplits)
-            .forEachOrdered(processCallback);
+        monitorTableResult.getChanges()
+            .forEach(changesPerVersion -> processVersion(processCallback, changesPerVersion));
     }
 
-    // TODO PR 7 Add implementation and tests
-    private List<AddFile> processActions(ChangesPerVersion changes) {
-        return Collections.emptyList();
-    }
+    private void processVersion(
+        Consumer<List<DeltaSourceSplit>> processCallback,
+        ChangesPerVersion<Action> changesPerVersion) {
 
-    // TODO PR 7 Add implementation and tests
-    private List<DeltaSourceSplit> prepareSplits(List<AddFile> addFiles) {
-        return Collections.emptyList();
+        ChangesPerVersion<AddFile> addFilesPerVersion =
+            actionProcessor.processActions(changesPerVersion);
+
+        CounterBasedSplitFilter versionSplitFilter =
+            new CounterBasedSplitFilter((ignoreOffset) ? 0L : changesInitialOffset);
+
+        List<DeltaSourceSplit> splits = prepareSplits(addFilesPerVersion, versionSplitFilter);
+        ignoreOffset = true;
+
+        this.processedFilesForCurrentVersionCount += versionSplitFilter.getTestCounter();
+
+        processCallback.accept(splits);
     }
 }

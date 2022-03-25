@@ -2,6 +2,9 @@ package io.delta.flink.source.internal.enumerator.supplier;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.utils.TransitiveOptional;
+import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
+import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -35,9 +38,31 @@ public class ContinuousSourceSnapshotSupplier extends SnapshotSupplier {
      */
     @Override
     public Snapshot getSnapshot() {
-        //.or(this::getSnapshotFromStartingVersionOption) // TODO Add in PR 7
-        //.or(this::getSnapshotFromStartingTimestampOption) // TODO Add in PR 7
-        return getHeadSnapshot()
+        return getSnapshotFromStartingVersionOption()
+            .or(this::getSnapshotFromStartingTimestampOption)
+            .or(this::getHeadSnapshot)
             .get();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromStartingVersionOption() {
+        String startingVersion = getOptionValue(STARTING_VERSION);
+        if (startingVersion != null) {
+            if (startingVersion.equalsIgnoreCase(DeltaSourceOptions.STARTING_VERSION_LATEST)) {
+                return TransitiveOptional.ofNullable(deltaLog.snapshot());
+            } else {
+                return TransitiveOptional.ofNullable(deltaLog.getSnapshotForVersionAsOf(
+                    Long.parseLong(startingVersion)));
+            }
+        }
+        return TransitiveOptional.empty();
+    }
+
+    private TransitiveOptional<Snapshot> getSnapshotFromStartingTimestampOption() {
+        String startingTimestamp = getOptionValue(STARTING_TIMESTAMP);
+        if (startingTimestamp != null) {
+            return TransitiveOptional.ofNullable(deltaLog.getSnapshotForTimestampAsOf(
+                TimestampFormatConverter.convertToTimestamp(startingTimestamp)));
+        }
+        return TransitiveOptional.empty();
     }
 }

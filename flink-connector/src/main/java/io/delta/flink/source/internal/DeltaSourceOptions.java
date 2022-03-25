@@ -90,6 +90,14 @@ public class DeltaSourceOptions {
     public static final ConfigOption<Integer> UPDATE_CHECK_INTERVAL =
         ConfigOptions.key("updateCheckIntervalMillis").intType().defaultValue(5000);
 
+    public static final ConfigOption<Boolean> IGNORE_DELETES =
+        ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false)
+            .withDescription("Allow for Delete only versions");
+
+    public static final ConfigOption<Boolean> IGNORE_CHANGES =
+        ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false)
+            .withDescription("Allow for versions with deletes and updates.");
+
     // TODO test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
@@ -97,6 +105,8 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(STARTING_VERSION.key(), STARTING_VERSION);
         VALID_SOURCE_OPTIONS.put(STARTING_TIMESTAMP.key(), STARTING_TIMESTAMP);
         VALID_SOURCE_OPTIONS.put(UPDATE_CHECK_INTERVAL.key(), UPDATE_CHECK_INTERVAL);
+        VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
+        VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
     }
 
     // TODO Add other options in future PRs

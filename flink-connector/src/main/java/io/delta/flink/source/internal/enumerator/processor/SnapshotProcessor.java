@@ -5,9 +5,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.function.Consumer;
 
+import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
-import io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter;
-import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
+import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpointBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.utils.SourceUtils;
 import org.apache.flink.core.fs.Path;
@@ -18,23 +18,12 @@ import io.delta.standalone.actions.AddFile;
 /**
  * This implementation of {@link TableProcessor} process data from Delta table {@link Snapshot}.
  */
-public class SnapshotProcessor implements TableProcessor {
-
-    /**
-     * A {@link Path} to Delta Table that this processor reads.
-     */
-    private final Path deltaTablePath;
+public class SnapshotProcessor extends BaseTableProcessor {
 
     /**
      * A {@link Snapshot} that is processed by this processor.
      */
     private final Snapshot snapshot;
-
-    /**
-     * The {@code AddFileEnumerator}'s to convert all discovered {@link AddFile} to set of {@link
-     * DeltaSourceSplit}.
-     */
-    private final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
     /**
      * Set with already processed paths for Parquet Files. Processor will skip not process parquet
@@ -48,9 +37,8 @@ public class SnapshotProcessor implements TableProcessor {
     public SnapshotProcessor(Path deltaTablePath, Snapshot snapshot,
         AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
         Collection<Path> alreadyProcessedPaths) {
-        this.deltaTablePath = deltaTablePath;
+        super(deltaTablePath, fileEnumerator);
         this.snapshot = snapshot;
-        this.fileEnumerator = fileEnumerator;
         this.alreadyProcessedPaths = new HashSet<>(alreadyProcessedPaths);
     }
 
@@ -66,21 +54,21 @@ public class SnapshotProcessor implements TableProcessor {
         // TODO Initial data read. This should be done in chunks since snapshot.getAllFiles()
         //  can have millions of files, and we would OOM the Job Manager
         //  if we would read all of them at once.
-        AddFileEnumeratorContext context =
-            setUpEnumeratorContext(snapshot.getAllFiles(), snapshot.getVersion());
-        List<DeltaSourceSplit> splits = fileEnumerator
-            .enumerateSplits(context, (SplitFilter<Path>) alreadyProcessedPaths::add);
-
+        List<DeltaSourceSplit> splits =
+            prepareSplits(new ChangesPerVersion<>(
+                SourceUtils.pathToString(deltaTablePath),
+                snapshot.getVersion(),
+                snapshot.getAllFiles()),
+                alreadyProcessedPaths::add);
         processCallback.accept(splits);
     }
 
-    /**
-     * @return Collection of {@link Path} objects that corresponds to Parquet files processed by
-     * this processor.
-     */
     @Override
-    public Collection<Path> getAlreadyProcessedPaths() {
-        return alreadyProcessedPaths;
+    public DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> snapshotState(
+        DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
+
+        checkpointBuilder.withProcessedPaths(alreadyProcessedPaths);
+        return checkpointBuilder;
     }
 
     /**
@@ -89,11 +77,5 @@ public class SnapshotProcessor implements TableProcessor {
     @Override
     public long getSnapshotVersion() {
         return snapshot.getVersion();
-    }
-
-    private AddFileEnumeratorContext setUpEnumeratorContext(List<AddFile> addFiles,
-        long snapshotVersion) {
-        String pathString = SourceUtils.pathToString(deltaTablePath);
-        return new AddFileEnumeratorContext(pathString, addFiles, snapshotVersion);
     }
 }

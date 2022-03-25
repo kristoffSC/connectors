@@ -34,7 +34,7 @@ public final class DeltaSourceExceptions {
     /**
      * Creates new {@link DeltaSourceException} object that can be used for {@link IOException}
      * thrown from {@link io.delta.flink.source.internal.file.AddFileEnumerator#enumerateSplits(
-     * AddFileEnumeratorContext, io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter)}
+     *AddFileEnumeratorContext, io.delta.flink.source.internal.file.AddFileEnumerator.SplitFilter)}
      * <p>
      * <p>
      * Wraps given {@link Throwable} with {@link DeltaSourceException}. The returned exception
@@ -50,6 +50,27 @@ public final class DeltaSourceExceptions {
         return new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),
             String.format("An Exception while processing Parquet Files for path %s and version %d",
                 filePath, context.getSnapshotVersion()), e);
+    }
+
+    public static void deltaSourceIgnoreChangesException(String deltaTablePath,
+        long snapshotVersion) {
+
+        throw new DeltaSourceException(
+            deltaTablePath, snapshotVersion,
+            String.format("Detected a data update in the source table at version "
+                + "%d. This is currently not supported. If you'd like to ignore updates, set "
+                + "the option 'ignoreChanges' to 'true'. If you would like the data update to "
+                + "be reflected, please restart this query with a fresh Delta checkpoint "
+                + "directory.", snapshotVersion));
+    }
+
+    public static void deltaSourceIgnoreDeleteException(String deltaTablePath,
+        long snapshotVersion) {
+        throw new DeltaSourceException(
+            deltaTablePath, snapshotVersion,
+            String.format("Detected deleted data (for example $removedFile) from streaming source "
+                + "at version %d. This is currently not supported. If you'd like to ignore deletes "
+                + "set the option 'ignoreDeletes' to 'true'.", snapshotVersion));
     }
 
     // Add other methods in future PRs.

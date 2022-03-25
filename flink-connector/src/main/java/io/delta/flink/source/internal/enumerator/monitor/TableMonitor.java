@@ -1,8 +1,16 @@
 package io.delta.flink.source.internal.enumerator.monitor;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Callable;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.VersionLog;
+import io.delta.standalone.actions.Action;
 
 /**
  * This class implements a logic for monitoring Delta table for changes. The logic is implemented in
@@ -61,11 +69,70 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      */
     @Override
     public TableMonitorResult call() throws Exception {
-        // TODO PR 7 Add monitor implementation and tests, for now return null.
-        return null;
+        // TODO PR 7 add tests
+        TableMonitorResult monitorResult = monitorForChanges(this.monitorVersion);
+        long highestSeenVersion = monitorResult.getHighestSeenVersion();
+        if (!monitorResult.getChanges().isEmpty()) {
+            this.monitorVersion = highestSeenVersion + 1;
+        }
+        return monitorResult;
     }
 
     public long getMonitorVersion() {
         return monitorVersion;
+    }
+
+    private TableMonitorResult monitorForChanges(long startVersion) {
+
+        // TODO Add tests, especially for Action filters.
+        Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
+        if (changes.hasNext()) {
+            return processChanges(startVersion, changes);
+        }
+
+        // Case if there were no changes.
+        return new TableMonitorResult(startVersion, Collections.emptyList());
+    }
+
+    private TableMonitorResult processChanges(long startVersion, Iterator<VersionLog> changes) {
+
+        List<ChangesPerVersion<Action>> actionsPerVersion = new ArrayList<>();
+        long highestSeenVersion = startVersion;
+
+        long endTime = System.currentTimeMillis() + maxDurationMillis;
+
+        while (changes.hasNext()) {
+            VersionLog versionLog = changes.next();
+            Pair<Long, List<Action>> version = processVersion(highestSeenVersion, versionLog);
+
+            highestSeenVersion = version.getKey();
+            actionsPerVersion.add(
+                new ChangesPerVersion<>(
+                    deltaLog.getPath().toUri().normalize().toString(),
+                    versionLog.getVersion(), version.getValue()));
+
+            // TODO PR 7 write unit test for this
+            // Check if we still under task interval limit.
+            if (System.currentTimeMillis() >= endTime) {
+                break;
+            }
+        }
+        return new TableMonitorResult(highestSeenVersion, actionsPerVersion);
+    }
+
+    // We must assign splits at VersionLog element granularity, meaning that we cannot assign
+    // splits while integrating through VersionLog changes. We must do it only when we are
+    // sure that there were no breaking changes in this version. In other case we could emit
+    // downstream a corrupted data or unsupported data change.
+    private Pair<Long, List<Action>> processVersion(
+        long highestSeenVersion, VersionLog versionLog) {
+        long version = versionLog.getVersion();
+
+        // track the highest version number for future use
+        if (highestSeenVersion < version) {
+            highestSeenVersion = version;
+        }
+
+        return Pair.of(highestSeenVersion, versionLog.getActions());
     }
 }
