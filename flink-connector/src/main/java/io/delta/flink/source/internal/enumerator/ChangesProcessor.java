@@ -22,7 +22,7 @@ import io.delta.standalone.actions.AddFile;
  * Snapshot} content.
  *
  * <p>
- * The {@code Snapshot} version is specified by {@link TableMonitor} used during creating an
+ * The {@code Snapshot} version is specified by {@link TableMonitor} used when creating an
  * instance of {@code ChangesProcessor}.
  */
 public class ChangesProcessor implements ContinuousTableProcessor {
@@ -32,7 +32,7 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     /**
      * The {@link TableMonitor} instance used to monitor Delta table for changes.
      */
-    // TODO PR 7 Will be used in monitor for changes.
+    // TODO PR 7 Will be used for monitoring for changes.
     private final TableMonitor tableMonitor;
 
     /**
@@ -50,10 +50,10 @@ public class ChangesProcessor implements ContinuousTableProcessor {
     // TODO PR 7 - update this set in prepareSplits method.
     private final HashSet<Path> alreadyProcessedPaths;
 
-    // TODO PR 7 Add monitor for changes.
+    // TODO PR 7 Will be used for monitoring for changes.
     // private final boolean ignoreChanges;
 
-    // TODO PR 7 Add monitor for changes.
+    // TODO PR 7 Will be used for monitoring for changes.
     // private final boolean ignoreDeletes;
 
     /**
