@@ -81,6 +81,93 @@ public class DeltaSinkWriteReadITCase {
 
     private String deltaTablePath;
 
+    private static StreamExecutionEnvironment getTestStreamEnv() {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+        return env;
+    }
+
+    private static List<RowData> rowToRowData(RowType rowType,
+        Row row) {
+        DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
+            DataFormatConverters.getConverterForDataType(
+                TypeConversions.fromLogicalToDataType(rowType));
+        RowData rowData = CONVERTER.toInternal(row);
+        return Collections.singletonList(rowData);
+    }
+
+    /**
+     * Method that reads record written to a Delta table and with the use of Delta Standalone Reader
+     * validates whether the read fields are equal to their original values.
+     *
+     * @param snapshot    current snapshot representing the table's state after the record has been
+     *                    written by the Flink job
+     * @param originalRow original row containing values before writing
+     */
+    public static void validate(Snapshot snapshot,
+        Row originalRow) {
+        assertTrue(snapshot.getVersion() >= 0);
+        assertTrue(snapshot.getAllFiles().size() > 0);
+
+        Integer originalValue = (Integer) originalRow.getField(1);
+        CloseableIterator<RowRecord> iter = snapshot.open();
+        RowRecord row;
+        int numRows = 0;
+        while (iter.hasNext()) {
+            row = iter.next();
+            numRows++;
+            assertEquals(originalValue.floatValue(), row.getFloat("f1"), 0.0);
+            assertEquals(originalValue.intValue(), row.getInt("f2"));
+            assertEquals(originalValue.toString(), row.getString("f3"));
+            assertEquals(originalValue.doubleValue(), row.getDouble("f4"), 0.0);
+            assertFalse(row.getBoolean("f5"));
+            assertEquals(originalValue.byteValue(), row.getByte("f6"));
+            assertEquals(originalValue.shortValue(), row.getShort("f7"));
+            assertEquals(originalValue.longValue(), row.getLong("f8"));
+            assertEquals(
+                originalValue,
+                Integer.valueOf(new String(row.getBinary("f9"), StandardCharsets.UTF_8)));
+            assertEquals(
+                originalValue,
+                Integer.valueOf(new String(row.getBinary("f10"), StandardCharsets.UTF_8)));
+            assertEquals(
+                originalRow.getField(10), row.getTimestamp("f11").toLocalDateTime());
+
+            assertEquals(originalRow.getField(11),
+                row.getTimestamp("f12").toLocalDateTime().toInstant(ZoneOffset.UTC));
+            assertEquals(originalRow.getField(12), row.getDate("f13").toLocalDate());
+            assertEquals(String.valueOf(originalValue), row.getString("f14"));
+            BigDecimal expectedBigDecimal1 = BigDecimal.valueOf(originalValue);
+            assertEquals(
+                expectedBigDecimal1,
+                row.getBigDecimal("f15").setScale(expectedBigDecimal1.scale()));
+            BigDecimal expectedBigDecimal2 = new BigDecimal("11.11");
+            assertEquals(
+                expectedBigDecimal2,
+                row.getBigDecimal("f16").setScale(expectedBigDecimal2.scale()));
+        }
+        assertEquals(1, numRows);
+    }
+
+    /**
+     * Method for converting instances of {@link LocalDateTime} from one time zone to another. It is
+     * needed because when we write {@link LocalDateTime} (which does not store any time zone
+     * information) to a Parquet file and then read it back then internal Parquet reader interprets
+     * read value as UTC and automatically converts it to the system's time zone.
+     *
+     * @param time     {@link LocalDateTime} to convert
+     * @param fromZone source time zone
+     * @param toZone   target time zone
+     * @return representation of {@link LocalDateTime} in target time zone
+     */
+    public static LocalDateTime toZone(
+        final LocalDateTime time, final ZoneId fromZone, final ZoneId toZone) {
+        final ZonedDateTime zonedTime = time.atZone(fromZone);
+        final ZonedDateTime converted = zonedTime.withZoneSameInstant(toZone);
+        return converted.toLocalDateTime();
+    }
+
     @Before
     public void setup() throws IOException {
         deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
@@ -120,7 +207,7 @@ public class DeltaSinkWriteReadITCase {
             value.longValue(), // big int type
             String.valueOf(value).getBytes(StandardCharsets.UTF_8), // binary type
             String.valueOf(value).getBytes(StandardCharsets.UTF_8), // varbinary type
-            LocalDateTime.now(ZoneOffset.UTC), // timestamp type
+            LocalDateTime.now(ZoneId.systemDefault()), // timestamp type
             Instant.now(), // local zoned timestamp type
             LocalDate.now(), // date type
             String.valueOf(value), // char type
@@ -133,7 +220,7 @@ public class DeltaSinkWriteReadITCase {
 
         // THEN
         DeltaLog deltaLog =
-            DeltaLog.forTable(new org.apache.hadoop.conf.Configuration(), deltaTablePath);
+            DeltaLog.forTable(DeltaSinkTestUtils.getHadoopConf(), deltaTablePath);
         waitUntilDeltaLogExists(deltaLog);
         validate(deltaLog.snapshot(), testRow);
     }
@@ -175,8 +262,8 @@ public class DeltaSinkWriteReadITCase {
     }
 
     /**
-     * In this method we check in short time intervals for the total time of 10 seconds whether
-     * the DeltaLog for the table has been already created by the Flink job running in the deamon
+     * In this method we check in short time intervals for the total time of 10 seconds whether the
+     * DeltaLog for the table has been already created by the Flink job running in the deamon
      * thread
      *
      * @param deltaLog {@link DeltaLog} instance for test table
@@ -186,8 +273,10 @@ public class DeltaSinkWriteReadITCase {
     private void waitUntilDeltaLogExists(DeltaLog deltaLog) throws InterruptedException {
         int i = 0;
         while (deltaLog.snapshot().getVersion() < 0) {
-            if (i > 20) throw new RuntimeException(
-                "Timeout. DeltaLog for table has not been initialized");
+            if (i > 20) {
+                throw new RuntimeException(
+                    "Timeout. DeltaLog for table has not been initialized");
+            }
             i++;
             Thread.sleep(500);
             deltaLog.update();
@@ -206,12 +295,12 @@ public class DeltaSinkWriteReadITCase {
      * @param testData collection of test {@link RowData}
      */
     private void runFlinkJobInBackground(RowType rowType,
-                                         List<RowData> testData) {
+        List<RowData> testData) {
         new Thread(() -> runFlinkJob(rowType, testData)).start();
     }
 
     private void runFlinkJob(RowType rowType,
-                             List<RowData> testData) {
+        List<RowData> testData) {
         StreamExecutionEnvironment env = getTestStreamEnv();
         DeltaSink<RowData> deltaSink = DeltaSink
             .forRowData(
@@ -223,95 +312,5 @@ public class DeltaSinkWriteReadITCase {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private static StreamExecutionEnvironment getTestStreamEnv() {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
-        env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
-        return env;
-    }
-
-    private static List<RowData> rowToRowData(RowType rowType,
-                                              Row row) {
-        DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
-            DataFormatConverters.getConverterForDataType(
-                TypeConversions.fromLogicalToDataType(rowType));
-        RowData rowData = CONVERTER.toInternal(row);
-        return Collections.singletonList(rowData);
-    }
-
-    /**
-     * Method that reads record written to a Delta table and with the use of Delta Standalone Reader
-     * validates whether the read fields are equal to their original values.
-     *
-     * @param snapshot    current snapshot representing the table's state after the record has been
-     *                    written by the Flink job
-     * @param originalRow original row containing values before writing
-     */
-    public static void validate(Snapshot snapshot,
-                                Row originalRow) {
-        assertTrue(snapshot.getVersion() >= 0);
-        assertTrue(snapshot.getAllFiles().size() > 0);
-
-        Integer originalValue = (Integer) originalRow.getField(1);
-        CloseableIterator<RowRecord> iter = snapshot.open();
-        RowRecord row;
-        int numRows = 0;
-        while (iter.hasNext()) {
-            row = iter.next();
-            numRows++;
-            assertEquals(originalValue.floatValue(), row.getFloat("f1"), 0.0);
-            assertEquals(originalValue.intValue(), row.getInt("f2"));
-            assertEquals(originalValue.toString(), row.getString("f3"));
-            assertEquals(originalValue.doubleValue(), row.getDouble("f4"), 0.0);
-            assertFalse(row.getBoolean("f5"));
-            assertEquals(originalValue.byteValue(), row.getByte("f6"));
-            assertEquals(originalValue.shortValue(), row.getShort("f7"));
-            assertEquals(originalValue.longValue(), row.getLong("f8"));
-            assertEquals(
-                originalValue,
-                Integer.valueOf(new String(row.getBinary("f9"), StandardCharsets.UTF_8)));
-            assertEquals(
-                originalValue,
-                Integer.valueOf(new String(row.getBinary("f10"), StandardCharsets.UTF_8)));
-            assertEquals(
-                originalRow.getField(10),
-                toZone(
-                    row.getTimestamp("f11").toLocalDateTime(),
-                    ZoneId.systemDefault(),
-                    ZoneId.of("UTC"))
-            );
-            assertEquals(originalRow.getField(11), row.getTimestamp("f12").toInstant());
-            assertEquals(originalRow.getField(12), row.getDate("f13").toLocalDate());
-            assertEquals(String.valueOf(originalValue), row.getString("f14"));
-            BigDecimal expectedBigDecimal1 = BigDecimal.valueOf(originalValue);
-            assertEquals(
-                expectedBigDecimal1,
-                row.getBigDecimal("f15").setScale(expectedBigDecimal1.scale()));
-            BigDecimal expectedBigDecimal2 = new BigDecimal("11.11");
-            assertEquals(
-                expectedBigDecimal2,
-                row.getBigDecimal("f16").setScale(expectedBigDecimal2.scale()));
-        }
-        assertEquals(1, numRows);
-    }
-
-    /**
-     * Method for converting instances of {@link LocalDateTime} from one time zone to another.
-     * It is needed because when we write {@link LocalDateTime} (which does not store any time zone
-     * information) to a Parquet file and then read it back then internal Parquet reader interprets
-     * read value as UTC and automatically converts it to the system's time zone.
-     *
-     * @param time     {@link LocalDateTime} to convert
-     * @param fromZone source time zone
-     * @param toZone   target time zone
-     * @return representation of {@link LocalDateTime} in target time zone
-     */
-    public static LocalDateTime toZone(
-        final LocalDateTime time, final ZoneId fromZone, final ZoneId toZone) {
-        final ZonedDateTime zonedTime = time.atZone(fromZone);
-        final ZonedDateTime converted = zonedTime.withZoneSameInstant(toZone);
-        return converted.toLocalDateTime();
     }
 }
