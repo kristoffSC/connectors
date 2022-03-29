@@ -26,9 +26,8 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
-import io.delta.flink.sink.DeltaTablePartitionAssigner;
+import io.delta.flink.sink.internal.DeltaBucketAssigner;
 import io.delta.flink.sink.internal.committables.DeltaCommittable;
-import io.delta.flink.sink.internal.logging.Logging;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.sink.Sink;
 import org.apache.flink.api.connector.sink.SinkWriter;
@@ -38,6 +37,8 @@ import org.apache.flink.streaming.api.functions.sink.filesystem.BucketAssigner;
 import org.apache.flink.streaming.api.functions.sink.filesystem.DeltaBulkBucketWriter;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.CheckpointRollingPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 import static org.apache.flink.util.Preconditions.checkState;
@@ -69,9 +70,9 @@ import static org.apache.flink.util.Preconditions.checkState;
  * @param <IN> The type of input elements.
  */
 public class DeltaWriter<IN> implements SinkWriter<IN, DeltaCommittable, DeltaWriterBucketState>,
-                                            Sink.ProcessingTimeService.ProcessingTimeCallback,
-                                            Logging {
+                                            Sink.ProcessingTimeService.ProcessingTimeCallback {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DeltaWriter.class);
 
     /**
      * Value used as a bucket id for noop bucket states. It will be used to snapshot and indicate
@@ -137,7 +138,7 @@ public class DeltaWriter<IN> implements SinkWriter<IN, DeltaCommittable, DeltaWr
      *
      * @param basePath              The base path for the table
      * @param bucketAssigner        The {@link BucketAssigner} provided by the user. It is advised
-     *                              to use {@link DeltaTablePartitionAssigner} however users are
+     *                              to use {@link DeltaBucketAssigner} however users are
      *                              allowed to use any custom implementation of bucketAssigner. The
      *                              only requirement for correctness is to follow DeltaLake's style
      *                              of table partitioning.
@@ -314,8 +315,8 @@ public class DeltaWriter<IN> implements SinkWriter<IN, DeltaCommittable, DeltaWr
                 continue;
             }
 
-            if (isDebugEnabled()) {
-                logDebug("Restoring: {}", state);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Restoring: {}", state);
             }
 
             DeltaWriterBucket<IN> restoredBucket =
