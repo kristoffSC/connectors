@@ -56,9 +56,10 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
 
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createInitialStateEnumerator(Path deltaTablePath, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaSourceConfiguration sourceConfiguration) {
+        createInitialStateEnumerator(
+            Path deltaTablePath, Configuration configuration,
+            SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+            DeltaSourceConfiguration sourceConfiguration) {
 
         DeltaLog deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
@@ -78,6 +79,34 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
         createEnumeratorForCheckpoint(
+            DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint,
+            Configuration configuration,
+            SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+            DeltaSourceConfiguration sourceConfiguration) {
+
+        ContinuousTableProcessor tableProcessor =
+            createTableProcessorFromCheckpoint(checkpoint, configuration, enumContext,
+                sourceConfiguration);
+
+        Collection<FileSourceSplit> checkpointSplits =
+            (Collection<FileSourceSplit>) (Collection<?>) checkpoint.getSplits();
+
+        return new ContinuousDeltaSourceSplitEnumerator(
+            checkpoint.getDeltaTablePath(), tableProcessor, splitAssignerProvider.create(
+            checkpointSplits), enumContext);
+    }
+
+    /**
+     * @return A {@link ContinuousTableProcessor} instance using
+     * {@link DeltaEnumeratorStateCheckpoint}
+     * data.
+     * <p>
+     * @implNote If {@link DeltaSourceOptions#STARTING_VERSION} or {@link
+     * DeltaSourceOptions#STARTING_TIMESTAMP} options were defined or if Enumerator already
+     * processed initial Snapshot, the returned ContinuousTableProcessor instance will process only
+     * changes applied to monitored Delta table.
+     */
+    private ContinuousTableProcessor createTableProcessorFromCheckpoint(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
