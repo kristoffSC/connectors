@@ -68,7 +68,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             new ContinuousSourceSnapshotSupplier(deltaLog, sourceConfiguration).getSnapshot();
 
         ContinuousTableProcessor tableProcessor =
-            setUpTableProcessor(
+            createTableProcessor(
                 deltaTablePath, enumContext, sourceConfiguration, deltaLog, snapshot);
 
         return new ContinuousDeltaSourceSplitEnumerator(
@@ -110,33 +110,6 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
-
-        ContinuousTableProcessor tableProcessor =
-            setUpTableProcessorFromCheckpoint(checkpoint, configuration, enumContext,
-                sourceConfiguration);
-
-        Collection<FileSourceSplit> checkpointSplits =
-            (Collection<FileSourceSplit>) (Collection<?>) checkpoint.getSplits();
-
-        return new ContinuousDeltaSourceSplitEnumerator(
-            checkpoint.getDeltaTablePath(), tableProcessor, splitAssignerProvider.create(
-            checkpointSplits), enumContext);
-    }
-
-    /**
-     * @return A {@link ContinuousTableProcessor} instance using
-     * {@link DeltaEnumeratorStateCheckpoint}
-     * data.
-     * <p>
-     * @implNote If {@link DeltaSourceOptions#STARTING_VERSION} or {@link
-     * DeltaSourceOptions#STARTING_TIMESTAMP} options were defined or if Enumerator already
-     * processed initial Snapshot, the returned ContinuousTableProcessor instance will process only
-     * changes applied to monitored Delta table.
-     */
-    private ContinuousTableProcessor setUpTableProcessorFromCheckpoint(
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaSourceConfiguration sourceConfiguration) {
         long snapshotVersion = checkpoint.getSnapshotVersion();
 
         Path deltaTablePath = checkpoint.getDeltaTablePath();
@@ -144,11 +117,11 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
         if (checkpoint.isMonitoringForChanges()) {
-            return setUpChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
-                snapshotVersion, checkpoint.getChangesOffset());
+            return createChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,
+                deltaLog, snapshotVersion, checkpoint.getChangesOffset());
         } else {
             return
-                setUpSnapshotAndChangesProcessor(deltaTablePath, enumContext,
+                createSnapshotAndChangesProcessor(deltaTablePath, enumContext,
                     sourceConfiguration, deltaLog,
                     deltaLog.getSnapshotForVersionAsOf(snapshotVersion),
                     checkpoint.getChangesOffset());
@@ -163,22 +136,22 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
      * ContinuousTableProcessor instance will process only changes applied to monitored Delta
      * table.
      */
-    private ContinuousTableProcessor setUpTableProcessor(Path deltaTablePath,
+    private ContinuousTableProcessor createTableProcessor(Path deltaTablePath,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot) {
 
         if (isChangeStreamOnly(sourceConfiguration)) {
             return
-                setUpChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
+                createChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
                     snapshot.getVersion(), 0);
         } else {
             return
-                setUpSnapshotAndChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,
+                createSnapshotAndChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,
                     deltaLog, snapshot, 0);
         }
     }
 
-    private ChangesProcessor setUpChangesProcessor(
+    private ChangesProcessor createChangesProcessor(
         Path deltaTablePath, SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog,
         long monitorSnapshotVersion, long changesInitialOffset) {
@@ -191,7 +164,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             sourceConfiguration, changesInitialOffset);
     }
 
-    private ContinuousTableProcessor setUpSnapshotAndChangesProcessor(Path deltaTablePath,
+    private ContinuousTableProcessor createSnapshotAndChangesProcessor(Path deltaTablePath,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot,
         long changesInitialOffset) {
@@ -200,7 +173,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         // should start monitoring for changes is snapshot.version + 1. We don't want to get
         // changes from snapshot.version.
         ChangesProcessor changesProcessor =
-            setUpChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
+            createChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
                 snapshot.getVersion() + 1, changesInitialOffset);
 
         SnapshotProcessor snapshotProcessor =
