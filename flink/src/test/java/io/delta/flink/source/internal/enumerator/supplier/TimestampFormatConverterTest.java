@@ -22,6 +22,8 @@ public class TimestampFormatConverterTest {
         this.expected = expected;
     }
 
+    // Test data was based on example from
+    // https://docs.delta.io/latest/delta-streaming.html#:~:text=A%20timestamp%20string.%20For%20example%2C
     @Parameters(name = "{index}: Input = [{0}]")
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][]{

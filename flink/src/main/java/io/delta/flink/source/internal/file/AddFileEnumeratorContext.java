@@ -11,7 +11,7 @@ import io.delta.standalone.actions.AddFile;
 public class AddFileEnumeratorContext {
 
     /**
-     * Path to Delta Table for which this context is created.
+     * Path to Delta table for which this context is created.
      */
     private final String tablePath;
 
@@ -21,7 +21,7 @@ public class AddFileEnumeratorContext {
     private final List<AddFile> addFiles;
 
     /**
-     * A Delta Table snapshot version that this context represents.
+     * A Delta table snapshot version that this context represents.
      */
     private final long snapshotVersion;
 
@@ -30,7 +30,7 @@ public class AddFileEnumeratorContext {
      * list. The {@code AddFileEnumeratorContext} is expected to have a version scope thus it should
      * contain {@code AddFile}'s only from one version.
      *
-     * @param tablePath       A path for Delta Table for witch this context was created.
+     * @param tablePath       A path for Delta table for witch this context was created.
      * @param addFiles        A list of {@link AddFile} that should be converted to Splits and are
      *                        coming from {@code tablePath}.
      * @param snapshotVersion A {@link io.delta.standalone.Snapshot} version for which this context

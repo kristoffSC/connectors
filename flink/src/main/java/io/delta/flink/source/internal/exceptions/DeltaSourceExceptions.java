@@ -5,6 +5,8 @@ import java.io.IOException;
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import org.apache.flink.core.fs.Path;
 
+import io.delta.standalone.actions.Action;
+
 /**
  * The utility class that provides a factory methods for various cases where {@link
  * DeltaSourceException} has to be thrown.
@@ -20,8 +22,8 @@ public final class DeltaSourceExceptions {
      * object will use {@link Throwable#toString()} on provided {@code Throwable} to get its
      * exception message.
      *
-     * @param tablePath       Path to Delta Table for which this exception occurred.
-     * @param snapshotVersion Delta Table Snapshot version for which this exception occurred.
+     * @param tablePath       Path to Delta table for which this exception occurred.
+     * @param snapshotVersion Delta table Snapshot version for which this exception occurred.
      * @param t               {@link Throwable} that should be wrapped with {@link
      *                        DeltaSourceException}
      * @return {@link DeltaSourceException} wrapping original {@link Throwable}
@@ -45,18 +47,28 @@ public final class DeltaSourceExceptions {
      * @param e        Wrapped {@link IOException}
      * @return {@link DeltaSourceException} wrapping original {@code IOException}
      */
-    public static DeltaSourceException fileEnumerationException(AddFileEnumeratorContext context,
-        Path filePath, IOException e) {
+    public static DeltaSourceException fileEnumerationException(
+        AddFileEnumeratorContext context, Path filePath, IOException e) {
         return new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),
             String.format("An Exception while processing Parquet Files for path %s and version %d",
                 filePath, context.getSnapshotVersion()), e);
     }
 
-    public static void deltaSourceIgnoreChangesException(String deltaTablePath,
-        long snapshotVersion) {
+    /**
+     * Creates a new DeltaSourceException with a dedicated exception message for case when {@link
+     * io.delta.standalone.actions.RemoveFile} and {@link io.delta.standalone.actions.AddFile}
+     * actions were recorded for the same Delta table version and "ignoreChanges" option was not
+     * used.
+     *
+     * @param tablePath       Path to Delta table for which this exception occurred.
+     * @param snapshotVersion Delta table Snapshot version for which this exception occurred.
+     * @return A {@link DeltaSourceException} object.
+     */
+    public static DeltaSourceException deltaSourceIgnoreChangesException(
+        String tablePath, long snapshotVersion) {
 
-        throw new DeltaSourceException(
-            deltaTablePath, snapshotVersion,
+        return new DeltaSourceException(
+            tablePath, snapshotVersion,
             String.format("Detected a data update in the source table at version "
                 + "%d. This is currently not supported. If you'd like to ignore updates, set "
                 + "the option 'ignoreChanges' to 'true'. If you would like the data update to "
@@ -64,13 +76,51 @@ public final class DeltaSourceExceptions {
                 + "directory.", snapshotVersion));
     }
 
-    public static void deltaSourceIgnoreDeleteException(String deltaTablePath,
-        long snapshotVersion) {
-        throw new DeltaSourceException(
-            deltaTablePath, snapshotVersion,
+    /**
+     * Creates a new DeltaSourceException with a dedicated exception message for case when {@link
+     * io.delta.standalone.actions.RemoveFile} and {@link io.delta.standalone.actions.AddFile}
+     * actions were recorded for the same Delta table version and "ignoreChanges" nor
+     * "ignoreDeletes" options were used.
+     *
+     * @param tablePath       Path to Delta table for which this exception occurred.
+     * @param snapshotVersion Delta table Snapshot version for which this exception occurred.
+     * @return A {@link DeltaSourceException} object.
+     */
+    public static DeltaSourceException deltaSourceIgnoreDeleteException(
+        String tablePath, long snapshotVersion) {
+        return new DeltaSourceException(
+            tablePath, snapshotVersion,
             String.format("Detected deleted data (for example $removedFile) from streaming source "
                 + "at version %d. This is currently not supported. If you'd like to ignore deletes "
                 + "set the option 'ignoreDeletes' to 'true'.", snapshotVersion));
+    }
+
+    public static DeltaSourceException tableMonitorException(
+        String deltaTablePath, Throwable error) {
+        return new DeltaSourceException(
+            deltaTablePath, null,
+            String.format("Exception during monitoring Delta table [%s] for changes",
+                deltaTablePath), error);
+    }
+
+    /**
+     * Creates a new DeltaSourceException with a dedicated exception message for case when
+     * unsupported {@link Action} was recorded when processing changes from Delta table.
+     *
+     * @param tablePath       Path to Delta Table for which this exception occurred.
+     * @param snapshotVersion Delta Table Snapshot version for which this exception occurred.
+     * @param action          Unsupported {@link Action} that was recorded for given snapshot
+     *                        version.
+     * @return A {@link DeltaSourceException} object.
+     */
+    public static DeltaSourceException unsupportedDeltaActionException(
+        String tablePath, long snapshotVersion, Action action) {
+        return new DeltaSourceException(
+            tablePath, snapshotVersion,
+            String.format(
+                "Got an unsupported action - [%s] when processing changes"
+                    + " from version [%d] for table [%s]",
+                action.getClass(), snapshotVersion, tablePath));
     }
 
     // Add other methods in future PRs.

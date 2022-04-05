@@ -79,9 +79,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
 
         // THEN
-        assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
+        assertThat("Source read different number of rows that Delta table have.", resultData.size(),
             equalTo(2));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
+        assertThat("Source Produced Different Rows that were in Delta table", actualNames,
             equalTo(EXPECTED_NAMES));
     }
 
@@ -107,7 +107,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
 
         // THEN
-        assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
+        assertThat("Source read different number of rows that Delta table have.", resultData.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));

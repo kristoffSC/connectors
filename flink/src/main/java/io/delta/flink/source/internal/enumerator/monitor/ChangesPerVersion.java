@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A container object that represents Delta Table changes per one {@link
+ * A container object that represents Delta table changes per one {@link
  * io.delta.standalone.Snapshot} version.
  */
 public class ChangesPerVersion<T> {

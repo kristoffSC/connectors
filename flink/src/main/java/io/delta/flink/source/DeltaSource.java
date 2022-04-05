@@ -28,7 +28,7 @@ import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
 
 /**
- * A unified data source that reads Delta Table - both in batch and in streaming mode.
+ * A unified data source that reads Delta table - both in batch and in streaming mode.
  *
  * <p>This source supports all (distributed) file systems and object stores that can be accessed
  * via the Flink's {@link FileSystem} class.
@@ -39,7 +39,7 @@ import io.delta.standalone.actions.AddFile;
  * @implNote <h2>Batch and Streaming</h2>
  *
  * <p>This source supports both bounded/batch and continuous/streaming modes. For the
- * bounded/batch case, the Delta Source processes all {@link AddFile} from Delta Table Snapshot. In
+ * bounded/batch case, the Delta Source processes all {@link AddFile} from Delta table Snapshot. In
  * the continuous/streaming case, the source periodically checks the Delta Table for any appending
  * changes and reads them.
  *

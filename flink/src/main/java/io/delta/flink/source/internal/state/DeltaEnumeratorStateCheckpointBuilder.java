@@ -3,7 +3,6 @@ package io.delta.flink.source.internal.state;
 import java.util.Collection;
 import java.util.Collections;
 
-import io.delta.flink.source.internal.enumerator.processor.ContinuousTableProcessor;
 import org.apache.flink.connector.file.src.PendingSplitsCheckpoint;
 import org.apache.flink.core.fs.Path;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -16,22 +15,38 @@ public class DeltaEnumeratorStateCheckpointBuilder<SplitT extends DeltaSourceSpl
     private final Path deltaTablePath;
 
     /**
-     * The Delta Table snapshot version used to create this checkpoint.
+     * The Delta table snapshot version used to create this checkpoint.
      */
     private final long snapshotVersion;
 
+    /**
+     * Created {@link DeltaSourceSplit} that were not yet assigned to source readers.
+     */
     private final Collection<SplitT> splits;
 
+    /**
+     * The paths that are no longer in the enumerator checkpoint, but have been processed before and
+     * should this be ignored. Relevant only for sources in
+     * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED}
+     * mode.
+     */
     private Collection<Path> processedPaths = Collections.emptySet();
 
     /**
-     * Flag indicating that source start monitoring Delta Table for changes.
+     * Flag indicating that source started monitoring Delta table for changes.
      * <p>
-     * This field is mapped from {@link ContinuousTableProcessor #isMonitoringForChanges()} method.
+     * The default value is false.
      */
     private boolean monitoringForChanges;
 
-    // TODO PR 7 javadoc
+    /**
+     * Number of {@link io.delta.standalone.actions.Action} that should be ignored by Source.
+     * Relevant only for sources in
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode.
+     * <p>
+     * The default value is 0.
+     */
     private long changesOffset;
 
     public DeltaEnumeratorStateCheckpointBuilder(

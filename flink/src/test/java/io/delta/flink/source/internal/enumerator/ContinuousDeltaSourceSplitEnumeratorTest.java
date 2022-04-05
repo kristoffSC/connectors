@@ -7,6 +7,7 @@ import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import static java.util.Collections.singletonList;
 
+import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
@@ -19,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -30,11 +32,15 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.delta.standalone.Snapshot;
 import io.delta.standalone.VersionLog;
 import io.delta.standalone.actions.AddFile;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnumeratorTestBase {
+
+    @Mock
+    private Snapshot startingVersionSnapshot;
 
     private ContinuousDeltaSourceSplitEnumerator enumerator;
 
@@ -63,20 +69,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     public void shouldNotReadInitialSnapshotWhenMonitoringForChanges() {
 
         long snapshotVersion = 10;
-
-        Mockito.doAnswer(invocation -> {
-            TableMonitor tableMonitor = invocation.getArgument(0, TableMonitor.class);
-            assertThat(tableMonitor.getMonitorVersion(), equalTo(snapshotVersion));
-            tableMonitor.call();
-            return new TableMonitorResult(snapshotVersion, Collections.emptyList());
-        }).when(enumContext)
-            .callAsync(any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
-
-        AddFile fileOne = mock(AddFile.class);
-        AddFile fileTwo = mock(AddFile.class);
-
-        List<VersionLog> changes = Arrays.asList(new VersionLog(10, singletonList(fileOne)),
-            new VersionLog(11, singletonList(fileTwo)));
+        List<VersionLog> changes = mockEnumContextAndTableChange(snapshotVersion);
 
         when(deltaLog.getChanges(snapshotVersion, true)).thenReturn(changes.iterator());
         when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
@@ -96,11 +89,9 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
 
         // verify that we try to get changes from Delta Log.
-        verify(enumContext).callAsync(any(Callable.class), any(BiConsumer.class), anyLong(),
-            anyLong());
-
-        // TODO PR 7 - uncomment after implementing TableMonitor::call
-        //verify(deltaLog).getChanges(snapshotVersion, true);
+        verify(enumContext).callAsync(
+            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+        verify(deltaLog).getChanges(snapshotVersion, true);
     }
 
     @Test
@@ -148,21 +139,121 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         verify(enumContext, never()).signalNoMoreSplits(subtaskId);
     }
 
-    // TODO Add in PR 7
-    //@Test
+    @Test
     public void shouldOnlyReadChangesWhenStartingVersionOption() {
+        long startingVersion = 10;
+        sourceConfiguration.addOption(
+            DeltaSourceOptions.STARTING_VERSION.key(), String.valueOf(startingVersion));
 
+        List<VersionLog> changes = mockEnumContextAndTableChange(startingVersion);
+
+        when(deltaLog.getChanges(startingVersion, true)).thenReturn(changes.iterator());
+        when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
+
+        when(deltaLog.getSnapshotForVersionAsOf(startingVersion)).thenReturn(
+            startingVersionSnapshot);
+        when(startingVersionSnapshot.getVersion()).thenReturn(startingVersion);
+
+        enumerator = setUpEnumerator();
+        enumerator.start();
+
+        // verify that get snapshot for startingVersion
+        verify(deltaLog).getSnapshotForVersionAsOf(startingVersion);
+        verify(deltaLog, never()).snapshot();
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+
+        // verify that we did not read from startingVersionSnapshot
+        verify(startingVersionSnapshot, never()).getAllFiles();
+
+        // verify that we try to get changes from Delta Log.
+        verify(enumContext).callAsync(
+            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+        verify(deltaLog).getChanges(startingVersion, true);
     }
 
-    // TODO Add in PR 7
-    //@Test
-    public void shouldOnlyReadChangesWhenStartingTimestampOption() {
+    @Test
+    public void shouldOnlyReadChangesWhenLatestStartingVersionOption() {
+        long startingVersion = 10;
+        sourceConfiguration.addOption(DeltaSourceOptions.STARTING_VERSION.key(), "latest");
 
+        List<VersionLog> changes = mockEnumContextAndTableChange(startingVersion);
+
+        when(deltaLog.getChanges(startingVersion, true)).thenReturn(changes.iterator());
+        when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
+        when(headSnapshot.getVersion()).thenReturn(startingVersion);
+
+        enumerator = setUpEnumeratorWithHeadSnapshot();
+        enumerator.start();
+
+        // verify that get snapshot from head since "latest" was used as startingVersion value.
+        verify(deltaLog).snapshot();
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+        verify(deltaLog, never()).getSnapshotForTimestampAsOf(anyLong());
+
+        // verify that we did not read from startingVersionSnapshot
+        verify(startingVersionSnapshot, never()).getAllFiles();
+
+        // verify that we try to get changes from Delta Log.
+        verify(enumContext).callAsync(
+            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+        verify(deltaLog).getChanges(startingVersion, true);
+    }
+
+    @Test
+    public void shouldOnlyReadChangesWhenStartingTimestampOption() {
+        String startingTimestampString = "2022-02-24T04:55:00.001Z";
+        long startingTimestamp = 1645678500001L;
+        long startingVersion = 10;
+
+        sourceConfiguration.addOption(
+            DeltaSourceOptions.STARTING_TIMESTAMP.key(), startingTimestampString);
+
+        List<VersionLog> changes = mockEnumContextAndTableChange(startingVersion);
+
+        when(deltaLog.getChanges(startingVersion, true)).thenReturn(changes.iterator());
+        when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
+
+        when(deltaLog.getSnapshotForTimestampAsOf(startingTimestamp))
+            .thenReturn(startingVersionSnapshot);
+        when(startingVersionSnapshot.getVersion()).thenReturn(startingVersion);
+
+        enumerator = setUpEnumerator();
+        enumerator.start();
+
+        // verify that get snapshot for startingTimestamp
+        verify(deltaLog).getSnapshotForTimestampAsOf(startingTimestamp);
+        verify(deltaLog, never()).getSnapshotForVersionAsOf(anyLong());
+        verify(deltaLog, never()).snapshot();
+
+        // verify that we did not read from startingVersionSnapshot
+        verify(startingVersionSnapshot, never()).getAllFiles();
+
+        // verify that we try to get changes from Delta Log.
+        verify(enumContext).callAsync(
+            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+        verify(deltaLog).getChanges(startingVersion, true);
     }
 
     @Override
     protected SplitEnumeratorProvider getProvider() {
         return this.provider;
+    }
+
+    private List<VersionLog> mockEnumContextAndTableChange(long snapshotVersion) {
+        Mockito.doAnswer(invocation -> {
+            TableMonitor tableMonitor = invocation.getArgument(0, TableMonitor.class);
+            assertThat(tableMonitor.getMonitorVersion(), equalTo(snapshotVersion));
+            tableMonitor.call();
+            return new TableMonitorResult(snapshotVersion, Collections.emptyList());
+        }).when(enumContext)
+            .callAsync(any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+
+        AddFile fileOne = mock(AddFile.class);
+        AddFile fileTwo = mock(AddFile.class);
+
+        return Arrays.asList(
+            new VersionLog(snapshotVersion, singletonList(fileOne)),
+            new VersionLog(snapshotVersion + 1, singletonList(fileTwo)));
     }
 
 }

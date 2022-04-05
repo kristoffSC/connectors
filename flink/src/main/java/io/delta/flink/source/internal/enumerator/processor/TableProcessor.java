@@ -28,6 +28,19 @@ public interface TableProcessor {
      */
     long getSnapshotVersion();
 
+    /**
+     * Add {@link TableProcessor} state information to {@link DeltaEnumeratorStateCheckpointBuilder}
+     * to be stored in Flink's checkpoint.
+     * <p>
+     * The implementation of this method should add the latest state information to {@link
+     * DeltaEnumeratorStateCheckpointBuilder} needed to recreate {@link TableProcessor} instance
+     * during Flink recovery.
+     *
+     * @param checkpointBuilder the {@link DeltaEnumeratorStateCheckpointBuilder} instance that
+     *                          should be updated with {@link TableProcessor} state information.
+     * @return the {@link DeltaEnumeratorStateCheckpointBuilder} instance with {@link
+     * TableProcessor} state information.
+     */
     DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> snapshotState(
         DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder);
 }

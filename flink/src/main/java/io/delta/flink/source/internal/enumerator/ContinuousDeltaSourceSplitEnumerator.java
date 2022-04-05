@@ -63,6 +63,6 @@ public class ContinuousDeltaSourceSplitEnumerator extends DeltaSourceSplitEnumer
 
     @Override
     protected void handleNoMoreSplits(int subtaskId) {
-        // We should do nothing, since we are continuously monitoring Delta Table.
+        // We should do nothing, since we are continuously monitoring Delta table.
     }
 }

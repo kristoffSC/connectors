@@ -14,7 +14,7 @@ import org.apache.flink.core.fs.Path;
  *
  * <p>It contains all necessary information need by SplitEnumerator to resume work after
  * checkpoint recovery including currently pending splits that are not yet assigned and resume
- * changes discovery task on Delta Table in {@link Boundedness#CONTINUOUS_UNBOUNDED} mode</p>
+ * changes discovery task on Delta table in {@link Boundedness#CONTINUOUS_UNBOUNDED} mode</p>
  *
  * <p>During checkpoint, Flink will serialize this object and persist it in checkpoint location.
  * During the recovery, Flink will deserialize this object from Checkpoint/Savepoint and will use it
@@ -26,12 +26,12 @@ import org.apache.flink.core.fs.Path;
 public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
 
     /**
-     * {@link Path} to Delta Table used for this snapshot.
+     * {@link Path} to Delta table used for this snapshot.
      */
     private final Path deltaTablePath;
 
     /**
-     * The Delta Table snapshot version used to create this checkpoint.
+     * The Delta table snapshot version used to create this checkpoint.
      */
     private final long snapshotVersion;
 
@@ -48,7 +48,11 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      */
     private final PendingSplitsCheckpoint<SplitT> pendingSplitsCheckpoint;
 
-    // TODO PR 7 javadoc
+    /**
+     * Number of {@link io.delta.standalone.actions.Action} that should be ignored by Source.
+     * Relevant only for sources in
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     */
     private final long changesOffset;
 
     protected DeltaEnumeratorStateCheckpoint(Path deltaTablePath,

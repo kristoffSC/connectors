@@ -7,21 +7,21 @@ public class DeltaSourceException extends RuntimeException {
 
     private final String tablePath;
 
-    private final long snapshotVersion;
+    private final Long snapshotVersion;
 
-    public DeltaSourceException(String tablePath, long snapshotVersion, Throwable cause) {
+    public DeltaSourceException(String tablePath, Long snapshotVersion, Throwable cause) {
         super(cause);
         this.tablePath = tablePath;
         this.snapshotVersion = snapshotVersion;
     }
 
-    public DeltaSourceException(String tablePath, long snapshotVersion, String message) {
+    public DeltaSourceException(String tablePath, Long snapshotVersion, String message) {
         super(message);
         this.tablePath = tablePath;
         this.snapshotVersion = snapshotVersion;
     }
 
-    public DeltaSourceException(String tablePath, long snapshotVersion, String message,
+    public DeltaSourceException(String tablePath, Long snapshotVersion, String message,
         Throwable cause) {
         super(message, cause);
         this.tablePath = tablePath;
@@ -32,7 +32,7 @@ public class DeltaSourceException extends RuntimeException {
         return tablePath;
     }
 
-    public long getSnapshotVersion() {
+    public Long getSnapshotVersion() {
         return snapshotVersion;
     }
 }

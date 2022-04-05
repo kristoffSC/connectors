@@ -121,10 +121,8 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
                 deltaLog, snapshotVersion, checkpoint.getChangesOffset());
         } else {
             return
-                createSnapshotAndChangesProcessor(deltaTablePath, enumContext,
-                    sourceConfiguration, deltaLog,
-                    deltaLog.getSnapshotForVersionAsOf(snapshotVersion),
-                    checkpoint.getChangesOffset());
+                createSnapshotAndChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,
+                    deltaLog, deltaLog.getSnapshotForVersionAsOf(snapshotVersion));
         }
     }
 
@@ -136,18 +134,20 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
      * ContinuousTableProcessor instance will process only changes applied to monitored Delta
      * table.
      */
-    private ContinuousTableProcessor createTableProcessor(Path deltaTablePath,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+    private ContinuousTableProcessor createTableProcessor(
+        Path deltaTablePath, SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot) {
+
+        long noChangesOffset = 0;
 
         if (isChangeStreamOnly(sourceConfiguration)) {
             return
                 createChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
-                    snapshot.getVersion(), 0);
+                    snapshot.getVersion(), noChangesOffset);
         } else {
             return
                 createSnapshotAndChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,
-                    deltaLog, snapshot, 0);
+                    deltaLog, snapshot);
         }
     }
 
@@ -166,19 +166,19 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
 
     private ContinuousTableProcessor createSnapshotAndChangesProcessor(Path deltaTablePath,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot,
-        long changesInitialOffset) {
+        DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog, Snapshot snapshot) {
 
         // Since this is the processor for both snapshot and changes, the version for which we
         // should start monitoring for changes is snapshot.version + 1. We don't want to get
         // changes from snapshot.version.
+        long noOffset = 0;
         ChangesProcessor changesProcessor =
             createChangesProcessor(deltaTablePath, enumContext, sourceConfiguration, deltaLog,
-                snapshot.getVersion() + 1, changesInitialOffset);
+                snapshot.getVersion() + 1, noOffset);
 
         SnapshotProcessor snapshotProcessor =
-            new SnapshotProcessor(deltaTablePath, snapshot,
-                fileEnumeratorProvider.create(), Collections.emptySet());
+            new SnapshotProcessor(deltaTablePath, snapshot, fileEnumeratorProvider.create(),
+                Collections.emptySet());
 
         return new SnapshotAndChangesTableProcessor(snapshotProcessor, changesProcessor);
     }

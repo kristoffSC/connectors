@@ -22,7 +22,7 @@ import org.apache.flink.util.StringUtils;
  * enumerator to the readers, and is non-null when the reader's checkpoint their state in a file
  * source split.
  *
- * <p>This implementation extends a {@link FileSourceSplit} with Delta Table partition
+ * <p>This implementation extends a {@link FileSourceSplit} with Delta table partition
  * information</p>
  */
 
