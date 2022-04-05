@@ -454,7 +454,7 @@ lazy val standalone = (project in file("standalone"))
       // -- Bump up the genjavadoc version explicitly to 0.18 to work with Scala 2.12
       compilerPlugin("com.typesafe.genjavadoc" %% "genjavadoc-plugin" % "0.18" cross CrossVersion.full)
     ),
-    Compile /sourceGenerators += Def.task {
+    Compile / sourceGenerators += Def.task {
       val file = (Compile / sourceManaged).value / "io" / "delta" / "standalone" / "package.scala"
       IO.write(file,
         s"""package io.delta
@@ -530,8 +530,8 @@ lazy val standalone = (project in file("standalone"))
         .map(_.filterNot(_.getCanonicalPath.contains("/internal/")))
         // ignore project `hive` which depends on this project
         .map(_.filterNot(_.getCanonicalPath.contains("/hive/")))
-        // ignore project `flink-connector` which depends on this project
-        .map(_.filterNot(_.getCanonicalPath.contains("/flink-connector/")))
+        // ignore project `flink` which depends on this project
+        .map(_.filterNot(_.getCanonicalPath.contains("/flink/")))
     },
     // Ensure unidoc is run with tests. Must be cleaned before test for unidoc to be generated.
     (Test / test) := ((Test / test) dependsOn (Compile / unidoc)).value
@@ -636,6 +636,7 @@ lazy val sqlDeltaImport = (project in file("sql-delta-import"))
   .settings (
     name := "sql-delta-import",
     commonSettings,
+    skipReleaseSettings,
     publishArtifact := scalaBinaryVersion.value != "2.11",
     Test / publishArtifact := false,
     libraryDependencies ++= Seq(
@@ -650,7 +651,6 @@ lazy val sqlDeltaImport = (project in file("sql-delta-import"))
       "org.apache.spark" % ("spark-sql_" + sqlDeltaImportScalaVersion(scalaBinaryVersion.value)) % "3.2.0" % "test"
     )
   )
-  .settings(releaseSettings)
 
 def flinkScalaVersion(scalaBinaryVersion: String): String = {
   scalaBinaryVersion match {
@@ -662,16 +662,29 @@ def flinkScalaVersion(scalaBinaryVersion: String): String = {
 }
 
 val flinkVersion = "1.13.0"
-lazy val flinkConnector = (project in file("flink-connector"))
+lazy val flink = (project in file("flink"))
   .dependsOn(standaloneCosmetic % "provided")
   .enablePlugins(GenJavadocPlugin, JavaUnidocPlugin)
   .settings (
-    name := "flink-connector",
-    scalaVersion := "2.12.8",
+    name := "delta-flink",
     commonSettings,
-    publishArtifact := scalaBinaryVersion.value != "2.13",
+    releaseSettings,
+    publishArtifact := scalaBinaryVersion.value == "2.12", // only publish once
+    autoScalaLibrary := false, // exclude scala-library from dependencies
     Test / publishArtifact := false,
-    skipReleaseSettings, // TODO remove when releasing
+    pomExtra :=
+      <url>https://github.com/delta-io/connectors</url>
+        <scm>
+          <url>git@github.com:delta-io/connectors.git</url>
+          <connection>scm:git:git@github.com:delta-io/connectors.git</connection>
+        </scm>
+        <developers>
+          <developer>
+            <id>pkubit-g</id>
+            <name>Paweł Kubit</name>
+            <url>https://github.com/pkubit-g</url>
+          </developer>
+        </developers>,
     crossPaths := false,
     libraryDependencies ++= Seq(
       "org.apache.flink" % ("flink-parquet_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "provided",
@@ -705,20 +718,21 @@ lazy val flinkConnector = (project in file("flink-connector"))
     },
     /**
      * Unidoc settings
-     * Generate javadoc with `unidoc` command, outputs to `flink-connector/target/javaunidoc`
-     * e.g. build/sbt flinkConnector/unidoc
+     * Generate javadoc with `unidoc` command, outputs to `flink/target/javaunidoc`
+     * e.g. build/sbt flink/unidoc
      */
     JavaUnidoc / unidoc / javacOptions := Seq(
       "-public",
-      "-windowtitle", "Flink Connector" + version.value.replaceAll("-SNAPSHOT", "") + " JavaDoc",
+      "-windowtitle", "Flink/Delta Connector " + version.value.replaceAll("-SNAPSHOT", "") + " JavaDoc",
       "-noqualifier", "java.lang",
       "-tag", "implNote:a:Implementation Note:",
       "-Xdoclint:all"
     ),
+    Compile / doc / javacOptions := (JavaUnidoc / unidoc / javacOptions).value,
     JavaUnidoc / unidoc /  unidocAllSources := {
       (JavaUnidoc / unidoc / unidocAllSources).value
-        // include only relevant flink-connector classes
-        .map(_.filter(_.getCanonicalPath.contains("/flink-connector/")))
+        // include only relevant delta-flink classes
+        .map(_.filter(_.getCanonicalPath.contains("/flink/")))
         // exclude internal classes
         .map(_.filterNot(_.getCanonicalPath.contains("/internal/")))
         // exclude flink package

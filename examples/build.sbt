@@ -22,7 +22,8 @@ scalaVersion := "2.12.8"
 version := "0.1.0"
 
 lazy val commonSettings = Seq(
-  crossScalaVersions := Seq("2.12.8", "2.11.12"),
+  crossScalaVersions := Seq("2.13.8", "2.12.8", "2.11.12"),
+  resolvers += Resolver.mavenLocal,
   libraryDependencies ++= Seq(
     "io.delta" %% "delta-standalone" % getStandaloneVersion(),
     "org.apache.hadoop" % "hadoop-client" % "3.1.0",
@@ -57,4 +58,25 @@ lazy val helloWorld = (project in file("hello-world")) settings (
   scalaVersion := "2.12.8",
   commonSettings,
   extraMavenRepo
+)
+
+val flinkVersion = "1.12.0"
+val flinkHadoopVersion = "3.1.0"
+lazy val flinkExample = (project in file("flink-example")) settings (
+  name := "flink",
+  scalaVersion := "2.12.8",
+  commonSettings,
+  extraMavenRepo,
+  resolvers += Resolver.mavenLocal,
+  libraryDependencies ++= Seq(
+    "io.delta" % "delta-flink" % getStandaloneVersion(),
+    "io.delta" %% "delta-standalone" % getStandaloneVersion(),
+    "org.apache.flink" %% "flink-parquet" % flinkVersion,
+    "org.apache.flink" % "flink-table-common" % flinkVersion,
+    "org.apache.hadoop" % "hadoop-client" % flinkHadoopVersion,
+
+    // Below dependencies are needed only to run the example project in memory
+    "org.apache.flink" %% "flink-clients" % flinkVersion,
+    "org.apache.flink" %% "flink-table-runtime-blink" % flinkVersion
+  )
 )
