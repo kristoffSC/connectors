@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
-import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
-import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
+import io.delta.flink.source.internal.enumerator.monitor.TableMonitorResult;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpointBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;

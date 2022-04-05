@@ -684,6 +684,11 @@ lazy val flink = (project in file("flink"))
             <name>Paweł Kubit</name>
             <url>https://github.com/pkubit-g</url>
           </developer>
+          <developer>
+            <id>kristoffSC</id>
+            <name>Krzysztof Chmielewski</name>
+            <url>https://github.com/kristoffSC</url>
+          </developer>
         </developers>,
     crossPaths := false,
     libraryDependencies ++= Seq(
