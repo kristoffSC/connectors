@@ -81,7 +81,7 @@ public class ActionProcessor {
                 case METADATA:
                 case PROTOCOL:
                     break;
-                // TODO PR 7 verify with Scott and TD;
+                // TODO PR 7.1 verify with Scott and TD;
                     /*throw DeltaSourceExceptions.unsupportedDeltaActionException(
                         changesToProcess.getDeltaTablePath(), changesToProcess.getSnapshotVersion(),
                         action);*/

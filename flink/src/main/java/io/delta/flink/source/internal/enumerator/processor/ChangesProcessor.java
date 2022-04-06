@@ -123,7 +123,7 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
      */
     @Override
     public void process(Consumer<List<DeltaSourceSplit>> processCallback) {
-        // TODO PR 7 add tests to check split creation//assignment granularity is in scope of
+        // TODO PR 7.1 add tests to check split creation//assignment granularity is in scope of
         //  VersionLog.
         //monitor for changes
         enumContext.callAsync(

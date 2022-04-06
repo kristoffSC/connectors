@@ -6,8 +6,6 @@ import java.util.Map;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 
-import io.delta.standalone.actions.RemoveFile;
-
 /**
  * This class contains all available options for {@link io.delta.flink.source.DeltaSource} with
  * their type and default values. It may be viewed as a kind of dictionary class. This class will be
@@ -112,7 +110,7 @@ public class DeltaSourceOptions {
      * <p>
      * If this option is set to true, Source connector will not throw an exception when processing
      * version containing only {@link io.delta.standalone.actions.RemoveFile} actions regardless of
-     * {@link RemoveFile#isDataChange()} flag.
+     * {@link io.delta.standalone.actions.RemoveFile#isDataChange()} flag.
      * <p>
      * <p>
      * The String representation for this option is <b>ignoreDeletes</b> and its default value is
@@ -129,8 +127,8 @@ public class DeltaSourceOptions {
      * <p>
      * If this option is set to true, Source connector will not throw an exception when processing
      * version containing combination of {@link io.delta.standalone.actions.RemoveFile} and {@link
-     * io.delta.standalone.actions.AddFile} actions regardless of {@link RemoveFile#isDataChange()}
-     * flag.
+     * io.delta.standalone.actions.AddFile} actions regardless of {@link
+     * io.delta.standalone.actions.RemoveFile#isDataChange()} flag.
      * <p>
      * <p>
      * The String representation for this option is <b>ignoreChanges</b> and its default value is
@@ -150,6 +148,4 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
     }
-
-    // TODO Add other options in future PRs
 }

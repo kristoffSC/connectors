@@ -69,7 +69,7 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      */
     @Override
     public TableMonitorResult call() throws Exception {
-        // TODO PR 7 add tests
+        // TODO PR 7.1 add tests
         TableMonitorResult monitorResult = monitorForChanges(this.monitorVersion);
         long highestSeenVersion = monitorResult.getHighestSeenVersion();
         if (!monitorResult.getChanges().isEmpty()) {
@@ -111,7 +111,7 @@ public class TableMonitor implements Callable<TableMonitorResult> {
                     deltaLog.getPath().toUri().normalize().toString(),
                     versionLog.getVersion(), version.getValue()));
 
-            // TODO PR 7 write unit test for this
+            // TODO PR 7.1 write unit test for this
             // Check if we still under task interval limit.
             if (System.currentTimeMillis() >= endTime) {
                 break;
