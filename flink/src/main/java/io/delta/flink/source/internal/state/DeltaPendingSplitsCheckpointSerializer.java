@@ -86,7 +86,6 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
             outputWrapper.write(decoratedBytes);
             outputWrapper.writeLong(state.getSnapshotVersion());
             outputWrapper.writeBoolean(state.isMonitoringForChanges());
-            outputWrapper.writeLong(state.getChangesOffset());
 
             final byte[] serPath =
                 SourceUtils.pathToString(state.getDeltaTablePath())
@@ -126,7 +125,6 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
 
         long snapshotVersion = inputWrapper.readLong();
         boolean monitoringForChanges = inputWrapper.readBoolean();
-        long changesOffset = inputWrapper.readLong();
 
         final byte[] bytes = new byte[inputWrapper.readInt()];
         inputWrapper.readFully(bytes);
@@ -134,7 +132,6 @@ public class DeltaPendingSplitsCheckpointSerializer<SplitT extends DeltaSourceSp
         Path deltaTablePath = new Path(new String(bytes, StandardCharsets.UTF_8));
 
         return new DeltaEnumeratorStateCheckpoint<>(
-            deltaTablePath, snapshotVersion, monitoringForChanges, changesOffset,
-            decoratedCheckPoint);
+            deltaTablePath, snapshotVersion, monitoringForChanges, decoratedCheckPoint);
     }
 }

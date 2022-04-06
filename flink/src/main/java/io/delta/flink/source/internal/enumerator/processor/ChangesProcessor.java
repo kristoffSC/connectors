@@ -63,43 +63,21 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
     private final long initialDelay;
 
     /**
-     * Number of actions that should be skipped by processor.
-     */
-    private final long actionsOffset;
-
-    /**
      * The Delta table version that is currently processed by this class.
      * <p>
      * This value will be updated while processing every version from {@link TableMonitorResult}.
      */
     private long currentSnapshotVersion;
 
-    /**
-     * Number of {@link Action}s processed per {@link #currentSnapshotVersion}
-     * <p>
-     * This value will be reassigned while processing every version {@link TableMonitorResult}.
-     */
-    private long processedActionsCountForCurrentVersion;
-
-    /**
-     * An internal field to tell if {@link #actionsOffset} should be ignored or not.
-     *
-     * <p>
-     * This flag is set to true after processing the first {@link io.delta.standalone.VersionLog}
-     * from Delta table.
-     */
-    private boolean ignoreActionsOffset;
-
     public ChangesProcessor(
         Path deltaTablePath, TableMonitor tableMonitor,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         AddFileEnumerator<DeltaSourceSplit> fileEnumerator,
-        DeltaSourceConfiguration sourceConfiguration, long actionsOffset) {
+        DeltaSourceConfiguration sourceConfiguration) {
         super(deltaTablePath, fileEnumerator);
         this.tableMonitor = tableMonitor;
         this.enumContext = enumContext;
         this.currentSnapshotVersion = this.tableMonitor.getMonitorVersion();
-        this.actionsOffset = actionsOffset;
 
         this.actionProcessor = new ActionProcessor(
             sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_CHANGES),
@@ -108,7 +86,6 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
         this.checkInterval = sourceConfiguration.getValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL);
         this.initialDelay =
             sourceConfiguration.getValue(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY);
-        this.ignoreActionsOffset = false;
     }
 
     /**
@@ -145,12 +122,7 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
     @Override
     public DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> snapshotState(
         DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
-
-        checkpointBuilder.withChangesOffset(
-            (ignoreActionsOffset) ? processedActionsCountForCurrentVersion : actionsOffset);
-        checkpointBuilder.withMonitoringForChanges(isMonitoringForChanges());
-
-        return checkpointBuilder;
+        return checkpointBuilder.withMonitoringForChanges(isMonitoringForChanges());
     }
 
     /**
@@ -202,14 +174,7 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
         ChangesPerVersion<AddFile> addFilesPerVersion =
             actionProcessor.processActions(changesPerVersion);
 
-        CounterBasedSplitFilter versionSplitFilter =
-            new CounterBasedSplitFilter((ignoreActionsOffset) ? 0L : actionsOffset);
-
-        List<DeltaSourceSplit> splits = prepareSplits(addFilesPerVersion, versionSplitFilter);
-        ignoreActionsOffset = true;
-
-        this.processedActionsCountForCurrentVersion = versionSplitFilter.getTestCounter();
-
+        List<DeltaSourceSplit> splits = prepareSplits(addFilesPerVersion, (path) -> true);
         processCallback.accept(splits);
     }
 }

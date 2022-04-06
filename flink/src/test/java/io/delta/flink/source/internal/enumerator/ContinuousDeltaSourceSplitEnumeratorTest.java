@@ -69,9 +69,12 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     public void shouldNotReadInitialSnapshotWhenMonitoringForChanges() {
 
         long snapshotVersion = 10;
-        List<VersionLog> changes = mockEnumContextAndTableChange(snapshotVersion);
+        long monitorVersion = snapshotVersion + 1;
 
-        when(deltaLog.getChanges(snapshotVersion, true)).thenReturn(changes.iterator());
+        List<VersionLog> changes = mockEnumContextAndTableChange(snapshotVersion);
+        long nextMonitoringVersion = changes.get(changes.size() - 1).getVersion() + 1;
+
+        when(deltaLog.getChanges(monitorVersion, true)).thenReturn(changes.iterator());
         when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
@@ -90,13 +93,18 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         // verify that we try to get changes from Delta Log.
         verify(enumContext).callAsync(
-            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
-        verify(deltaLog).getChanges(snapshotVersion, true);
+            tableMonitorArgumentCaptor.capture(), any(BiConsumer.class), anyLong(), anyLong());
+        verify(deltaLog).getChanges(monitorVersion, true);
+
+        // verify TableMonitor starting version
+        assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
+            equalTo(nextMonitoringVersion));
     }
 
     @Test
     public void shouldReadInitialSnapshotWhenNotMonitoringForChanges() {
         long snapshotVersion = 10;
+        long monitorVersion = snapshotVersion + 1;
 
         when(deltaLog.getSnapshotForVersionAsOf(snapshotVersion)).thenReturn(checkpointedSnapshot);
         when(checkpointedSnapshot.getVersion()).thenReturn(snapshotVersion);
@@ -122,7 +130,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         verify(enumContext).callAsync(tableMonitorArgumentCaptor.capture(), any(),
             anyLong(), anyLong());
         assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
-            equalTo(snapshotVersion + 1));
+            equalTo(monitorVersion));
     }
 
     @Test
@@ -146,6 +154,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
             DeltaSourceOptions.STARTING_VERSION.key(), String.valueOf(startingVersion));
 
         List<VersionLog> changes = mockEnumContextAndTableChange(startingVersion);
+        long nextMonitoringVersion = changes.get(changes.size() - 1).getVersion() + 1;
 
         when(deltaLog.getChanges(startingVersion, true)).thenReturn(changes.iterator());
         when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
@@ -167,8 +176,12 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         // verify that we try to get changes from Delta Log.
         verify(enumContext).callAsync(
-            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+            tableMonitorArgumentCaptor.capture(), any(BiConsumer.class), anyLong(), anyLong());
         verify(deltaLog).getChanges(startingVersion, true);
+
+        // verify TableMonitor starting version
+        assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
+            equalTo(nextMonitoringVersion));
     }
 
     @Test
@@ -177,6 +190,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         sourceConfiguration.addOption(DeltaSourceOptions.STARTING_VERSION.key(), "latest");
 
         List<VersionLog> changes = mockEnumContextAndTableChange(startingVersion);
+        long nextMonitoringVersion = changes.get(changes.size() - 1).getVersion() + 1;
 
         when(deltaLog.getChanges(startingVersion, true)).thenReturn(changes.iterator());
         when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
@@ -195,8 +209,12 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         // verify that we try to get changes from Delta Log.
         verify(enumContext).callAsync(
-            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+            tableMonitorArgumentCaptor.capture(), any(BiConsumer.class), anyLong(), anyLong());
         verify(deltaLog).getChanges(startingVersion, true);
+
+        // verify TableMonitor starting version
+        assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
+            equalTo(nextMonitoringVersion));
     }
 
     @Test
@@ -209,6 +227,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
             DeltaSourceOptions.STARTING_TIMESTAMP.key(), startingTimestampString);
 
         List<VersionLog> changes = mockEnumContextAndTableChange(startingVersion);
+        long nextMonitoringVersion = changes.get(changes.size() - 1).getVersion() + 1;
 
         when(deltaLog.getChanges(startingVersion, true)).thenReturn(changes.iterator());
         when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
@@ -230,8 +249,12 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
 
         // verify that we try to get changes from Delta Log.
         verify(enumContext).callAsync(
-            any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
+            tableMonitorArgumentCaptor.capture(), any(BiConsumer.class), anyLong(), anyLong());
         verify(deltaLog).getChanges(startingVersion, true);
+
+        // verify TableMonitor starting version
+        assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
+            equalTo(nextMonitoringVersion));
     }
 
     @Override
@@ -242,7 +265,6 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     private List<VersionLog> mockEnumContextAndTableChange(long snapshotVersion) {
         Mockito.doAnswer(invocation -> {
             TableMonitor tableMonitor = invocation.getArgument(0, TableMonitor.class);
-            assertThat(tableMonitor.getMonitorVersion(), equalTo(snapshotVersion));
             tableMonitor.call();
             return new TableMonitorResult(snapshotVersion, Collections.emptyList());
         }).when(enumContext)

@@ -48,20 +48,12 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
      */
     private final PendingSplitsCheckpoint<SplitT> pendingSplitsCheckpoint;
 
-    /**
-     * Number of {@link io.delta.standalone.actions.Action} that should be ignored by Source.
-     * Relevant only for sources in
-     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
-     */
-    private final long changesOffset;
-
     protected DeltaEnumeratorStateCheckpoint(Path deltaTablePath,
-        long snapshotVersion, boolean monitoringForChanges, long changesOffset,
+        long snapshotVersion, boolean monitoringForChanges,
         PendingSplitsCheckpoint<SplitT> pendingSplitsCheckpoint) {
         this.deltaTablePath = deltaTablePath;
         this.snapshotVersion = snapshotVersion;
         this.monitoringForChanges = monitoringForChanges;
-        this.changesOffset = changesOffset;
         this.pendingSplitsCheckpoint = pendingSplitsCheckpoint;
     }
 
@@ -107,7 +99,4 @@ public class DeltaEnumeratorStateCheckpoint<SplitT extends DeltaSourceSplit> {
         return pendingSplitsCheckpoint;
     }
 
-    public long getChangesOffset() {
-        return changesOffset;
-    }
 }

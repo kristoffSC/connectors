@@ -68,6 +68,7 @@ public class SnapshotProcessor extends BaseTableProcessor {
         DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
 
         checkpointBuilder.withProcessedPaths(alreadyProcessedPaths);
+        checkpointBuilder.withMonitoringForChanges(false);
         return checkpointBuilder;
     }
 

@@ -85,7 +85,6 @@ public class SnapshotAndChangesTableProcessor implements ContinuousTableProcesso
         DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
 
         checkpointBuilder.withMonitoringForChanges(isMonitoringForChanges());
-
         if (isMonitoringForChanges()) {
             checkpointBuilder = changesProcessor.snapshotState(checkpointBuilder);
         } else {
