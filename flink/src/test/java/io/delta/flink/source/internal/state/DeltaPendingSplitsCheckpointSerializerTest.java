@@ -29,7 +29,7 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
             new DeltaEnumeratorStateCheckpoint<>(
-                TABLE_PATH, 2, true, 12, pendingSplits);
+                TABLE_PATH, 2, true, pendingSplits);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
@@ -49,7 +49,7 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
             new DeltaEnumeratorStateCheckpoint<>(
-                TABLE_PATH, 100, true, 0, pendingSplits);
+                TABLE_PATH, 100, true, pendingSplits);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
@@ -71,7 +71,7 @@ public class DeltaPendingSplitsCheckpointSerializerTest {
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
             new DeltaEnumeratorStateCheckpoint<>(
-                TABLE_PATH, 1410, true, 100, pendingSplits);
+                TABLE_PATH, 1410, true, pendingSplits);
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> deSerialized =
             serializeAndDeserialize(checkpoint);
