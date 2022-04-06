@@ -1,12 +1,23 @@
 package io.delta.flink.source.internal.exceptions;
 
+import java.util.Optional;
+
 /**
  * A runtime exception throw by {@link io.delta.flink.source.DeltaSource} components.
  */
 public class DeltaSourceException extends RuntimeException {
 
+    /**
+     * Path to Delta table for which exception was throw.
+     */
     private final String tablePath;
 
+    /**
+     * The {@link io.delta.standalone.Snapshot} version for which exception was throw.
+     * <p>
+     * This value can be null, meaning that we were not abele to identify snapshot version for this
+     * exception.
+     */
     private final Long snapshotVersion;
 
     public DeltaSourceException(String tablePath, Long snapshotVersion, Throwable cause) {
@@ -28,11 +39,19 @@ public class DeltaSourceException extends RuntimeException {
         this.snapshotVersion = snapshotVersion;
     }
 
+    /**
+     * @return Delta table path for which this exception was throw.
+     */
     public String getTablePath() {
         return tablePath;
     }
 
-    public Long getSnapshotVersion() {
-        return snapshotVersion;
+    /**
+     * @return An {@link Optional} value with {@link io.delta.standalone.Snapshot} version for which
+     * this exception was throw. If snapshot value was unknown, then the returned optional will be
+     * empty.
+     */
+    public Optional<Long> getSnapshotVersion() {
+        return Optional.ofNullable(snapshotVersion);
     }
 }

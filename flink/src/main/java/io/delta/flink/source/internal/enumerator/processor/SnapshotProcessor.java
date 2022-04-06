@@ -26,8 +26,8 @@ public class SnapshotProcessor extends BaseTableProcessor {
     private final Snapshot snapshot;
 
     /**
-     * Set with already processed paths for Parquet Files. Processor will skip not process parquet
-     * files from this set.
+     * Set with already processed paths for Parquet Files. Processor will skip (i.e. not process)
+     * parquet files from this set.
      * <p>
      * The use case for this set is a recovery from checkpoint scenario, where we don't want to
      * reprocess already processed Parquet files.
@@ -56,9 +56,9 @@ public class SnapshotProcessor extends BaseTableProcessor {
         //  if we would read all of them at once.
         List<DeltaSourceSplit> splits =
             prepareSplits(new ChangesPerVersion<>(
-                SourceUtils.pathToString(deltaTablePath),
-                snapshot.getVersion(),
-                snapshot.getAllFiles()),
+                    SourceUtils.pathToString(deltaTablePath),
+                    snapshot.getVersion(),
+                    snapshot.getAllFiles()),
                 alreadyProcessedPaths::add);
         processCallback.accept(splits);
     }
@@ -68,6 +68,8 @@ public class SnapshotProcessor extends BaseTableProcessor {
         DeltaEnumeratorStateCheckpointBuilder<DeltaSourceSplit> checkpointBuilder) {
 
         checkpointBuilder.withProcessedPaths(alreadyProcessedPaths);
+
+        // false means that this processor does not check Delta table for changes.
         checkpointBuilder.withMonitoringForChanges(false);
         return checkpointBuilder;
     }

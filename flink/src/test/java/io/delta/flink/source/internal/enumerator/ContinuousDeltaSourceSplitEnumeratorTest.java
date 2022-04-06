@@ -75,7 +75,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         long nextMonitoringVersion = changes.get(changes.size() - 1).getVersion() + 1;
 
         when(deltaLog.getChanges(monitorVersion, true)).thenReturn(changes.iterator());
-        when(deltaLog.getPath()).thenReturn(new Path("s3//some/path"));
+        when(deltaLog.getPath()).thenReturn(new Path("s3://some/path"));
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
             DeltaEnumeratorStateCheckpointBuilder
@@ -266,7 +266,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         Mockito.doAnswer(invocation -> {
             TableMonitor tableMonitor = invocation.getArgument(0, TableMonitor.class);
             tableMonitor.call();
-            return new TableMonitorResult(snapshotVersion, Collections.emptyList());
+            return new TableMonitorResult(Collections.emptyList());
         }).when(enumContext)
             .callAsync(any(Callable.class), any(BiConsumer.class), anyLong(), anyLong());
 

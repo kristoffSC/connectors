@@ -6,8 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.VersionLog;
 import io.delta.standalone.actions.Action;
@@ -51,8 +49,7 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      *                          implementation will try to guarantee that overall call is * no
      *                          longer that this limit. See {@link #call()} method for details.
      */
-    public TableMonitor(DeltaLog deltaLog, long monitorVersion,
-        long maxDurationMillis) {
+    public TableMonitor(DeltaLog deltaLog, long monitorVersion, long maxDurationMillis) {
         this.deltaLog = deltaLog;
         this.monitorVersion = monitorVersion;
         this.maxDurationMillis = maxDurationMillis;
@@ -71,9 +68,10 @@ public class TableMonitor implements Callable<TableMonitorResult> {
     public TableMonitorResult call() throws Exception {
         // TODO PR 7.1 add tests
         TableMonitorResult monitorResult = monitorForChanges(this.monitorVersion);
-        long highestSeenVersion = monitorResult.getHighestSeenVersion();
-        if (!monitorResult.getChanges().isEmpty()) {
-            this.monitorVersion = highestSeenVersion + 1;
+        List<ChangesPerVersion<Action>> discoveredChanges = monitorResult.getChanges();
+        if (!discoveredChanges.isEmpty()) {
+            this.monitorVersion =
+                discoveredChanges.get(discoveredChanges.size() - 1).getSnapshotVersion() + 1;
         }
         return monitorResult;
     }
@@ -84,32 +82,38 @@ public class TableMonitor implements Callable<TableMonitorResult> {
 
     private TableMonitorResult monitorForChanges(long startVersion) {
 
-        // TODO Add tests, especially for Action filters.
-        Iterator<VersionLog> changes = deltaLog.getChanges(startVersion, true);
+        // TODO PR 7.1 Add tests, especially for Action filters.
+        Iterator<VersionLog> changes =
+            deltaLog.getChanges(startVersion, true); // failOnDataLoss=true
         if (changes.hasNext()) {
-            return processChanges(startVersion, changes);
+            return processChanges(changes);
         }
 
         // Case if there were no changes.
-        return new TableMonitorResult(startVersion, Collections.emptyList());
+        return new TableMonitorResult(Collections.emptyList());
     }
 
-    private TableMonitorResult processChanges(long startVersion, Iterator<VersionLog> changes) {
+    private TableMonitorResult processChanges(Iterator<VersionLog> changes) {
 
+        // this must be an ordered list
         List<ChangesPerVersion<Action>> actionsPerVersion = new ArrayList<>();
-        long highestSeenVersion = startVersion;
 
         long endTime = System.currentTimeMillis() + maxDurationMillis;
 
+        String deltaTablePath = deltaLog.getPath().toUri().normalize().toString();
+
         while (changes.hasNext()) {
             VersionLog versionLog = changes.next();
-            Pair<Long, List<Action>> version = processVersion(highestSeenVersion, versionLog);
 
-            highestSeenVersion = version.getKey();
+            // We must assign splits at VersionLog element granularity, meaning that we cannot
+            // assign splits while integrating through VersionLog changes. We must do it only
+            // when we are sure that there were no breaking changes in this version. In other
+            // case we could emit downstream a corrupted data or unsupported data change.
             actionsPerVersion.add(
                 new ChangesPerVersion<>(
-                    deltaLog.getPath().toUri().normalize().toString(),
-                    versionLog.getVersion(), version.getValue()));
+                    deltaTablePath,
+                    versionLog.getVersion(),
+                    versionLog.getActions()));
 
             // TODO PR 7.1 write unit test for this
             // Check if we still under task interval limit.
@@ -117,22 +121,7 @@ public class TableMonitor implements Callable<TableMonitorResult> {
                 break;
             }
         }
-        return new TableMonitorResult(highestSeenVersion, actionsPerVersion);
-    }
 
-    // We must assign splits at VersionLog element granularity, meaning that we cannot assign
-    // splits while integrating through VersionLog changes. We must do it only when we are
-    // sure that there were no breaking changes in this version. In other case we could emit
-    // downstream a corrupted data or unsupported data change.
-    private Pair<Long, List<Action>> processVersion(
-        long highestSeenVersion, VersionLog versionLog) {
-        long version = versionLog.getVersion();
-
-        // track the highest version number for future use
-        if (highestSeenVersion < version) {
-            highestSeenVersion = version;
-        }
-
-        return Pair.of(highestSeenVersion, versionLog.getActions());
+        return new TableMonitorResult(actionsPerVersion);
     }
 }

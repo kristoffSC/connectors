@@ -3,11 +3,13 @@ package io.delta.flink.source.internal.enumerator.monitor;
 import java.util.Collections;
 import java.util.List;
 
+import io.delta.standalone.actions.Action;
+
 /**
  * A container object that represents Delta table changes per one {@link
  * io.delta.standalone.Snapshot} version.
  */
-public class ChangesPerVersion<T> {
+public class ChangesPerVersion<T extends Action> {
 
     private final String deltaTablePath;
 

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
+import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
 import static io.delta.flink.source.internal.exceptions.DeltaSourceExceptions.deltaSourceIgnoreChangesException;
 import static io.delta.flink.source.internal.exceptions.DeltaSourceExceptions.deltaSourceIgnoreDeleteException;
 
@@ -65,8 +66,8 @@ public class ActionProcessor {
             // "reflects" Class type.
             // We could consider using switch with String argument but this would mean that we
             // would need to use Java Class API target class String name.
-            DeltaActions deltaActions = DeltaActions.instanceFrom(action.getClass());
-            switch (deltaActions) {
+            DeltaActions deltaAction = DeltaActions.instanceFrom(action.getClass());
+            switch (deltaAction) {
                 case ADD:
                     if (((AddFile) action).isDataChange()) {
                         seenAddFile = true;
@@ -80,11 +81,9 @@ public class ActionProcessor {
                     break;
                 case METADATA:
                 case PROTOCOL:
-                    break;
-                // TODO PR 7.1 verify with Scott and TD;
-                    /*throw DeltaSourceExceptions.unsupportedDeltaActionException(
+                    throw DeltaSourceExceptions.unsupportedDeltaActionException(
                         changesToProcess.getDeltaTablePath(), changesToProcess.getSnapshotVersion(),
-                        action);*/
+                        action);
                 default:
                     // Inspired by https://github.com/delta-io/delta/blob/0d07d094ccd520c1adbe45dde4804c754c0a4baa/core/src/main/scala/org/apache/spark/sql/delta/sources/DeltaSource.scala#:~:text=case%20null%20%3D%3E%20//%20Some%20crazy%20future%20feature.%20Ignore
                     break;
@@ -97,7 +96,7 @@ public class ActionProcessor {
     }
 
     /**
-     * Performs a sanity check for processed version to verify if ther ewere no invalid combination
+     * Performs a sanity check for processed version to verify if there were no invalid combination
      * of {@link RemoveFile} and {@link AddFile} actions.
      * <p>
      * Will throw a {@link io.delta.flink.source.internal.exceptions.DeltaSourceException} if check
