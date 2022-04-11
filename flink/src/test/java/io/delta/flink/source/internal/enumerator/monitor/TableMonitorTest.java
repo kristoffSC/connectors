@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import io.delta.flink.source.internal.enumerator.processor.ActionProcessor;
 import org.apache.hadoop.fs.Path;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,13 +48,17 @@ public class TableMonitorTest {
     private static final long MAX_DURATION_MILLIS = 4000;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
+
     @Mock
     private DeltaLog deltaLog;
 
     private TableMonitor tableMonitor;
 
+    private ActionProcessor actionProcessor;
+
     @Before
     public void setUp() {
+        this.actionProcessor = new ActionProcessor(false, false);
         when(deltaLog.getPath()).thenReturn(new Path(TABLE_PATH));
     }
 
@@ -70,13 +75,14 @@ public class TableMonitorTest {
         when(deltaLog.getChanges(MONITOR_VERSION, true)).thenReturn(versions.iterator());
 
         // WHEN
-        tableMonitor = new TableMonitor(deltaLog, MONITOR_VERSION, MAX_DURATION_MILLIS);
+        tableMonitor =
+            new TableMonitor(deltaLog, MONITOR_VERSION, MAX_DURATION_MILLIS, actionProcessor);
         Future<TableMonitorResult> future = WORKER_EXECUTOR.submit(tableMonitor);
         // Timeout on get to prevent waiting forever and hanging the build.
         TableMonitorResult result = future.get(MAX_DURATION_MILLIS * 2, TimeUnit.MILLISECONDS);
 
         // THEN
-        List<ChangesPerVersion<Action>> changes = result.getChanges();
+        List<ChangesPerVersion<AddFile>> changes = result.getChanges();
         assertThat(changes.size(), equalTo(versions.size()));
         assertThat(changes.get(changes.size() - 1).getSnapshotVersion(),
             equalTo(MONITOR_VERSION + 3));
@@ -93,13 +99,14 @@ public class TableMonitorTest {
         when(deltaLog.getChanges(MONITOR_VERSION, true)).thenReturn(Collections.emptyIterator());
 
         // WHEN
-        tableMonitor = new TableMonitor(deltaLog, MONITOR_VERSION, MAX_DURATION_MILLIS);
+        tableMonitor =
+            new TableMonitor(deltaLog, MONITOR_VERSION, MAX_DURATION_MILLIS, actionProcessor);
         Future<TableMonitorResult> future = WORKER_EXECUTOR.submit(tableMonitor);
         // Timeout on get to prevent waiting forever and hanging the build.
         TableMonitorResult result = future.get(MAX_DURATION_MILLIS * 2, TimeUnit.MILLISECONDS);
 
         // THEN
-        List<ChangesPerVersion<Action>> changes = result.getChanges();
+        List<ChangesPerVersion<AddFile>> changes = result.getChanges();
         assertThat(changes.size(), equalTo(0));
 
         assertThat("The next monitoring version should not be updated if no changes were found.",
@@ -127,13 +134,14 @@ public class TableMonitorTest {
         when(deltaLog.getChanges(MONITOR_VERSION, true)).thenReturn(versions.iterator());
 
         // WHEN
-        tableMonitor = new TableMonitor(deltaLog, MONITOR_VERSION, MAX_DURATION_MILLIS);
+        tableMonitor =
+            new TableMonitor(deltaLog, MONITOR_VERSION, MAX_DURATION_MILLIS, actionProcessor);
         Future<TableMonitorResult> future = WORKER_EXECUTOR.submit(tableMonitor);
         // Timeout on get to prevent waiting forever and hanging the build.
         TableMonitorResult result = future.get(MAX_DURATION_MILLIS * 2, TimeUnit.MILLISECONDS);
 
         // THEN
-        List<ChangesPerVersion<Action>> changes = result.getChanges();
+        List<ChangesPerVersion<AddFile>> changes = result.getChanges();
         assertThat(changes.size(), equalTo(versions.size() - 1));
         assertThat("The last discovered, returned version should be the long taking version.",
             changes.get(changes.size() - 1).getSnapshotVersion(),
