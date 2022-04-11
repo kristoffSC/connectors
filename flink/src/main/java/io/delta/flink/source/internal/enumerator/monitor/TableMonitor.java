@@ -60,12 +60,14 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      * @param actionProcessor   The {@link ActionProcessor} instance used to process {@link Action}
      *                          discovered on Delta table.
      */
-    public TableMonitor(DeltaLog deltaLog, long monitorVersion, long maxDurationMillis,
-        ActionProcessor actionProcessor) {
+    public TableMonitor(
+            DeltaLog deltaLog,
+            long monitorVersion,
+            long maxDurationMillis,
+            ActionProcessor actionProcessor) {
         this.deltaLog = deltaLog;
         this.monitorVersion = monitorVersion;
         this.maxDurationMillis = maxDurationMillis;
-
         this.actionProcessor = actionProcessor;
     }
 
