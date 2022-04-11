@@ -7,6 +7,7 @@ import static java.util.Collections.emptyList;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.monitor.TableMonitor;
+import io.delta.flink.source.internal.enumerator.processor.ActionProcessor;
 import io.delta.flink.source.internal.enumerator.processor.ChangesProcessor;
 import io.delta.flink.source.internal.enumerator.processor.ContinuousTableProcessor;
 import io.delta.flink.source.internal.enumerator.processor.SnapshotAndChangesTableProcessor;
@@ -153,9 +154,14 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         Path deltaTablePath, SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration, DeltaLog deltaLog,
         long monitorSnapshotVersion) {
+
+        ActionProcessor actionProcessor = new ActionProcessor(
+            sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_CHANGES),
+            sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_DELETES));
+
         TableMonitor tableMonitor =
             new TableMonitor(deltaLog, monitorSnapshotVersion, sourceConfiguration.getValue(
-                DeltaSourceOptions.UPDATE_CHECK_INTERVAL));
+                DeltaSourceOptions.UPDATE_CHECK_INTERVAL), actionProcessor);
 
         return new ChangesProcessor(
             deltaTablePath, tableMonitor, enumContext, fileEnumeratorProvider.create(),

@@ -47,12 +47,6 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
     private final SplitEnumeratorContext<DeltaSourceSplit> enumContext;
 
     /**
-     * An {@link ActionProcessor} instance used to process {@link Action} object from Delta {@link
-     * io.delta.standalone.VersionLog}.
-     */
-    private final ActionProcessor actionProcessor;
-
-    /**
      * An interval value in milliseconds to periodically check the Delta table for new changes.
      */
     private final long checkInterval;
@@ -78,10 +72,6 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
         this.tableMonitor = tableMonitor;
         this.enumContext = enumContext;
         this.currentSnapshotVersion = this.tableMonitor.getMonitorVersion();
-
-        this.actionProcessor = new ActionProcessor(
-            sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_CHANGES),
-            sourceConfiguration.getValue(DeltaSourceOptions.IGNORE_DELETES));
 
         this.checkInterval = sourceConfiguration.getValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL);
         this.initialDelay =
@@ -166,13 +156,11 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
      */
     private void processVersion(
         Consumer<List<DeltaSourceSplit>> processCallback,
-        ChangesPerVersion<Action> changesPerVersion) {
+        ChangesPerVersion<AddFile> changesPerVersion) {
 
         this.currentSnapshotVersion = changesPerVersion.getSnapshotVersion();
-        ChangesPerVersion<AddFile> addFilesPerVersion =
-            actionProcessor.processActions(changesPerVersion);
 
-        List<DeltaSourceSplit> splits = prepareSplits(addFilesPerVersion, (path) -> true);
+        List<DeltaSourceSplit> splits = prepareSplits(changesPerVersion, (path) -> true);
         processCallback.accept(splits);
     }
 }
