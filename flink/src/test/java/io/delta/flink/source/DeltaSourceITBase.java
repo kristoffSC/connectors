@@ -1,10 +1,17 @@
 package io.delta.flink.source;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
@@ -21,6 +28,9 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
+import org.apache.flink.table.types.logical.CharType;
+import org.apache.flink.table.types.logical.IntType;
+import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.util.TestLogger;
 import org.junit.ClassRule;
@@ -32,12 +42,47 @@ public abstract class DeltaSourceITBase extends TestLogger {
     @ClassRule
     public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
+    protected static final LogicalType[] COLUMN_TYPES =
+        {new CharType(), new CharType(), new IntType()};
+
+    protected static final Set<String> SMALL_TABLE_EXPECTED_VALUES =
+        Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
+
+    protected static final String[] SMALL_TABLE_COLUMN_NAMES = {"name", "surname", "age"};
+
+    protected static final int SMALL_TABLE_COUNT = 2;
+
+    protected static final int LARGE_TABLE_RECORD_COUNT = 1100;
+
     protected static final int PARALLELISM = 4;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
 
+    protected String nonPartitionedTablePath;
+
+    protected String nonPartitionedLargeTablePath;
+
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
+
+    public void setup() {
+        try {
+            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+
+            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
+            // TODO PR 8 Add Partitioned table
+            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
+            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
+                nonPartitionedLargeTablePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Weren't able to setup the test dependencies", e);
+        }
+    }
+
+    public void after() {
+        miniClusterResource.getClusterClient().close();
+    }
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster) throws Exception {
@@ -209,6 +254,74 @@ public abstract class DeltaSourceITBase extends TestLogger {
         }
 
         return result;
+    }
+
+    protected <T> List<List<T>> testContinuousDeltaSource(
+        FailoverType failoverType, DeltaSource<T> source, ContinuousTestDescriptor testDescriptor,
+        FailCheck failCheck)
+        throws Exception {
+
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(source.getTablePath().toString());
+        List<List<T>> totalResults = new ArrayList<>();
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(PARALLELISM);
+        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
+        env.enableCheckpointing(200L);
+        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
+
+        DataStream<T> stream =
+            env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
+
+        DataStream<T> failingStreamDecorator =
+            RecordCounterToFail.wrapWithFailureAfter(stream, failCheck);
+
+        ClientAndIterator<T> client =
+            DataStreamUtils.collectWithClient(failingStreamDecorator,
+                "Continuous DeltaSource  Test");
+
+        JobID jobId = client.client.getJobID();
+
+        // Initial Table Data
+        Future<?> initialDataFuture =
+            startInitialResultsFetcherThread(testDescriptor, totalResults, client);
+
+        // Table Updates
+        Future<?> tableUpdaterFuture =
+            startTableUpdaterThread(testDescriptor, tableUpdater, totalResults, client);
+
+        RecordCounterToFail.waitToFail();
+        triggerFailover(
+            failoverType,
+            jobId,
+            RecordCounterToFail::continueProcessing,
+            miniClusterResource.getMiniCluster());
+
+        // Main thread wait for all threads to finish.
+        initialDataFuture.get(2, TimeUnit.MINUTES);
+        tableUpdaterFuture.get(2, TimeUnit.MINUTES);
+        client.client.cancel().get(2, TimeUnit.MINUTES);
+
+        return totalResults;
+    }
+
+    private <T> Future<?> startInitialResultsFetcherThread(ContinuousTestDescriptor testDescriptor,
+        List<List<T>> totalResults, ClientAndIterator<T> client) {
+        return WORKER_EXECUTOR.submit(() -> {
+            totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                testDescriptor.getInitialDataSize()));
+        });
+    }
+
+    private <T> Future<?> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
+        DeltaTableUpdater tableUpdater, List<List<T>> totalResults, ClientAndIterator<T> client) {
+        return WORKER_EXECUTOR.submit(
+            () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
+                tableUpdater.writeToTable(descriptor);
+                totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                    descriptor.getExpectedCount()));
+                System.out.println("Stream result size: " + totalResults.size());
+            }));
     }
 
     public enum FailoverType {

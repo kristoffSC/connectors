@@ -1,14 +1,11 @@
 package io.delta.flink.source;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import io.delta.flink.DeltaTestUtils;
-import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
@@ -20,7 +17,6 @@ import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
-import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
@@ -30,36 +26,18 @@ import org.junit.Test;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 
+// TODO PR 7.1 refactor this to use Parameterized for failover types same as
+//  DeltaSourceContinuousExecutionITCaseTest
 public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
-
-    private static final Set<String> EXPECTED_NAMES =
-        Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
-
-    private static final int LARGE_TABLE_RECORD_COUNT = 1100;
-
-    private String nonPartitionedTablePath;
-
-    private String nonPartitionedLargeTablePath;
 
     @Before
     public void setup() {
-        try {
-            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-
-            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
-            // TODO Add Partitioned table in later PRs
-            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
-            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
-                nonPartitionedLargeTablePath);
-        } catch (IOException e) {
-            throw new RuntimeException("Weren't able to setup the test dependencies", e);
-        }
+        super.setup();
     }
 
     @After
     public void after() {
-        miniClusterResource.getClusterClient().close();
+        super.after();
     }
 
     @Test
@@ -69,8 +47,8 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         DeltaSource<RowData> deltaSource =
             initBoundedSource(
                 Path.fromLocalFile(new File(nonPartitionedTablePath)),
-                new String[]{"name", "surname", "age"},
-                new LogicalType[]{new CharType(), new CharType(), new IntType()});
+                SMALL_TABLE_COLUMN_NAMES,
+                COLUMN_TYPES);
 
         // WHEN
         List<RowData> resultData = testBoundDeltaSource(deltaSource);
@@ -80,9 +58,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // THEN
         assertThat("Source read different number of rows that Delta table have.", resultData.size(),
-            equalTo(2));
+            equalTo(SMALL_TABLE_COUNT));
         assertThat("Source Produced Different Rows that were in Delta table", actualNames,
-            equalTo(EXPECTED_NAMES));
+            equalTo(SMALL_TABLE_EXPECTED_VALUES));
     }
 
     @Test
@@ -132,15 +110,15 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
 
         // THEN
-        assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
+        assertThat("Source read different number of rows that Delta table have.", resultData.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
-        assertThat("Source Must Have produced some duplicates.", actualValues.size(),
+        assertThat("Source must have produced some duplicates.", actualValues.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
-    // TODO ADD Partition tests in later PRs
+    // TODO PR 8 ADD Partition tests in later PRs
 
-    // TODO for future PRs
+    // TODO PR 9 for future PRs
     //  This is a temporary method for creating DeltaSource.
     //  The Desired state is to use DeltaSourceBuilder which was not included in this PR.
     //  For reference how DeltaSource creation will look like please go to:

@@ -66,7 +66,6 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      */
     @Override
     public TableMonitorResult call() throws Exception {
-        // TODO PR 7.1 add tests
         TableMonitorResult monitorResult = monitorForChanges(this.monitorVersion);
         List<ChangesPerVersion<Action>> discoveredChanges = monitorResult.getChanges();
         if (!discoveredChanges.isEmpty()) {
@@ -82,7 +81,6 @@ public class TableMonitor implements Callable<TableMonitorResult> {
 
     private TableMonitorResult monitorForChanges(long startVersion) {
 
-        // TODO PR 7.1 Add tests, especially for Action filters.
         Iterator<VersionLog> changes =
             deltaLog.getChanges(startVersion, true); // failOnDataLoss=true
         if (changes.hasNext()) {
@@ -115,7 +113,6 @@ public class TableMonitor implements Callable<TableMonitorResult> {
                     versionLog.getVersion(),
                     versionLog.getActions()));
 
-            // TODO PR 7.1 write unit test for this
             // Check if we still under task interval limit.
             if (System.currentTimeMillis() >= endTime) {
                 break;
