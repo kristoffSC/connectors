@@ -57,7 +57,8 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
     private final long initialDelay;
 
     /**
-     * The Delta table version that is currently processed by this class.
+     * A {@link Snapshot} version that this processor used as a starting version to get changes from
+     * Delta table.
      * <p>
      * This value will be updated while processing every version from {@link TableMonitorResult}.
      */
@@ -101,8 +102,8 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
     }
 
     /**
-     * @return A {@link Snapshot} version that this processor currently reads changes from. The
-     * method can return different values for every method call.
+     * @return A {@link Snapshot} version that this processor used as a starting version to get
+     * changes from Delta table. The method can return different values for every method call.
      */
     @Override
     public long getSnapshotVersion() {
@@ -160,7 +161,13 @@ public class ChangesProcessor extends BaseTableProcessor implements ContinuousTa
         Consumer<List<DeltaSourceSplit>> processCallback,
         ChangesPerVersion<AddFile> changesPerVersion) {
 
-        this.currentSnapshotVersion = changesPerVersion.getSnapshotVersion();
+        // This may look like TableMonitor#monitorVersion field. However, TableMonitor's field
+        // will be updated on a different thread than this method here is executed. So to avoid
+        // any race conditions and visibility issues caused by updating and reading field from two
+        // threads, we are using data from TableMonitorResult.
+        // From ChangesProcessor perspective we only need to know what is the next version that
+        // we used as deltaLog.getChanges(version, boolean) and this will be this here.
+        this.currentSnapshotVersion = changesPerVersion.getSnapshotVersion() + 1;
 
         List<DeltaSourceSplit> splits = prepareSplits(changesPerVersion, (path) -> true);
         processCallback.accept(splits);

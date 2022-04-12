@@ -1,5 +1,6 @@
 package io.delta.flink.source.internal.enumerator;
 
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -50,7 +51,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     private ArgumentCaptor<TableMonitor> tableMonitorArgumentCaptor;
 
     @Before
-    public void setUp() {
+    public void setUp() throws URISyntaxException {
         super.setUp();
 
         when(splitAssignerProvider.create(Mockito.any())).thenReturn(splitAssigner);
@@ -69,12 +70,11 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
     public void shouldNotReadInitialSnapshotWhenMonitoringForChanges() {
 
         long snapshotVersion = 10;
-        long monitorVersion = snapshotVersion + 1;
 
         List<VersionLog> changes = mockEnumContextAndTableChange(snapshotVersion);
         long nextMonitoringVersion = changes.get(changes.size() - 1).getVersion() + 1;
 
-        when(deltaLog.getChanges(monitorVersion, true)).thenReturn(changes.iterator());
+        when(deltaLog.getChanges(snapshotVersion, true)).thenReturn(changes.iterator());
         when(deltaLog.getPath()).thenReturn(new Path("s3://some/path"));
 
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint =
@@ -94,7 +94,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         // verify that we try to get changes from Delta Log.
         verify(enumContext).callAsync(
             tableMonitorArgumentCaptor.capture(), any(BiConsumer.class), anyLong(), anyLong());
-        verify(deltaLog).getChanges(monitorVersion, true);
+        verify(deltaLog).getChanges(snapshotVersion, true);
 
         // verify TableMonitor starting version
         assertThat(tableMonitorArgumentCaptor.getValue().getMonitorVersion(),
