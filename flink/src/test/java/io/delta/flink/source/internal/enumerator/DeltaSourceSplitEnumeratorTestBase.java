@@ -1,5 +1,7 @@
 package io.delta.flink.source.internal.enumerator;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -52,7 +54,7 @@ import io.delta.standalone.actions.AddFile;
  */
 public abstract class DeltaSourceSplitEnumeratorTestBase {
 
-    protected static final String TEST_PATH = "/some/path/file.txt";
+    private static final String TABLE_PATH = "s3://some/path/";
 
     @Mock
     protected Path deltaTablePath;
@@ -92,19 +94,16 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
     private ArgumentCaptor<List<FileSourceSplit>> splitsCaptor;
     private DeltaSourceSplitEnumerator enumerator;
 
-    protected void setUp() {
+    protected void setUp() throws URISyntaxException {
         sourceConfiguration = new DeltaSourceConfiguration();
         deltaLogStatic = Mockito.mockStatic(DeltaLog.class);
         deltaLogStatic.when(() -> DeltaLog.forTable(any(Configuration.class), anyString()))
             .thenReturn(this.deltaLog);
 
-        sourceUtils = Mockito.mockStatic(SourceUtils.class);
-        sourceUtils.when(() -> SourceUtils.pathToString(deltaTablePath))
-            .thenReturn(TEST_PATH);
+        when(deltaTablePath.toUri()).thenReturn(new URI(TABLE_PATH));
     }
 
     protected void after() {
-        sourceUtils.close();
         deltaLogStatic.close();
     }
 
@@ -225,7 +224,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
 
     protected DeltaSourceSplitEnumerator createEnumerator() {
         return (DeltaSourceSplitEnumerator) getProvider().createInitialStateEnumerator(
-            deltaTablePath,
+            new Path(TABLE_PATH),
             DeltaSinkTestUtils.getHadoopConf(), enumContext, sourceConfiguration);
     }
 

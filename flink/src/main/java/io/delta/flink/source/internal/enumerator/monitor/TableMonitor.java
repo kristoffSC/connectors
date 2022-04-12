@@ -60,12 +60,14 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      * @param actionProcessor   The {@link ActionProcessor} instance used to process {@link Action}
      *                          discovered on Delta table.
      */
-    public TableMonitor(DeltaLog deltaLog, long monitorVersion, long maxDurationMillis,
-        ActionProcessor actionProcessor) {
+    public TableMonitor(
+            DeltaLog deltaLog,
+            long monitorVersion,
+            long maxDurationMillis,
+            ActionProcessor actionProcessor) {
         this.deltaLog = deltaLog;
         this.monitorVersion = monitorVersion;
         this.maxDurationMillis = maxDurationMillis;
-
         this.actionProcessor = actionProcessor;
     }
 
@@ -124,10 +126,11 @@ public class TableMonitor implements Callable<TableMonitorResult> {
             // case we could emit downstream a corrupted data or unsupported data change.
             ChangesPerVersion<Action> version =
                 new ChangesPerVersion<>(
-                    deltaTablePath, versionLog.getVersion(), versionLog.getActions());
+                    deltaTablePath,
+                    versionLog.getVersion(),
+                    versionLog.getActions());
 
             ChangesPerVersion<AddFile> addFilesPerVersion = actionProcessor.processActions(version);
-
             changesPerVersion.add(addFilesPerVersion);
 
             // Check if we still under task interval limit.

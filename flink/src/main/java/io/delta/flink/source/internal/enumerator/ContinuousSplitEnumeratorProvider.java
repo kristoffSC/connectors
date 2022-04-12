@@ -18,7 +18,6 @@ import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.utils.SourceUtils;
 import org.apache.flink.api.connector.source.Boundedness;
-import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
@@ -56,8 +55,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createInitialStateEnumerator(
+    public ContinuousDeltaSourceSplitEnumerator createInitialStateEnumerator(
             Path deltaTablePath, Configuration configuration,
             SplitEnumeratorContext<DeltaSourceSplit> enumContext,
             DeltaSourceConfiguration sourceConfiguration) {
@@ -78,8 +76,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
 
     @SuppressWarnings("unchecked")
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumeratorForCheckpoint(
+    public ContinuousDeltaSourceSplitEnumerator createEnumeratorForCheckpoint(
             DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint,
             Configuration configuration,
             SplitEnumeratorContext<DeltaSourceSplit> enumContext,
@@ -119,7 +116,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
 
         if (checkpoint.isMonitoringForChanges()) {
             return createChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,
-                deltaLog, snapshotVersion + 1);
+                deltaLog, snapshotVersion);
         } else {
             return
                 createSnapshotAndChangesProcessor(deltaTablePath, enumContext, sourceConfiguration,

@@ -1,5 +1,6 @@
 package io.delta.flink.source.internal.enumerator;
 
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -37,7 +38,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
     private BoundedSplitEnumeratorProvider provider;
 
     @Before
-    public void setUp() {
+    public void setUp() throws URISyntaxException {
         super.setUp();
 
         when(splitAssignerProvider.create(any())).thenReturn(splitAssigner);
