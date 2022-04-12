@@ -11,7 +11,6 @@ import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.utils.SourceUtils;
 import org.apache.flink.api.connector.source.Boundedness;
-import org.apache.flink.api.connector.source.SplitEnumerator;
 import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -45,8 +44,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createInitialStateEnumerator(
+    public BoundedDeltaSourceSplitEnumerator createInitialStateEnumerator(
         Path deltaTablePath, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
@@ -67,8 +65,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
     }
 
     @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumeratorForCheckpoint(
+    public BoundedDeltaSourceSplitEnumerator createEnumeratorForCheckpoint(
         DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
         SplitEnumeratorContext<DeltaSourceSplit> enumContext,
         DeltaSourceConfiguration sourceConfiguration) {
