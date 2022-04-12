@@ -25,7 +25,7 @@ public class DeltaSourceOptions {
 
     /**
      * A map of all valid {@code DeltaSource} options. This map can be used for example by {@code
-     * DeltaSourceBuilder} to do configuration sanity check.
+     * DeltaSourceStepBuilder} to do configuration sanity check.
      *
      * @implNote All {@code ConfigOption} defined in {@code DeltaSourceOptions} class must be added
      * to {@code VALID_SOURCE_OPTIONS} map.
@@ -137,7 +137,12 @@ public class DeltaSourceOptions {
     public static final ConfigOption<Boolean> IGNORE_CHANGES =
         ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false);
 
-    // TODO test all allowed options
+    // TODO PR 9 add doc
+    public static final ConfigOption<Integer> PARQUET_BATCH_SIZE =
+        ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
+            .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
+
+    // TODO PR 9 test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         VALID_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
@@ -147,5 +152,6 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(UPDATE_CHECK_INITIAL_DELAY.key(), UPDATE_CHECK_INITIAL_DELAY);
         VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
+        VALID_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
     }
 }

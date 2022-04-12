@@ -55,9 +55,8 @@ import io.delta.standalone.actions.AddFile;
  * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
  * read in parallel.
  */
-// TODO: include basic bounded + continuous creation example (when DeltaSourceBuilder.java API is
-//  finalized).
-// TODO: Add Marker interfaces for internal classes to hide them in public methods.
+// TODO PR 9 include basic bounded + continuous creation example (when DeltaSourceStepBuilder
+//  .java API is finalized).
 public final class DeltaSource<T>
     implements Source<T, DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {

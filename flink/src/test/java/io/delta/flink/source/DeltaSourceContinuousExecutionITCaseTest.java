@@ -10,20 +10,13 @@ import java.util.stream.Collectors;
 
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
-import io.delta.flink.source.internal.DeltaSourceConfiguration;
-import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
-import io.delta.flink.source.internal.file.DeltaFileEnumerator;
-import io.delta.flink.source.internal.state.DeltaSourceSplit;
-import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
-import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,8 +64,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(Path.fromLocalFile(new File(nonPartitionedTablePath)),
-                SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
+            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -96,7 +88,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
+            initContinuousSource(
+                nonPartitionedLargeTablePath,
                 new String[]{"col1", "col2", "col3"},
                 new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
 
@@ -123,8 +116,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(Path.fromLocalFile(new File(nonPartitionedTablePath)),
-                SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
+            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
 
@@ -167,24 +159,15 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     //  For reference how DeltaSource creation will look like please go to:
     //  https://github.com/delta-io/connectors/pull/256/files#:~:text=testWithoutPartitions()
 
-    private DeltaSource<RowData> initContinuousSource(Path nonPartitionedTablePath,
-        String[] columnNames, LogicalType[] columnTypes) {
+    private DeltaSource<RowData> initContinuousSource(
+        String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 
-        Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
-
-        ParquetColumnarRowInputFormat<DeltaSourceSplit>
-            fileSourceSplitParquetColumnarRowInputFormat = new ParquetColumnarRowInputFormat<>(
-            hadoopConf,
-            RowType.of(columnTypes, columnNames),
-            2048, // Parquet Reader batchSize
-            true, // isUtcTimestamp
-            true);// isCaseSensitive
-
-        return DeltaSource.forBulkFileFormat(
-            nonPartitionedTablePath,
-            fileSourceSplitParquetColumnarRowInputFormat,
-            new ContinuousSplitEnumeratorProvider(
-                LocalityAwareSplitAssigner::new, DeltaFileEnumerator::new),
-            hadoopConf, new DeltaSourceConfiguration());
+        return DeltaSourceStepBuilder.builder()
+            .tablePath(Path.fromLocalFile(new File(tablePath)))
+            .columnNames(columnNames)
+            .columnTypes(columnTypes)
+            .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
+            .continuousMode()
+            .buildForRowData();
     }
 }
