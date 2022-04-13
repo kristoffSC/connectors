@@ -8,14 +8,14 @@ import java.util.Optional;
 public class DeltaSourceException extends RuntimeException {
 
     /**
-     * Path to Delta table for which exception was throw.
+     * Path to Delta table for which exception was thrown.
      */
     private final String tablePath;
 
     /**
      * The {@link io.delta.standalone.Snapshot} version for which exception was throw.
      * <p>
-     * This value can be null, meaning that we were not abele to identify snapshot version for this
+     * This value can be null, meaning that we were not able to identify snapshot version for this
      * exception.
      */
     private final Long snapshotVersion;
@@ -40,7 +40,7 @@ public class DeltaSourceException extends RuntimeException {
     }
 
     /**
-     * @return Delta table path for which this exception was throw.
+     * @return Delta table path for which this exception was thrown.
      */
     public String getTablePath() {
         return tablePath;
@@ -48,7 +48,7 @@ public class DeltaSourceException extends RuntimeException {
 
     /**
      * @return An {@link Optional} value with {@link io.delta.standalone.Snapshot} version for which
-     * this exception was throw. If snapshot value was unknown, then the returned optional will be
+     * this exception was thrown. If snapshot value was unknown, then the returned optional will be
      * empty.
      */
     public Optional<Long> getSnapshotVersion() {
