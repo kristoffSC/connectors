@@ -141,8 +141,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets {@link Path} to Delta table.
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public TableColumnNameStep<T> tablePath(Path tablePath) {
@@ -152,8 +150,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Defines column names that should be read from Delta table.
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public TableColumnTypeStep<T> columnNames(String[] columnNames) {
@@ -164,8 +160,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
     /**
      * Defines types for column names defined by
      * {@link DeltaSourceStepBuilder#columnNames(String[])}
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public HadoopConfigurationStep<T> columnTypes(LogicalType[] columnTypes) {
@@ -176,8 +170,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
     /**
      * Defines Hadoop configuration that should be used by craeted {@link
      * io.delta.flink.source.DeltaSource}.
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> hadoopConfiguration(Configuration configuration) {
@@ -187,8 +179,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "versionAsOf"
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> versionAsOf(long snapshotVersion) {
@@ -198,8 +188,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "timestampAsOf"
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> timestampAsOf(long snapshotTimestamp) {
@@ -209,8 +197,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "startingVersion"
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> startingVersion(long startingVersion) {
@@ -220,8 +206,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "startingTimestamp"
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> startingTimestamp(long startingTimestamp) {
@@ -231,8 +215,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "updateCheckIntervalMillis"
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> updateCheckIntervalMillis(long updateCheckInterval) {
@@ -242,8 +224,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "ignoreDeletes" flag
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> ignoreDeletes(long ignoreDeletes) {
@@ -253,8 +233,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets "ignoreChanges" flag
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> ignoreChanges(long ignoreChanges) {
@@ -267,7 +245,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      *
      * @param optionName  Option name to set.
      * @param optionValue Option {@link String} value to set.
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> option(String optionName, String optionValue) {
@@ -281,7 +258,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      *
      * @param optionName  Option name to set.
      * @param optionValue Option boolean value to set.
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> option(String optionName, boolean optionValue) {
@@ -295,7 +271,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      *
      * @param optionName  Option name to set.
      * @param optionValue Option int value to set.
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> option(String optionName, int optionValue) {
@@ -309,7 +284,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      *
      * @param optionName  Option name to set.
      * @param optionValue Option long value to set.
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> option(String optionName, long optionValue) {
@@ -320,8 +294,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Set list of partition columns.
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> partitions(List<String> partitions) {
@@ -331,8 +303,6 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
 
     /**
      * Sets source to work in Continuous mode.
-     *
-     * @return instance of {@link DeltaSourceStepBuilder}.
      */
     @Override
     public BuildStep<T> continuousMode() {

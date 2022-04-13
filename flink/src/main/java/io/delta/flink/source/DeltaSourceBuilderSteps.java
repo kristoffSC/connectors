@@ -34,6 +34,9 @@ public interface DeltaSourceBuilderSteps {
      */
     interface TablePathStep<T> {
 
+        /**
+         * Sets {@link Path} to Delta table.
+         */
         TableColumnNameStep<T> tablePath(Path tablePath);
     }
 
