@@ -12,7 +12,8 @@ import org.apache.flink.configuration.ConfigOptions;
  * used both by Streaming and Table source.
  *
  * @implNote This class is used as a dictionary to work with {@link DeltaSourceConfiguration} class
- * that contains an actual configuration options used for particular {@code DeltaSource} instance.
+ * that contains an actual configuration options used for particular {@code DeltaSourceInternal}
+ * instance.
  */
 public class DeltaSourceOptions {
 
@@ -24,8 +25,8 @@ public class DeltaSourceOptions {
     public static final String STARTING_VERSION_LATEST = "latest";
 
     /**
-     * A map of all valid {@code DeltaSource} options. This map can be used for example by {@code
-     * DeltaSourceStepBuilder} to do configuration sanity check.
+     * A map of all valid {@code DeltaSourceInternal} options. This map can be used for example by
+     * {@code DeltaSourceStepBuilder} to do configuration sanity check.
      *
      * @implNote All {@code ConfigOption} defined in {@code DeltaSourceOptions} class must be added
      * to {@code VALID_SOURCE_OPTIONS} map.

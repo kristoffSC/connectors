@@ -111,19 +111,19 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     // TODO PR 8 ADD Partition tests in later PRs
 
     // TODO PR 9 for future PRs
-    //  This is a temporary method for creating DeltaSource.
+    //  This is a temporary method for creating DeltaSourceInternal.
     //  The Desired state is to use DeltaSourceBuilder which was not included in this PR.
-    //  For reference how DeltaSource creation will look like please go to:
+    //  For reference how DeltaSourceInternal creation will look like please go to:
     //  https://github.com/delta-io/connectors/pull/256/files#:~:text=testWithoutPartitions()
 
     private DeltaSource<RowData> initBoundedSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 
-        return DeltaSourceStepBuilder.builder()
+        return DeltaSource.forRowData()
             .tablePath(Path.fromLocalFile(new File(tablePath)))
             .columnNames(columnNames)
             .columnTypes(columnTypes)
             .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
-            .buildForRowData();
+            .build();
     }
 }

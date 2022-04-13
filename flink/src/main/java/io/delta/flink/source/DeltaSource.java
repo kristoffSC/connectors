@@ -1,30 +1,17 @@
 package io.delta.flink.source;
 
+import io.delta.flink.source.DeltaSourceBuilderSteps.TablePathStep;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.DeltaSourceInternal;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
-import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
-import io.delta.flink.source.internal.state.DeltaPendingSplitsCheckpointSerializer;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
-import io.delta.flink.source.internal.state.DeltaSourceSplitSerializer;
-import org.apache.flink.annotation.VisibleForTesting;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.connector.source.Boundedness;
-import org.apache.flink.api.connector.source.Source;
-import org.apache.flink.api.connector.source.SourceReader;
-import org.apache.flink.api.connector.source.SourceReaderContext;
-import org.apache.flink.api.connector.source.SplitEnumerator;
-import org.apache.flink.api.connector.source.SplitEnumeratorContext;
-import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
-import org.apache.flink.connector.file.src.impl.FileSourceReader;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.core.io.SimpleVersionedSerializer;
-import org.apache.flink.formats.parquet.utils.SerializableConfiguration;
+import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
-import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
 
 /**
@@ -57,55 +44,17 @@ import io.delta.standalone.actions.AddFile;
  */
 // TODO PR 9 include basic bounded + continuous creation example (when DeltaSourceStepBuilder
 //  .java API is finalized).
-public final class DeltaSource<T>
-    implements Source<T, DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>,
-    ResultTypeQueryable<T> {
+public class DeltaSource<T> extends DeltaSourceInternal<T> {
 
-    // ---------------------------------------------------------------------------------------------
-    // ALL NON TRANSIENT FIELDS HAVE TO BE SERIALIZABLE
-    // ---------------------------------------------------------------------------------------------
-    private static final long serialVersionUID = 1L;
-
-    /**
-     * Path to Delta Table from which this {@code DeltaSource} should read.
-     */
-    private final Path tablePath;
-
-    /**
-     * A reader format used for this Source.
-     */
-    private final BulkFormat<T, DeltaSourceSplit> readerFormat;
-
-    /**
-     * Factory for {@link SplitEnumerator}
-     */
-    private final SplitEnumeratorProvider splitEnumeratorProvider;
-
-    /**
-     * A Flink Serialization Wrapper around Hadoop Configuration needed for {@link DeltaLog}
-     */
-    private final SerializableConfiguration serializableConf;
-
-    /**
-     * Source Options used for {@code DeltaSource} creation.
-     */
-    private final DeltaSourceConfiguration sourceConfiguration;
-
-    // ---------------------------------------------------------------------------------------------
-
-    DeltaSource(Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
-        SplitEnumeratorProvider splitEnumeratorProvider, Configuration configuration,
-        DeltaSourceConfiguration sourceConfiguration) {
-
-        this.tablePath = tablePath;
-        this.readerFormat = readerFormat;
-        this.splitEnumeratorProvider = splitEnumeratorProvider;
-        this.serializableConf = new SerializableConfiguration(configuration);
-        this.sourceConfiguration = sourceConfiguration;
+    DeltaSource(
+        Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
+        SplitEnumeratorProvider splitEnumeratorProvider,
+        Configuration configuration, DeltaSourceConfiguration sourceConfiguration) {
+        super(tablePath, readerFormat, splitEnumeratorProvider, configuration, sourceConfiguration);
     }
 
     /**
-     * Builds a new {@code DeltaSource} using a {@link BulkFormat} to read batches of records from
+     * Creates a new {@code DeltaSource} using a {@link BulkFormat} to read batches of records from
      * files.
      */
     static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
@@ -119,54 +68,11 @@ public final class DeltaSource<T>
             sourceConfiguration);
     }
 
-    @Override
-    public SimpleVersionedSerializer<DeltaSourceSplit> getSplitSerializer() {
-        return DeltaSourceSplitSerializer.INSTANCE;
-    }
-
-    @Override
-    public SimpleVersionedSerializer<DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        getEnumeratorCheckpointSerializer() {
-        return new DeltaPendingSplitsCheckpointSerializer<>(DeltaSourceSplitSerializer.INSTANCE);
-    }
-
-    @Override
-    public Boundedness getBoundedness() {
-        return splitEnumeratorProvider.getBoundedness();
-    }
-
-    @Override
-    public SourceReader<T, DeltaSourceSplit> createReader(SourceReaderContext readerContext)
-        throws Exception {
-        return new FileSourceReader<>(readerContext, readerFormat,
-            readerContext.getConfiguration());
-    }
-
-    @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumerator(
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
-        return splitEnumeratorProvider.createInitialStateEnumerator(tablePath,
-            serializableConf.conf(),
-            enumContext, sourceConfiguration);
-    }
-
-    @Override
-    public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        restoreEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint) throws Exception {
-
-        return splitEnumeratorProvider.createEnumeratorForCheckpoint(
-            checkpoint, serializableConf.conf(), enumContext, sourceConfiguration);
-    }
-
-    @Override
-    public TypeInformation<T> getProducedType() {
-        return readerFormat.getProducedType();
-    }
-
-    @VisibleForTesting
-    Path getTablePath() {
-        return tablePath;
+    /**
+     * Creates a {@link RowDataDeltaSourceStepBuilder} and expose first mandatory build step -
+     * {@link TablePathStep}.
+     */
+    public static TablePathStep<RowData> forRowData() {
+        return RowDataDeltaSourceStepBuilder.stepBuilder();
     }
 }

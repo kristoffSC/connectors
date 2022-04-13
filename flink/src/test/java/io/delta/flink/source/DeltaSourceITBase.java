@@ -57,32 +57,10 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int PARALLELISM = 4;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
-
-    protected String nonPartitionedTablePath;
-
-    protected String nonPartitionedLargeTablePath;
-
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
-
-    public void setup() {
-        try {
-            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-
-            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
-            // TODO PR 8 Add Partitioned table
-            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
-            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
-                nonPartitionedLargeTablePath);
-        } catch (IOException e) {
-            throw new RuntimeException("Weren't able to setup the test dependencies", e);
-        }
-    }
-
-    public void after() {
-        miniClusterResource.getClusterClient().close();
-    }
+    protected String nonPartitionedTablePath;
+    protected String nonPartitionedLargeTablePath;
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster) throws Exception {
@@ -116,6 +94,25 @@ public abstract class DeltaSourceITBase extends TestLogger {
         miniCluster.startTaskManager();
     }
 
+    public void setup() {
+        try {
+            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+
+            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
+            // TODO PR 8 Add Partitioned table
+            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
+            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
+                nonPartitionedLargeTablePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Weren't able to setup the test dependencies", e);
+        }
+    }
+
+    public void after() {
+        miniClusterResource.getClusterClient().close();
+    }
+
     private MiniClusterWithClientResource buildCluster() {
         Configuration configuration = new Configuration();
         configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, false);
@@ -132,8 +129,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
-     * instance without any failover.
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSourceInternal} instance without any failover.
      *
      * @param source The {@link DeltaSource} that should be used in this test.
      * @param <T>    Type of objects produced by source.
@@ -151,12 +148,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
-     * instance.
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSourceInternal} instance.
      * <p>
      * <p>
      * The created environment can perform a failover after condition described by {@link FailCheck}
-     * which is evaluated every record produced by {@code DeltaSource}
+     * which is evaluated every record produced by {@code DeltaSourceInternal}
      *
      * @param failoverType The {@link FailoverType} type that should be performed for given test
      *                     setup.
@@ -233,7 +230,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(
-                failingStreamDecorator, "Bounded DeltaSource Test");
+                failingStreamDecorator, "Bounded DeltaSourceInternal Test");
         JobID jobId = client.client.getJobID();
 
         // Wait with main thread until FailCheck from RecordCounterToFail.wrapWithFailureAfter
@@ -278,7 +275,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(failingStreamDecorator,
-                "Continuous DeltaSource  Test");
+                "Continuous DeltaSourceInternal  Test");
 
         JobID jobId = client.client.getJobID();
 
