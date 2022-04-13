@@ -60,12 +60,6 @@ public class ActionProcessor {
         boolean seenRemovedFile = false;
 
         for (Action action : changesToProcess.getChanges()) {
-
-            // Java does not support switch statements for Class types.
-            // With this DeltaActions trick here, we can use switch with static enum types that
-            // "reflects" Class type.
-            // We could consider using switch with String argument but this would mean that we
-            // would need to use Java Class API target class String name.
             DeltaActions deltaAction = DeltaActions.instanceFrom(action.getClass());
             switch (deltaAction) {
                 case ADD:
