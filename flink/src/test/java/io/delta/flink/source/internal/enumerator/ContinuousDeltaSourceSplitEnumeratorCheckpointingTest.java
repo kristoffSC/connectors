@@ -179,7 +179,7 @@ public class ContinuousDeltaSourceSplitEnumeratorCheckpointingTest {
      *     <li>Read Changes only from version N</li>
      *     <li>Create a checkpoint</li>
      *     <li>Create a new {@link ContinuousDeltaSourceSplitEnumerator} from checkpoint</li>
-     *     <li>Verifies that enumerator resumed monitoring for changes for version N + 21</li>
+     *     <li>Verifies that enumerator resumed monitoring for changes for version N + 1</li>
      * </ul>
      */
     @Test
