@@ -57,32 +57,10 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int PARALLELISM = 4;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
-
-    protected String nonPartitionedTablePath;
-
-    protected String nonPartitionedLargeTablePath;
-
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
-
-    public void setup() {
-        try {
-            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-
-            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
-            // TODO PR 8 Add Partitioned table
-            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
-            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
-                nonPartitionedLargeTablePath);
-        } catch (IOException e) {
-            throw new RuntimeException("Weren't able to setup the test dependencies", e);
-        }
-    }
-
-    public void after() {
-        miniClusterResource.getClusterClient().close();
-    }
+    protected String nonPartitionedTablePath;
+    protected String nonPartitionedLargeTablePath;
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster) throws Exception {
@@ -116,6 +94,25 @@ public abstract class DeltaSourceITBase extends TestLogger {
         miniCluster.startTaskManager();
     }
 
+    public void setup() {
+        try {
+            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+
+            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
+            // TODO PR 8 Add Partitioned table
+            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
+            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
+                nonPartitionedLargeTablePath);
+        } catch (IOException e) {
+            throw new RuntimeException("Weren't able to setup the test dependencies", e);
+        }
+    }
+
+    public void after() {
+        miniClusterResource.getClusterClient().close();
+    }
+
     private MiniClusterWithClientResource buildCluster() {
         Configuration configuration = new Configuration();
         configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, false);
@@ -128,25 +125,6 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 .withHaLeadershipControl()
                 .setConfiguration(configuration)
                 .build());
-    }
-
-    /**
-     * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
-     * instance without any failover.
-     *
-     * @param source The {@link DeltaSource} that should be used in this test.
-     * @param <T>    Type of objects produced by source.
-     * @return A {@link List} of produced records.
-     */
-    protected <T> List<T> testBoundDeltaSource(DeltaSource<T> source)
-        throws Exception {
-
-        // Since we don't do any failover here (used FailoverType.NONE) we don't need any
-        // actually FailCheck.
-        // We do need to pass the check at least once, to call
-        // RecordCounterToFail#continueProcessing.get() hence (FailCheck) integer -> true
-        return testBoundDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
     }
 
     /**
@@ -217,7 +195,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         if (source.getBoundedness() != Boundedness.BOUNDED) {
             throw new RuntimeException(
-                "Using Continuous source in Bounded test setup. This will not work properly.");
+                "Not using Bounded source in Bounded test setup. This will not work properly.");
         }
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -261,6 +239,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
         FailCheck failCheck)
         throws Exception {
 
+        if (source.getBoundedness() != Boundedness.CONTINUOUS_UNBOUNDED) {
+            throw new RuntimeException(
+                "Not using using Continuous source in Continuous test setup. This will not work "
+                    + "properly.");
+        }
+
         DeltaTableUpdater tableUpdater = new DeltaTableUpdater(source.getTablePath().toString());
         List<List<T>> totalResults = new ArrayList<>();
 
@@ -297,7 +281,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             RecordCounterToFail::continueProcessing,
             miniClusterResource.getMiniCluster());
 
-        // Main thread wait for all threads to finish.
+        // Main thread waits up to 2 mMinutes for all threads to finish. Fails of timeout.
         initialDataFuture.get(2, TimeUnit.MINUTES);
         tableUpdaterFuture.get(2, TimeUnit.MINUTES);
         client.client.cancel().get(2, TimeUnit.MINUTES);
@@ -319,7 +303,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
                 tableUpdater.writeToTable(descriptor);
                 totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
-                    descriptor.getExpectedCount()));
+                    descriptor.getNumberOfNewRows()));
                 System.out.println("Stream result size: " + totalResults.size());
             }));
     }

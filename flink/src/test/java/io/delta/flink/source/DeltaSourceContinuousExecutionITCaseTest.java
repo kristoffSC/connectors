@@ -36,16 +36,18 @@ import static org.junit.Assert.assertThat;
 @RunWith(Parameterized.class)
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
 
-    private static final int TABLE_UPDATES_LIM = 5;
+    private static final int NUMBER_OF_TABLE_UPDATE_BULKS = 5;
 
     private static final int ROWS_PER_TABLE_UPDATE = 5;
 
+    /**
+     * Number of rows in Delta table before inserting a new data into it.
+     */
     private static final int INITIAL_DATA_SIZE = 2;
 
     private final FailoverType failoverType;
 
-    public DeltaSourceContinuousExecutionITCaseTest(
-        FailoverType failoverType) {
+    public DeltaSourceContinuousExecutionITCaseTest(FailoverType failoverType) {
         this.failoverType = failoverType;
     }
 
@@ -67,7 +69,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     }
 
     @Test
-    public void testWithNoUpdates() throws Exception {
+    public void shouldReadTableWithNoUpdates() throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
@@ -75,9 +77,11 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                 SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
 
         // WHEN
+        // Fail TaskManager or JobManager after half of the records or do not fail anything if
+        // FailoverType.NONE.
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
             new ContinuousTestDescriptor(2),
-            (FailCheck) integer -> true);
+            (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
         Set<String> actualNames =
@@ -92,7 +96,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     }
 
     @Test
-    public void testWithNoUpdatesLargeTable() throws Exception {
+    public void shouldReadLargeDeltaTableWithNoUpdates() throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
@@ -103,7 +107,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
             new ContinuousTestDescriptor(LARGE_TABLE_RECORD_COUNT),
-            (FailCheck) integer -> true);
+            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
         Set<Long> actualValues =
@@ -119,7 +123,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     @Test
     // This test updates Delta Table 5 times, so it will take some time to finish. About 1 minute.
-    public void testWithUpdates() throws Exception {
+    public void shouldReadDeltaTableFromSnapshotAndUpdates() throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
@@ -132,7 +136,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         List<List<RowData>> resultData =
             testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
                 (FailCheck) readRows -> readRows
-                    == (INITIAL_DATA_SIZE + TABLE_UPDATES_LIM * ROWS_PER_TABLE_UPDATE) / 2);
+                    == (INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE)
+                    / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
         Set<String> actualSurNames =
@@ -141,20 +146,24 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
-            equalTo(INITIAL_DATA_SIZE + TABLE_UPDATES_LIM * ROWS_PER_TABLE_UPDATE));
+            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
         assertThat("Source Produced Different Rows that were in Delta Table", actualSurNames.size(),
-            equalTo(INITIAL_DATA_SIZE + TABLE_UPDATES_LIM * ROWS_PER_TABLE_UPDATE));
+            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
     }
 
+    /**
+     * Creates a {@link ContinuousTestDescriptor} for tests. The descriptor created by this method
+     * describes a scenario where Delta table will be updated {@link #NUMBER_OF_TABLE_UPDATE_BULKS}
+     * times, where every update will contain {@link #ROWS_PER_TABLE_UPDATE} new unique rows.
+     */
     private ContinuousTestDescriptor prepareTableUpdates() {
         ContinuousTestDescriptor testDescriptor = new ContinuousTestDescriptor(INITIAL_DATA_SIZE);
-        for (int i = 0; i < TABLE_UPDATES_LIM; i++) {
+        for (int i = 0; i < NUMBER_OF_TABLE_UPDATE_BULKS; i++) {
             List<Row> newRows = new ArrayList<>();
             for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
                 newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
             }
-            testDescriptor.add(RowType.of(COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES), newRows,
-                newRows.size());
+            testDescriptor.add(RowType.of(COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES), newRows);
         }
         return testDescriptor;
     }
