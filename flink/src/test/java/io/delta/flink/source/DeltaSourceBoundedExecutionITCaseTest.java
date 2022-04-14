@@ -119,7 +119,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     private DeltaSource<RowData> initBoundedSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 
-        return DeltaSource.forRowData()
+        return DeltaSource.forRowDataStepBuilder()
             .tablePath(Path.fromLocalFile(new File(tablePath)))
             .columnNames(columnNames)
             .columnTypes(columnTypes)

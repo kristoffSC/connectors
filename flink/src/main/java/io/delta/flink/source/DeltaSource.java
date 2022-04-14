@@ -1,6 +1,6 @@
 package io.delta.flink.source;
 
-import io.delta.flink.source.DeltaSourceBuilderSteps.TablePathStep;
+import io.delta.flink.source.builder.DeltaSourceBuilderSteps.TablePathStep;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
@@ -42,7 +42,7 @@ import io.delta.standalone.actions.AddFile;
  * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
  * read in parallel.
  */
-// TODO PR 9 include basic bounded + continuous creation example (when DeltaSourceStepBuilder
+// TODO PR 9 include basic bounded + continuous creation example (when BaseDeltaSourceStepBuilder
 //  .java API is finalized).
 public class DeltaSource<T> extends DeltaSourceInternal<T> {
 
@@ -72,7 +72,14 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
      * Creates a {@link RowDataDeltaSourceStepBuilder} and expose first mandatory build step -
      * {@link TablePathStep}.
      */
-    public static TablePathStep<RowData> forRowData() {
+    public static TablePathStep<RowData> forRowDataStepBuilder() {
+        return RowDataDeltaSourceStepBuilder.stepBuilder();
+    }
+
+    /**
+     * Creates a {@link RowDataDeltaSourceBuilder}
+     */
+    public static TablePathStep<RowData> forRowDataBuilder() {
         return RowDataDeltaSourceStepBuilder.stepBuilder();
     }
 }

@@ -26,7 +26,7 @@ public class DeltaSourceOptions {
 
     /**
      * A map of all valid {@code DeltaSourceInternal} options. This map can be used for example by
-     * {@code DeltaSourceStepBuilder} to do configuration sanity check.
+     * {@code BaseDeltaSourceStepBuilder} to do configuration sanity check.
      *
      * @implNote All {@code ConfigOption} defined in {@code DeltaSourceOptions} class must be added
      * to {@code VALID_SOURCE_OPTIONS} map.

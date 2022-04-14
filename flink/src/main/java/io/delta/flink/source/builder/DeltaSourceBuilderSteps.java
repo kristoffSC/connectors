@@ -1,7 +1,9 @@
-package io.delta.flink.source;
+package io.delta.flink.source.builder;
 
 import java.util.List;
 
+import io.delta.flink.source.DeltaSource;
+import io.delta.flink.source.internal.DeltaSourceInternal;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
@@ -108,7 +110,7 @@ public interface DeltaSourceBuilderSteps {
 
         // -------------- Finalizing methods ----------
 
-        DeltaSource<T> build();
+        <V extends DeltaSourceInternal<T>> V build();
     }
 
 }

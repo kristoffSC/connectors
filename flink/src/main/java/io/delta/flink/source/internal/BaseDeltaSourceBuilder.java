@@ -2,11 +2,6 @@ package io.delta.flink.source.internal;
 
 import java.util.List;
 
-import io.delta.flink.source.DeltaSourceBuilderSteps.BuildStep;
-import io.delta.flink.source.DeltaSourceBuilderSteps.HadoopConfigurationStep;
-import io.delta.flink.source.DeltaSourceBuilderSteps.MandatorySteps;
-import io.delta.flink.source.DeltaSourceBuilderSteps.TableColumnNameStep;
-import io.delta.flink.source.DeltaSourceBuilderSteps.TableColumnTypeStep;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
@@ -31,9 +26,9 @@ import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INT
 import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
 
 /**
- * The builder for {@link io.delta.flink.source.DeltaSource} that follows Build Step Pattern.
+ * The base Builder class for {@link io.delta.flink.source.DeltaSource}
  */
-public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, BuildStep<T> {
+public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuilder<T, SELF>> {
 
     /**
      * The provider for {@link FileSplitAssigner}.
@@ -80,7 +75,7 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
     // ------------------------------------------------------
 
     /**
-     * A placeholder object for Delta source configuration used for {@link DeltaSourceStepBuilder}
+     * A placeholder object for Delta source configuration used for {@link BaseDeltaSourceBuilder}
      * instance.
      */
     protected final DeltaSourceConfiguration sourceConfiguration = new DeltaSourceConfiguration();
@@ -89,24 +84,24 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      * A {@link Path} to Delta table that should be read by created {@link
      * io.delta.flink.source.DeltaSource}.
      */
-    protected Path tablePath;
+    protected final Path tablePath;
 
     /**
      * A array of column names that should be raed from Delta table by created {@link
      * io.delta.flink.source.DeltaSource}.
      */
-    protected String[] columnNames;
+    protected final String[] columnNames;
 
     /**
      * A array of column types ({@link LogicalType} corresponding to {@link
-     * DeltaSourceStepBuilder#columnNames}.
+     * BaseDeltaSourceBuilder#columnNames}.
      */
-    protected LogicalType[] columnTypes;
+    protected final LogicalType[] columnTypes;
 
     /**
      * The Hadoop's {@link Configuration} for this Source.
      */
-    protected Configuration configuration;
+    protected final Configuration hadoopConfiguration;
 
     /**
      * Flag, that if set to {@code true} indicates that created {@link
@@ -123,8 +118,13 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      */
     protected List<String> partitions;
 
-    protected DeltaSourceStepBuilder() {
-
+    protected BaseDeltaSourceBuilder(
+        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
+        Configuration hadoopConfiguration) {
+        this.tablePath = tablePath;
+        this.columnNames = columnNames;
+        this.columnTypes = columnTypes;
+        this.hadoopConfiguration = hadoopConfiguration;
     }
 
     protected static ParquetColumnarRowInputFormat<DeltaSourceSplit> buildFormatWithoutPartitions(
@@ -140,104 +140,59 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
     }
 
     /**
-     * Sets {@link Path} to Delta table.
-     */
-    @Override
-    public TableColumnNameStep<T> tablePath(Path tablePath) {
-        this.tablePath = tablePath;
-        return this;
-    }
-
-    /**
-     * Defines column names that should be read from Delta table.
-     */
-    @Override
-    public TableColumnTypeStep<T> columnNames(String[] columnNames) {
-        this.columnNames = columnNames;
-        return this;
-    }
-
-    /**
-     * Defines types for column names defined by
-     * {@link DeltaSourceStepBuilder#columnNames(String[])}
-     */
-    @Override
-    public HadoopConfigurationStep<T> columnTypes(LogicalType[] columnTypes) {
-        this.columnTypes = columnTypes;
-        return this;
-    }
-
-    /**
-     * Defines Hadoop configuration that should be used by craeted {@link
-     * io.delta.flink.source.DeltaSource}.
-     */
-    @Override
-    public BuildStep<T> hadoopConfiguration(Configuration configuration) {
-        this.configuration = configuration;
-        return this;
-    }
-
-    /**
      * Sets "versionAsOf"
      */
-    @Override
-    public BuildStep<T> versionAsOf(long snapshotVersion) {
+    public SELF versionAsOf(long snapshotVersion) {
         sourceConfiguration.addOption(VERSION_AS_OF.key(), snapshotVersion);
-        return this;
+        return self();
     }
 
     /**
      * Sets "timestampAsOf"
      */
-    @Override
-    public BuildStep<T> timestampAsOf(long snapshotTimestamp) {
+    public SELF timestampAsOf(long snapshotTimestamp) {
         sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
-        return this;
+        return self();
     }
 
     /**
      * Sets "startingVersion"
      */
-    @Override
-    public BuildStep<T> startingVersion(long startingVersion) {
+    public SELF startingVersion(long startingVersion) {
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
-        return this;
+        return self();
     }
 
     /**
      * Sets "startingTimestamp"
      */
-    @Override
-    public BuildStep<T> startingTimestamp(long startingTimestamp) {
+    public SELF startingTimestamp(long startingTimestamp) {
         sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
-        return this;
+        return self();
     }
 
     /**
      * Sets "updateCheckIntervalMillis"
      */
-    @Override
-    public BuildStep<T> updateCheckIntervalMillis(long updateCheckInterval) {
+    public SELF updateCheckIntervalMillis(long updateCheckInterval) {
         sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
-        return this;
+        return self();
     }
 
     /**
      * Sets "ignoreDeletes" flag
      */
-    @Override
-    public BuildStep<T> ignoreDeletes(long ignoreDeletes) {
+    public SELF ignoreDeletes(long ignoreDeletes) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreDeletes);
-        return this;
+        return self();
     }
 
     /**
      * Sets "ignoreChanges" flag
      */
-    @Override
-    public BuildStep<T> ignoreChanges(long ignoreChanges) {
+    public SELF ignoreChanges(long ignoreChanges) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreChanges);
-        return this;
+        return self();
     }
 
     /**
@@ -246,11 +201,10 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      * @param optionName  Option name to set.
      * @param optionValue Option {@link String} value to set.
      */
-    @Override
-    public BuildStep<T> option(String optionName, String optionValue) {
+    public SELF option(String optionName, String optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
@@ -259,11 +213,10 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      * @param optionName  Option name to set.
      * @param optionValue Option boolean value to set.
      */
-    @Override
-    public BuildStep<T> option(String optionName, boolean optionValue) {
+    public SELF option(String optionName, boolean optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
@@ -272,11 +225,10 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      * @param optionName  Option name to set.
      * @param optionValue Option int value to set.
      */
-    @Override
-    public BuildStep<T> option(String optionName, int optionValue) {
+    public SELF option(String optionName, int optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
@@ -285,30 +237,29 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
      * @param optionName  Option name to set.
      * @param optionValue Option long value to set.
      */
-    @Override
-    public BuildStep<T> option(String optionName, long optionValue) {
+    public SELF option(String optionName, long optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
      * Set list of partition columns.
      */
-    @Override
-    public BuildStep<T> partitions(List<String> partitions) {
+    public SELF partitions(List<String> partitions) {
         this.partitions = partitions;
-        return this;
+        return self();
     }
 
     /**
      * Sets source to work in Continuous mode.
      */
-    @Override
-    public BuildStep<T> continuousMode() {
+    public SELF continuousMode() {
         this.continuousMode = true;
-        return this;
+        return self();
     }
+
+    public abstract <V extends DeltaSourceInternal<T>> V build();
 
     protected void validateOptionExclusions() {
 
@@ -347,5 +298,10 @@ public abstract class DeltaSourceStepBuilder<T> implements MandatorySteps<T>, Bu
                 SourceUtils.pathToString(tablePath), optionName);
         }
         return option;
+    }
+
+    @SuppressWarnings("unchecked")
+    private SELF self() {
+        return (SELF) this;
     }
 }
