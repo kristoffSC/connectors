@@ -46,12 +46,12 @@ public final class RowDataDeltaSourceBuilder
     }
 
     @Override
-    public RowDataDeltaSourceBuilder startingVersion(long startingVersion) {
+    public RowDataDeltaSourceBuilder startingVersion(String startingVersion) {
         return super.startingVersion(startingVersion);
     }
 
     @Override
-    public RowDataDeltaSourceBuilder startingTimestamp(long startingTimestamp) {
+    public RowDataDeltaSourceBuilder startingTimestamp(String startingTimestamp) {
         return super.startingTimestamp(startingTimestamp);
     }
 
@@ -61,12 +61,12 @@ public final class RowDataDeltaSourceBuilder
     }
 
     @Override
-    public RowDataDeltaSourceBuilder ignoreDeletes(long ignoreDeletes) {
+    public RowDataDeltaSourceBuilder ignoreDeletes(boolean ignoreDeletes) {
         return super.ignoreDeletes(ignoreDeletes);
     }
 
     @Override
-    public RowDataDeltaSourceBuilder ignoreChanges(long ignoreChanges) {
+    public RowDataDeltaSourceBuilder ignoreChanges(boolean ignoreChanges) {
         return super.ignoreChanges(ignoreChanges);
     }
 
@@ -110,7 +110,7 @@ public final class RowDataDeltaSourceBuilder
         //  "string" like values and string for numeric options.
         ParquetColumnarRowInputFormat<DeltaSourceSplit> format = buildFormat();
 
-        return DeltaSource.forBulkFileFormat(tablePath, format,
+        return new DeltaSource<>(tablePath, format,
             (isContinuousMode())
                 ? DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER
                 : DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER,

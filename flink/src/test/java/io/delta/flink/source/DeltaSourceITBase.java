@@ -57,9 +57,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int PARALLELISM = 4;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
+
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
+
     protected String nonPartitionedTablePath;
+
     protected String nonPartitionedLargeTablePath;
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,

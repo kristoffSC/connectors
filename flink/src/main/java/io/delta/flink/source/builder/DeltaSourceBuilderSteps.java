@@ -80,17 +80,18 @@ public interface DeltaSourceBuilderSteps {
         // -------------- Public Options --------------
         BuildStep<T> versionAsOf(long snapshotVersion);
 
+        // TODO PR 9 Ask TD adn Scott about type and format
         BuildStep<T> timestampAsOf(long snapshotTimestamp);
 
-        BuildStep<T> startingVersion(long startingVersion);
+        BuildStep<T> startingVersion(String startingVersion);
 
-        BuildStep<T> startingTimestamp(long startingTimestamp);
+        BuildStep<T> startingTimestamp(String startingTimestamp);
 
         BuildStep<T> updateCheckIntervalMillis(long updateCheckInterval);
 
-        BuildStep<T> ignoreDeletes(long ignoreDeletes);
+        BuildStep<T> ignoreDeletes(boolean ignoreDeletes);
 
-        BuildStep<T> ignoreChanges(long ignoreChanges);
+        BuildStep<T> ignoreChanges(boolean ignoreChanges);
         // --------------------------------------------
 
 

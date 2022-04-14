@@ -9,8 +9,8 @@ import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.flink.util.Preconditions.checkNotNull;
 
 import io.delta.standalone.actions.AddFile;
 
@@ -54,21 +54,6 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
     }
 
     /**
-     * Creates a new {@code DeltaSource} using a {@link BulkFormat} to read batches of records from
-     * files.
-     */
-    static <T> DeltaSource<T> forBulkFileFormat(Path deltaTablePath,
-        BulkFormat<T, DeltaSourceSplit> reader, SplitEnumeratorProvider splitEnumeratorProvider,
-        Configuration configuration, DeltaSourceConfiguration sourceConfiguration) {
-        checkNotNull(deltaTablePath, "deltaTablePath");
-        checkNotNull(reader, "reader");
-        checkNotNull(splitEnumeratorProvider, "splitEnumeratorProvider");
-
-        return new DeltaSource<>(deltaTablePath, reader, splitEnumeratorProvider, configuration,
-            sourceConfiguration);
-    }
-
-    /**
      * Creates a {@link RowDataDeltaSourceStepBuilder} and expose first mandatory build step -
      * {@link TablePathStep}.
      */
@@ -78,8 +63,18 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
 
     /**
      * Creates a {@link RowDataDeltaSourceBuilder}
+     *
+     * @param tablePath           A {@link Path} to Delta table.
+     * @param columnNames         - An array of string with column names that should be read from
+     *                            Delta table.
+     * @param columnTypes         An array of {@link LogicalType} objects describing a data type for
+     *                            each column name defined in {@code columnNames} parameter.
+     * @param hadoopConfiguration A Hadoop configuration object.
      */
-    public static TablePathStep<RowData> forRowDataBuilder() {
-        return RowDataDeltaSourceStepBuilder.stepBuilder();
+    public static RowDataDeltaSourceBuilder forRowDataBuilder(
+        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
+        Configuration hadoopConfiguration) {
+        return RowDataDeltaSourceBuilder.builder(
+            tablePath, columnNames, columnTypes, hadoopConfiguration);
     }
 }

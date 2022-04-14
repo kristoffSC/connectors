@@ -68,12 +68,12 @@ public final class RowDataDeltaSourceStepBuilder extends BaseDeltaSourceStepBuil
     }
 
     @Override
-    public BuildStep<RowData> startingVersion(long startingVersion) {
+    public BuildStep<RowData> startingVersion(String startingVersion) {
         return super.startingVersion(startingVersion);
     }
 
     @Override
-    public BuildStep<RowData> startingTimestamp(long startingTimestamp) {
+    public BuildStep<RowData> startingTimestamp(String startingTimestamp) {
         return super.startingTimestamp(startingTimestamp);
     }
 
@@ -83,12 +83,12 @@ public final class RowDataDeltaSourceStepBuilder extends BaseDeltaSourceStepBuil
     }
 
     @Override
-    public BuildStep<RowData> ignoreDeletes(long ignoreDeletes) {
+    public BuildStep<RowData> ignoreDeletes(boolean ignoreDeletes) {
         return super.ignoreDeletes(ignoreDeletes);
     }
 
     @Override
-    public BuildStep<RowData> ignoreChanges(long ignoreChanges) {
+    public BuildStep<RowData> ignoreChanges(boolean ignoreChanges) {
         return super.ignoreChanges(ignoreChanges);
     }
 
@@ -136,7 +136,7 @@ public final class RowDataDeltaSourceStepBuilder extends BaseDeltaSourceStepBuil
         //  "string" like values and string for numeric options.
         ParquetColumnarRowInputFormat<DeltaSourceSplit> format = buildFormat();
 
-        return DeltaSource.forBulkFileFormat(tablePath, format,
+        return new DeltaSource<>(tablePath, format,
             (isContinuousMode())
                 ? DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER
                 : DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER,

@@ -199,7 +199,7 @@ public abstract class BaseDeltaSourceStepBuilder<T> implements MandatorySteps<T>
      * Sets "startingVersion"
      */
     @Override
-    public BuildStep<T> startingVersion(long startingVersion) {
+    public BuildStep<T> startingVersion(String startingVersion) {
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
         return this;
     }
@@ -208,7 +208,7 @@ public abstract class BaseDeltaSourceStepBuilder<T> implements MandatorySteps<T>
      * Sets "startingTimestamp"
      */
     @Override
-    public BuildStep<T> startingTimestamp(long startingTimestamp) {
+    public BuildStep<T> startingTimestamp(String startingTimestamp) {
         sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
         return this;
     }
@@ -226,7 +226,7 @@ public abstract class BaseDeltaSourceStepBuilder<T> implements MandatorySteps<T>
      * Sets "ignoreDeletes" flag
      */
     @Override
-    public BuildStep<T> ignoreDeletes(long ignoreDeletes) {
+    public BuildStep<T> ignoreDeletes(boolean ignoreDeletes) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreDeletes);
         return this;
     }
@@ -235,7 +235,7 @@ public abstract class BaseDeltaSourceStepBuilder<T> implements MandatorySteps<T>
      * Sets "ignoreChanges" flag
      */
     @Override
-    public BuildStep<T> ignoreChanges(long ignoreChanges) {
+    public BuildStep<T> ignoreChanges(boolean ignoreChanges) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreChanges);
         return this;
     }

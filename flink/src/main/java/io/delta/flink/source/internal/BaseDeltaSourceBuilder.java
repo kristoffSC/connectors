@@ -147,6 +147,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         return self();
     }
 
+    // TODO PR 9 Ask TD adn Scott about type and format
     /**
      * Sets "timestampAsOf"
      */
@@ -158,7 +159,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     /**
      * Sets "startingVersion"
      */
-    public SELF startingVersion(long startingVersion) {
+    public SELF startingVersion(String startingVersion) {
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
         return self();
     }
@@ -166,7 +167,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     /**
      * Sets "startingTimestamp"
      */
-    public SELF startingTimestamp(long startingTimestamp) {
+    public SELF startingTimestamp(String startingTimestamp) {
         sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
         return self();
     }
@@ -182,7 +183,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     /**
      * Sets "ignoreDeletes" flag
      */
-    public SELF ignoreDeletes(long ignoreDeletes) {
+    public SELF ignoreDeletes(boolean ignoreDeletes) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreDeletes);
         return self();
     }
@@ -190,7 +191,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     /**
      * Sets "ignoreChanges" flag
      */
-    public SELF ignoreChanges(long ignoreChanges) {
+    public SELF ignoreChanges(boolean ignoreChanges) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreChanges);
         return self();
     }
