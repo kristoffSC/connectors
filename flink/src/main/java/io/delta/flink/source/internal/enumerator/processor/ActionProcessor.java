@@ -60,7 +60,7 @@ public class ActionProcessor {
         boolean seenRemovedFile = false;
 
         for (Action action : changesToProcess.getChanges()) {
-            DeltaActions deltaAction = DeltaActions.instanceFrom(action.getClass());
+            DeltaAction deltaAction = DeltaAction.instanceFrom(action.getClass());
             switch (deltaAction) {
                 case ADD:
                     if (((AddFile) action).isDataChange()) {

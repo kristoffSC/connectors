@@ -1,6 +1,8 @@
 package io.delta.flink.source;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,12 +17,27 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertThat;
 
-// TODO PR 7.1 refactor this to use Parameterized for failover types same as
-//  DeltaSourceContinuousExecutionITCaseTest
+@RunWith(Parameterized.class)
 public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
+
+    private final FailoverType failoverType;
+
+    public DeltaSourceBoundedExecutionITCaseTest(FailoverType failoverType) {
+        this.failoverType = failoverType;
+    }
+
+    @Parameters(name = "{index}: FailoverType = [{0}]")
+    public static Collection<Object[]> param() {
+        return Arrays.asList(new Object[][]{
+            {FailoverType.NONE}, {FailoverType.TASK_MANAGER}, {FailoverType.JOB_MANAGER}
+        });
+    }
 
     @Before
     public void setup() {
@@ -33,34 +50,11 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     }
 
     @Test
-    public void shouldReadTableWithoutPartitions() throws Exception {
-
-        // GIVEN
-        DeltaSource<RowData> deltaSource =
-            initBoundedSource(
-                nonPartitionedTablePath,
-                SMALL_TABLE_COLUMN_NAMES,
-                COLUMN_TYPES);
-
-        // WHEN
-        List<RowData> resultData = testBoundDeltaSource(deltaSource);
-
-        Set<String> actualNames =
-            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
-
-        // THEN
-        assertThat("Source read different number of rows that Delta table have.", resultData.size(),
-            equalTo(SMALL_TABLE_COUNT));
-        assertThat("Source Produced Different Rows that were in Delta table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
-    }
-
-    @Test
     // NOTE that this test can take some time to finish since we are restarting JM here.
     // It can be around 30 seconds or so.
     // Test if SplitEnumerator::addSplitsBack works well,
     // meaning if splits were added back to the Enumerator's state and reassigned to new TM.
-    public void shouldReadTableWithTaskManagerFailover() throws Exception {
+    public void shouldReadDeltaTable() throws Exception {
 
         DeltaSource<RowData> deltaSource =
             initBoundedSource(
@@ -69,8 +63,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
                 new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
 
         // WHEN
-        // Fail TM after half of the records.
-        List<RowData> resultData = testBoundDeltaSource(FailoverType.TASK_MANAGER, deltaSource,
+        // Fail TaskManager or JobManager after half of the records or do not fail anything if
+        // FailoverType.NONE.
+        List<RowData> resultData = testBoundDeltaSource(failoverType, deltaSource,
             (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         Set<Long> actualValues =
@@ -80,31 +75,6 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         assertThat("Source read different number of rows that Delta table have.", resultData.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
-            equalTo(LARGE_TABLE_RECORD_COUNT));
-    }
-
-    @Test
-    public void shouldReadTableWithJobManagerFailover() throws Exception {
-
-        // GIVEN
-        DeltaSource<RowData> deltaSource =
-            initBoundedSource(
-                nonPartitionedLargeTablePath,
-                new String[]{"col1", "col2", "col3"},
-                new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
-
-        // WHEN
-        // Fail TM after half of the records.
-        List<RowData> resultData = testBoundDeltaSource(FailoverType.JOB_MANAGER, deltaSource,
-            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
-
-        Set<Long> actualValues =
-            resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
-
-        // THEN
-        assertThat("Source read different number of rows that Delta table have.", resultData.size(),
-            equalTo(LARGE_TABLE_RECORD_COUNT));
-        assertThat("Source must have produced some duplicates.", actualValues.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 

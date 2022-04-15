@@ -57,7 +57,6 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int PARALLELISM = 4;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
-
     @Rule
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
 
@@ -217,7 +216,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         if (source.getBoundedness() != Boundedness.BOUNDED) {
             throw new RuntimeException(
-                "Using Continuous source in Bounded test setup. This will not work properly.");
+                "Not using Bounded source in Bounded test setup. This will not work properly.");
         }
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -261,6 +260,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
         FailCheck failCheck)
         throws Exception {
 
+        if (source.getBoundedness() != Boundedness.CONTINUOUS_UNBOUNDED) {
+            throw new RuntimeException(
+                "Not using using Continuous source in Continuous test setup. This will not work "
+                    + "properly.");
+        }
+
         DeltaTableUpdater tableUpdater = new DeltaTableUpdater(source.getTablePath().toString());
         List<List<T>> totalResults = new ArrayList<>();
 
@@ -297,7 +302,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             RecordCounterToFail::continueProcessing,
             miniClusterResource.getMiniCluster());
 
-        // Main thread wait for all threads to finish.
+        // Main thread waits up to 2 mMinutes for all threads to finish. Fails of timeout.
         initialDataFuture.get(2, TimeUnit.MINUTES);
         tableUpdaterFuture.get(2, TimeUnit.MINUTES);
         client.client.cancel().get(2, TimeUnit.MINUTES);
@@ -319,7 +324,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
                 tableUpdater.writeToTable(descriptor);
                 totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
-                    descriptor.getExpectedCount()));
+                    descriptor.getNumberOfNewRows()));
                 System.out.println("Stream result size: " + totalResults.size());
             }));
     }
