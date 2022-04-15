@@ -55,7 +55,7 @@ public class TableMonitor implements Callable<TableMonitorResult> {
      *                          this instance will monitor for changes.
      * @param maxDurationMillis The "maximal" duration that each subsequent call to {@link #call()}
      *                          method should take. This is a soft limit, which means that
-     *                          implementation will try to guarantee that overall call is * no
+     *                          implementation will try to guarantee that overall call is no
      *                          longer that this limit. See {@link #call()} method for details.
      * @param actionProcessor   The {@link ActionProcessor} instance used to process {@link Action}
      *                          discovered on Delta table.
