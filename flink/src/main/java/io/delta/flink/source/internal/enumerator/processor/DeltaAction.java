@@ -16,7 +16,7 @@ import io.delta.standalone.actions.RemoveFile;
  * <p>
  * This Enum can be used for example to build switch statement based on Delta Action type.
  */
-enum DeltaActions {
+enum DeltaAction {
 
     ADD(AddFile.class),
     REMOVE(RemoveFile.class),
@@ -24,11 +24,11 @@ enum DeltaActions {
     PROTOCOL(Protocol.class),
     OTHER(null);
 
-    private static final Map<Class<?>, DeltaActions> LOOKUP_MAP;
+    private static final Map<Class<?>, DeltaAction> LOOKUP_MAP;
 
     static {
-        Map<Class<?>, DeltaActions> tmpMap = new HashMap<>();
-        for (DeltaActions action : DeltaActions.values()) {
+        Map<Class<?>, DeltaAction> tmpMap = new HashMap<>();
+        for (DeltaAction action : DeltaAction.values()) {
             tmpMap.put(action.deltaActionClass, action);
         }
         LOOKUP_MAP = Collections.unmodifiableMap(tmpMap);
@@ -36,16 +36,16 @@ enum DeltaActions {
 
     private final Class<?> deltaActionClass;
 
-    DeltaActions(Class<?> deltaActionClass) {
+    DeltaAction(Class<?> deltaActionClass) {
         this.deltaActionClass = deltaActionClass;
     }
 
     /**
      * @param deltaActionName A concrete implementation of {@link Action} interface that we would
-     *                        like to map to {@link DeltaActions} instance.
-     * @return mapped instance of {@link DeltaActions} Enum.
+     *                        like to map to {@link DeltaAction} instance.
+     * @return mapped instance of {@link DeltaAction} Enum.
      */
-    public static DeltaActions instanceFrom(Class<? extends Action> deltaActionName) {
+    public static DeltaAction instanceFrom(Class<? extends Action> deltaActionName) {
         return LOOKUP_MAP.getOrDefault(deltaActionName, OTHER);
     }
 }
