@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -168,32 +169,27 @@ public abstract class DeltaSourceITBase extends TestLogger {
      * "fail check" and if true and if this is a first fail check it completes the FAIL {@code
      * CompletableFuture} and waits on continueProcessing {@code CompletableFuture} next.
      * <p>
-     * The flow is like so:
+     * The flow is:
      * <ul>
      *      <li>
      *          The main test thread creates Flink's Streaming Environment.
      *      </li>
      *      <li>
-     *          The main test thread creates Source.
+     *          The main test thread creates Delta source.
      *      </li>
      *      <li>
      *          The main test thread wraps created source with {@code wrapWithFailureAfter} which
-     *          has the
-     *          {@code FailCheck} condition.
+     *          has the {@code FailCheck} condition.
      *      </li>
      *      <li>
      *          The main test thread starts the "test Flink cluster" to produce records from
-     *      Source via {@code DataStreamUtils.collectWithClient(...)}. As a result there is a
-     *      Flink mini cluster
-     *          created and data is consumed by source on a new thread.
+     *          Source via {@code DataStreamUtils.collectWithClient(...)}. As a result there is a
+     *          Flink mini cluster created and data is consumed by source on a new thread.
      *      </li>
      *      <li>
      *          The main thread waits for "fail signal" that is issued by calling fail
-     *          .complete. This is
-     *          done on that new thread from point above. After calling {@code fail.complete} the
-     *          source
-     *          thread waits
-     *          on {@code continueProcessing.get()};
+     *          .complete. This is done on that new thread from point above. After calling {@code
+     *          fail.complete} the source thread waits on {@code continueProcessing.get()};
      *       </li>
      *       <li>
      *           When the main thread sees that fail.complete was executed by the Source
@@ -255,6 +251,64 @@ public abstract class DeltaSourceITBase extends TestLogger {
         return result;
     }
 
+    /**
+     * Base method used for testing {@link DeltaSource} in {@link Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode. This method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSource} instance.
+     * <p>
+     * <p>
+     * The created environment can perform a failover after condition described by {@link FailCheck}
+     * which is evaluated every record produced by {@code DeltaSource}
+     *
+     * @param failoverType The {@link FailoverType} type that should be performed for given test
+     *                     setup.
+     * @param source       The {@link DeltaSource} that should be used in this test.
+     * @param failCheck    The {@link FailCheck} condition which is evaluated for every row produced
+     *                     by source.
+     * @param <T>          Type of objects produced by source.
+     * @return A {@link List} of produced records.
+     * @implNote The {@code RecordCounterToFail::wrapWithFailureAfter} for every row checks the
+     * "fail check" and if true and if this is a first fail check it completes the FAIL {@code
+     * CompletableFuture} and waits on continueProcessing {@code CompletableFuture} next.
+     * <p>
+     * The flow is:
+     * <ul>
+     *      <li>
+     *          The main test thread creates Flink's Streaming Environment.
+     *      </li>
+     *      <li>
+     *          The main test thread creates Delta source.
+     *      </li>
+     *      <li>
+     *          The main test thread wraps created source with {@code wrapWithFailureAfter} which
+     *          has the {@code FailCheck} condition.
+     *      </li>
+     *      <li>
+     *          The main test thread starts the "test Flink cluster" to produce records from
+     *          Source via {@code DataStreamUtils.collectWithClient(...)}. As a result there is a
+     *          Flink mini cluster created and data is consumed by source on a new thread.
+     *      </li>
+     *      <li>
+     *          The main thread waits for "fail signal" that is issued by calling fail
+     *          .complete. This is done on that new thread from point above. After calling {@code
+     *          fail.complete} the source thread waits on {@code continueProcessing.get()};
+     *       </li>
+     *       <li>
+     *           When the main thread sees that fail.complete was executed by the Source
+     *          thread, it triggers the "generic" failover based on failoverType by calling
+     *          {@code triggerFailover(
+     *          ...)}.
+     *      </li>
+     *      <li>
+     *          After failover is complied, the main thread calls
+     *          {@code RecordCounterToFail::continueProcessing},
+     *          which releases the Source thread and resumes record consumption.
+     *       </li>
+     * </ul>
+     * For test where FailoverType == NONE, we trigger fail signal on a first record, Main thread
+     * executes triggerFailover method which only sends a continueProcessing signal that resumes
+     * the Source thread.
+     */
     protected <T> List<List<T>> testContinuousDeltaSource(
         FailoverType failoverType, DeltaSource<T> source, ContinuousTestDescriptor testDescriptor,
         FailCheck failCheck)
@@ -267,7 +321,6 @@ public abstract class DeltaSourceITBase extends TestLogger {
         }
 
         DeltaTableUpdater tableUpdater = new DeltaTableUpdater(source.getTablePath().toString());
-        List<List<T>> totalResults = new ArrayList<>();
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(PARALLELISM);
@@ -287,13 +340,13 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         JobID jobId = client.client.getJobID();
 
-        // Initial Table Data
-        Future<?> initialDataFuture =
-            startInitialResultsFetcherThread(testDescriptor, totalResults, client);
+        // Read data from initial snapshot
+        Future<List<T>> initialDataFuture =
+            startInitialResultsFetcherThread(testDescriptor, client);
 
-        // Table Updates
-        Future<?> tableUpdaterFuture =
-            startTableUpdaterThread(testDescriptor, tableUpdater, totalResults, client);
+        // Read data from table updates.
+        Future<List<T>> tableUpdaterFuture =
+            startTableUpdaterThread(testDescriptor, tableUpdater, client);
 
         RecordCounterToFail.waitToFail();
         triggerFailover(
@@ -303,30 +356,37 @@ public abstract class DeltaSourceITBase extends TestLogger {
             miniClusterResource.getMiniCluster());
 
         // Main thread waits up to 2 mMinutes for all threads to finish. Fails of timeout.
-        initialDataFuture.get(2, TimeUnit.MINUTES);
-        tableUpdaterFuture.get(2, TimeUnit.MINUTES);
+        List<List<T>> totalResults = new ArrayList<>();
+        totalResults.add(initialDataFuture.get(2, TimeUnit.MINUTES));
+        totalResults.add(tableUpdaterFuture.get(2, TimeUnit.MINUTES));
         client.client.cancel().get(2, TimeUnit.MINUTES);
 
         return totalResults;
     }
 
-    private <T> Future<?> startInitialResultsFetcherThread(ContinuousTestDescriptor testDescriptor,
-        List<List<T>> totalResults, ClientAndIterator<T> client) {
-        return WORKER_EXECUTOR.submit(() -> {
-            totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
-                testDescriptor.getInitialDataSize()));
-        });
+    private <T> Future<List<T>> startInitialResultsFetcherThread(
+        ContinuousTestDescriptor testDescriptor,
+        ClientAndIterator<T> client) {
+        return WORKER_EXECUTOR.submit(
+            () -> (DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                testDescriptor.getInitialDataSize())));
     }
 
-    private <T> Future<?> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
-        DeltaTableUpdater tableUpdater, List<List<T>> totalResults, ClientAndIterator<T> client) {
+    private <T> Future<List<T>> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
+        DeltaTableUpdater tableUpdater, ClientAndIterator<T> client) {
         return WORKER_EXECUTOR.submit(
-            () -> testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
-                tableUpdater.writeToTable(descriptor);
-                totalResults.add(DataStreamUtils.collectRecordsFromUnboundedStream(client,
-                    descriptor.getNumberOfNewRows()));
-                System.out.println("Stream result size: " + totalResults.size());
-            }));
+            () ->
+            {
+                List<T> results = new LinkedList<>();
+                testDescriptor.getUpdateDescriptors().forEach(descriptor -> {
+                    tableUpdater.writeToTable(descriptor);
+                    List<T> records = DataStreamUtils.collectRecordsFromUnboundedStream(client,
+                        descriptor.getNumberOfNewRows());
+                    System.out.println("Stream update result size: " + records.size());
+                    results.addAll(records);
+                });
+                return results;
+            });
     }
 
     public enum FailoverType {

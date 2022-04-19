@@ -29,8 +29,14 @@ import static org.junit.Assert.assertThat;
 @RunWith(Parameterized.class)
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
 
+    /**
+     * Number of updates done on Delta table, where each updated is bounded into one transaction
+     */
     private static final int NUMBER_OF_TABLE_UPDATE_BULKS = 5;
 
+    /**
+     * Number of rows added per each update of Delta table
+     */
     private static final int ROWS_PER_TABLE_UPDATE = 5;
 
     /**
@@ -75,15 +81,21 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             new ContinuousTestDescriptor(2),
             (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
 
+        // total number of read rows.
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
-        Set<String> actualNames =
+
+        // Each row has a unique column across all Delta table data. We are converting List or
+        // read rows to set of values for that unique column.
+        // If there were eny duplicates or missing values we will catch them here by comparing
+        // size of that Set to expected number of rows.
+        Set<String> uniqueValues =
             resultData.stream().flatMap(Collection::stream).map(row -> row.getString(1).toString())
                 .collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
             equalTo(SMALL_TABLE_COUNT));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
+        assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues,
             equalTo(SMALL_TABLE_EXPECTED_VALUES));
     }
 
@@ -103,14 +115,19 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
-        Set<Long> actualValues =
+
+        // Each row has a unique column across all Delta table data. We are converting List or
+        // read rows to set of values for that unique column.
+        // If there were eny duplicates or missing values we will catch them here by comparing
+        // size of that Set to expected number of rows.
+        Set<Long> uniqueValues =
             resultData.stream().flatMap(Collection::stream).map(row -> row.getLong(0))
                 .collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
             equalTo(LARGE_TABLE_RECORD_COUNT));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualValues.size(),
+        assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
@@ -132,14 +149,19 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                     / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
-        Set<String> actualSurNames =
+
+        // Each row has a unique column across all Delta table data. We are converting List or
+        // read rows to set of values for that unique column.
+        // If there were eny duplicates or missing values we will catch them here by comparing
+        // size of that Set to expected number of rows.
+        Set<String> uniqueValues =
             resultData.stream().flatMap(Collection::stream).map(row -> row.getString(1).toString())
                 .collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
             equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualSurNames.size(),
+        assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues.size(),
             equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
     }
 

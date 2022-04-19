@@ -20,15 +20,18 @@ import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
 
-import io.delta.standalone.CommitResult;
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Operation;
 import io.delta.standalone.OptimisticTransaction;
 import io.delta.standalone.actions.AddFile;
 
+/**
+ * This class inserts new data into Delta table.
+ */
 public class DeltaTableUpdater {
 
     private static final String ENGINE_INFO = "local";
+
     private static final Configuration configuration = DeltaTestUtils.getHadoopConf();
 
     private final String deltaTablePath;
@@ -37,32 +40,48 @@ public class DeltaTableUpdater {
         this.deltaTablePath = deltaTablePath;
     }
 
-    public CommitResult writeToTable(Descriptor descriptor) {
-        return writeToTable(descriptor.getRowType(), descriptor.getRows());
-    }
+    /**
+     * Writes rewords to Delta table accordingly to {@link Descriptor}. All new data from {@link
+     * Descriptor} will be inserted into Delta table under one commit, creating one new Delta
+     * version for entire {@link Descriptor}.
+     */
+    public void writeToTable(Descriptor descriptor) {
+        List<Row> rows = descriptor.getRows();
+        RowType rowType = descriptor.getRowType();
 
-    public CommitResult writeToTable(RowType rowType, List<Row> rows) {
         try {
             long now = System.currentTimeMillis();
-            DeltaLog log = DeltaLog.forTable(configuration, deltaTablePath);
+            DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTablePath);
 
-            Operation op = new Operation(Operation.Name.WRITE);
-            OptimisticTransaction txn = log.startTransaction();
+            // Start new Delta transaction.
+            OptimisticTransaction txn = deltaLog.startTransaction();
 
-            Path pathToParquet = writeParquet(deltaTablePath, rowType, rows);
+            Path pathToParquet = writeToParquet(deltaTablePath, rowType, rows);
 
             AddFile addFile =
                 AddFile.builder(pathToParquet.getPath(), Collections.emptyMap(), rows.size(), now,
                         true)
                     .build();
 
-            return txn.commit(Collections.singletonList(addFile), op, ENGINE_INFO);
+            // Commit Delta transaction.
+            Operation op = new Operation(Operation.Name.WRITE);
+            txn.commit(Collections.singletonList(addFile), op, ENGINE_INFO);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private Path writeParquet(String deltaTablePath, RowType rowType, List<Row> rows)
+    /**
+     * Writes Rows into Parquet files.
+     *
+     * @param deltaTablePath Root folder under which a Parquet file should be created.
+     * @param rowType        A {@link RowType} describing column types for rows.
+     * @param rows           A {@link List} of rows to write into the Parquet file.
+     * @return A {@link Path} to created Parquet file.
+     * @throws IOException {@link IOException} in case of any IO issue during writing to Parquet
+     *                     file.
+     */
+    private Path writeToParquet(String deltaTablePath, RowType rowType, List<Row> rows)
         throws IOException {
 
         ParquetWriterFactory<RowData> factory =
