@@ -15,7 +15,7 @@ public class SourceExamples {
     protected static final String[] COLUMN_NAMES = {"name", "surname", "age"};
 
     public void builderBounded() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataBuilder(
+        DeltaSource<RowData> source = DeltaSource.forRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -33,7 +33,7 @@ public class SourceExamples {
     }
 
     public void builderContinuous() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataBuilder(
+        DeltaSource<RowData> source = DeltaSource.forRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -55,7 +55,7 @@ public class SourceExamples {
     // Starting from here all examples are using DeltaSourceBuilder and not DeltaSourceStepBuilder
     // In both implementations, options are defined in the same way.
     public void builderBoundedPublicOption() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataBuilder(
+        DeltaSource<RowData> source = DeltaSource.forRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -65,7 +65,7 @@ public class SourceExamples {
     }
 
     public void builderContinuousPublicOption() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataBuilder(
+        DeltaSource<RowData> source = DeltaSource.forRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -77,7 +77,7 @@ public class SourceExamples {
     }
 
     public void builderContinuousNonPublicOption() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataBuilder(
+        DeltaSource<RowData> source = DeltaSource.forRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,

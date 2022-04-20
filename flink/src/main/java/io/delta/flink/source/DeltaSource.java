@@ -71,7 +71,7 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
      *                            each column name defined in {@code columnNames} parameter.
      * @param hadoopConfiguration A Hadoop configuration object.
      */
-    public static RowDataDeltaSourceBuilder forRowDataBuilder(
+    public static RowDataDeltaSourceBuilder forRowData(
         Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
         return RowDataDeltaSourceBuilder.builder(
