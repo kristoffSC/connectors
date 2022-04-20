@@ -53,19 +53,33 @@ public abstract class BaseActionProcessorParameterizedTest {
     protected ChangesPerVersion<AddFile> actualResult;
 
     public BaseActionProcessorParameterizedTest(
-        boolean ignoreChanges,
-        boolean ignoreDeletes,
-        ExpectedResults expectedResults) {
+            boolean ignoreChanges,
+            boolean ignoreDeletes,
+            ExpectedResults expectedResults) {
         this.ignoreChanges = ignoreChanges;
         this.ignoreDeletes = ignoreDeletes;
         this.expectedResults = expectedResults;
     }
 
+    /**
+     * This is a common method to assert results from {@link ActionProcessor} parametrized tests.
+     * This method assert whether returned values are same as expected including empty result, when
+     * {@link ActionProcessor} did not returned any data or when an exception was thrown.
+     *
+     * @param actualResult      Delta {@link AddFile} objects returned by {@link
+     *                          ActionProcessor#processActions(ChangesPerVersion)} method.
+     * @param expectedResults   Expected result for given test. Can be A collection od AddFile
+     *                          objects or Exception.
+     * @param gotDeltaException flag indicating that
+     * {@link ActionProcessor#processActions(ChangesPerVersion)}
+     *                          method thrown an exception during a test.
+     */
     protected void assertResult(
-        ChangesPerVersion<AddFile> actualResult,
-        List<Object> expectedResults,
-        boolean gotDeltaException) {
+            ChangesPerVersion<AddFile> actualResult,
+            List<Object> expectedResults,
+            boolean gotDeltaException) {
 
+        // Case when the Exception is the expected result.
         if (expectedResults.size() == 1
             && expectedResults.get(0).equals(DeltaSourceException.class)) {
             assertThat(gotDeltaException, equalTo(true));

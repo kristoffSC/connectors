@@ -38,13 +38,21 @@ public class TableMonitorTest {
 
     private static final Map<String, String> TAGS = Collections.emptyMap();
 
-    private static final String PATH = TABLE_PATH + "file.parquet";
+    private static final AddFile ADD_FILE_ONE =
+        new AddFile("0000.json", PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
 
-    private static final AddFile ADD_FILE =
-        new AddFile(PATH, PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
+    private static final AddFile ADD_FILE_TWO =
+        new AddFile("0001.json", PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
+
+    private static final AddFile ADD_FILE_THREE =
+        new AddFile("0002.json", PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
+
+    private static final AddFile ADD_FILE_FOUR =
+        new AddFile("0003.json", PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
 
     private static final long MONITOR_VERSION = 10;
 
+    // Max execution time for TableMonitor.call() method.
     private static final long MAX_DURATION_MILLIS = 4000;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
@@ -67,10 +75,10 @@ public class TableMonitorTest {
 
         // GIVEN
         List<VersionLog> versions =
-            Arrays.asList(new VersionLog(MONITOR_VERSION, Collections.singletonList(ADD_FILE)),
-                new VersionLog(MONITOR_VERSION + 1, Collections.singletonList(ADD_FILE)),
-                new VersionLog(MONITOR_VERSION + 2, Collections.singletonList(ADD_FILE)),
-                new VersionLog(MONITOR_VERSION + 3, Collections.singletonList(ADD_FILE)));
+            Arrays.asList(new VersionLog(MONITOR_VERSION, Collections.singletonList(ADD_FILE_ONE)),
+                new VersionLog(MONITOR_VERSION + 1, Collections.singletonList(ADD_FILE_TWO)),
+                new VersionLog(MONITOR_VERSION + 2, Collections.singletonList(ADD_FILE_THREE)),
+                new VersionLog(MONITOR_VERSION + 3, Collections.singletonList(ADD_FILE_FOUR)));
 
         when(deltaLog.getChanges(MONITOR_VERSION, true)).thenReturn(versions.iterator());
 
@@ -121,15 +129,15 @@ public class TableMonitorTest {
         // mock a long operation on VersionLog object
         when(longTakingVersion.getActions()).then((Answer<List<Action>>) invocation -> {
             Thread.sleep(MAX_DURATION_MILLIS + 1000);
-            return Collections.singletonList(ADD_FILE);
+            return Collections.singletonList(ADD_FILE_THREE);
         });
         when(longTakingVersion.getVersion()).thenReturn(MONITOR_VERSION + 2);
 
         List<VersionLog> versions =
-            Arrays.asList(new VersionLog(MONITOR_VERSION, Collections.singletonList(ADD_FILE)),
-                new VersionLog(MONITOR_VERSION + 1, Collections.singletonList(ADD_FILE)),
+            Arrays.asList(new VersionLog(MONITOR_VERSION, Collections.singletonList(ADD_FILE_ONE)),
+                new VersionLog(MONITOR_VERSION + 1, Collections.singletonList(ADD_FILE_TWO)),
                 longTakingVersion,
-                new VersionLog(MONITOR_VERSION + 3, Collections.singletonList(ADD_FILE)));
+                new VersionLog(MONITOR_VERSION + 3, Collections.singletonList(ADD_FILE_FOUR)));
 
         when(deltaLog.getChanges(MONITOR_VERSION, true)).thenReturn(versions.iterator());
 
@@ -142,6 +150,10 @@ public class TableMonitorTest {
 
         // THEN
         List<ChangesPerVersion<AddFile>> changes = result.getChanges();
+
+        // The MAX_DURATION_MILLIS upper limit is exceeded after processing VersionLog for
+        // version MONITOR_VERSION + 1. TableMonitor should stop further processing after that
+        // hence returning only versions.size() - 1 versions.
         assertThat(changes.size(), equalTo(versions.size() - 1));
         assertThat("The last discovered, returned version should be the long taking version.",
             changes.get(changes.size() - 1).getSnapshotVersion(),

@@ -41,7 +41,7 @@ public class DeltaTableUpdater {
     }
 
     /**
-     * Writes rewords to Delta table accordingly to {@link Descriptor}. All new data from {@link
+     * Writes records to Delta table accordingly to {@link Descriptor}. All new data from {@link
      * Descriptor} will be inserted into Delta table under one commit, creating one new Delta
      * version for entire {@link Descriptor}.
      */
@@ -53,9 +53,6 @@ public class DeltaTableUpdater {
             long now = System.currentTimeMillis();
             DeltaLog deltaLog = DeltaLog.forTable(configuration, deltaTablePath);
 
-            // Start new Delta transaction.
-            OptimisticTransaction txn = deltaLog.startTransaction();
-
             Path pathToParquet = writeToParquet(deltaTablePath, rowType, rows);
 
             AddFile addFile =
@@ -64,6 +61,8 @@ public class DeltaTableUpdater {
                     .build();
 
             // Commit Delta transaction.
+            // Start new Delta transaction.
+            OptimisticTransaction txn = deltaLog.startTransaction();
             Operation op = new Operation(Operation.Name.WRITE);
             txn.commit(Collections.singletonList(addFile), op, ENGINE_INFO);
         } catch (Exception e) {

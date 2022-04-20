@@ -18,8 +18,6 @@ import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.BigIntType;
-import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
@@ -80,7 +78,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // GIVEN
         DeltaSource<RowData> deltaSource =
             initContinuousSource(Path.fromLocalFile(new File(nonPartitionedTablePath)),
-                SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
+                SMALL_TABLE_COLUMN_NAMES, SMALL_TABLE_COLUMN_TYPES);
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
@@ -113,8 +111,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // GIVEN
         DeltaSource<RowData> deltaSource =
             initContinuousSource(Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
-                new String[]{"col1", "col2", "col3"},
-                new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
+                LARGE_TABLE_COLUMN_NAMES,
+                LARGE_TABLE_COLUMN_TYPES);
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -145,7 +143,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // GIVEN
         DeltaSource<RowData> deltaSource =
             initContinuousSource(Path.fromLocalFile(new File(nonPartitionedTablePath)),
-                SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
+                SMALL_TABLE_COLUMN_NAMES, SMALL_TABLE_COLUMN_TYPES);
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
 
@@ -185,7 +183,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
                 newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
             }
-            testDescriptor.add(RowType.of(COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES), newRows);
+            testDescriptor.add(
+                RowType.of(SMALL_TABLE_COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES), newRows);
         }
         return testDescriptor;
     }

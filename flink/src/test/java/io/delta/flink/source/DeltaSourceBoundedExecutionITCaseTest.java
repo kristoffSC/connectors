@@ -17,8 +17,6 @@ import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.BigIntType;
-import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
@@ -67,8 +65,8 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         DeltaSource<RowData> deltaSource =
             initBoundedSource(
                 Path.fromLocalFile(new File(nonPartitionedLargeTablePath)),
-                new String[]{"col1", "col2", "col3"},
-                new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
+                LARGE_TABLE_COLUMN_NAMES,
+                LARGE_TABLE_COLUMN_TYPES);
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
