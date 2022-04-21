@@ -23,11 +23,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.hamcrest.MatcherAssert.assertThat;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
 public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {

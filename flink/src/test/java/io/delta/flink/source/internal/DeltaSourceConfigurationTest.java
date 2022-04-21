@@ -11,9 +11,9 @@ import static io.delta.flink.source.internal.DeltaSourceConfigurationTest.TestOp
 import static io.delta.flink.source.internal.DeltaSourceConfigurationTest.TestOptions.LONG_OPTION;
 import static io.delta.flink.source.internal.DeltaSourceConfigurationTest.TestOptions.NO_DEFAULT_VALUE;
 import static io.delta.flink.source.internal.DeltaSourceConfigurationTest.TestOptions.STRING_OPTION;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.assertThat;
 
 public class DeltaSourceConfigurationTest {
 
