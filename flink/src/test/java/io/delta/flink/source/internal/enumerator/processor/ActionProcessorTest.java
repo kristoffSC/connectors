@@ -1,73 +1,76 @@
 package io.delta.flink.source.internal.enumerator.processor;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Stream;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 
+import io.delta.flink.source.VariableSource;
 import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
 import io.delta.flink.source.internal.exceptions.DeltaSourceException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNull.notNullValue;
-import static org.junit.Assert.assertThat;
 
 import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
-import io.delta.standalone.actions.RemoveFile;
 
-public class ActionProcessorTest {
+public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
 
-    private static final long SNAPSHOT_VERSION = 10;
+    @ParameterizedTest(name = "{index}: Actions = {0}")
+    @VariableSource("arguments_notIgnoreChangesAndNotIgnoreDeletes")
+    public void notIgnoreChangesAndNotIgnoreDeletes(
+            List<Action> inputActions,
+            Object expectedResults) {
 
-    private static final int SIZE = 100;
+        ActionProcessor processor = new ActionProcessor(false, false);
 
-    private static final String TABLE_PATH = "s3://some/path/";
-
-    private static final Map<String, String> PARTITIONS = Collections.emptyMap();
-
-    private static final Map<String, String> TAGS = Collections.emptyMap();
-
-    private static final String PATH = TABLE_PATH + "file.parquet";
-
-    private static final AddFile ADD_FILE =
-        new AddFile(PATH, PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
-
-    private static final RemoveFile REMOVE_FILE = ADD_FILE.remove(true);
-
-    private ActionProcessor processor;
-
-    @Before
-    public void setUp() {
-        // ignore deletes and ignore changes set to false
-        processor = new ActionProcessor(false, false);
+        testProcessor(inputActions, expectedResults, processor);
     }
 
-    @Test
-    public void shouldProcessAllAddActions() {
+    @ParameterizedTest(name = "{index}: Actions = {0}")
+    @VariableSource("arguments_notIgnoreChangesAndIgnoreDeletes")
+    public void notIgnoreChangesAndIgnoreDeletes(
+            List<Action> inputActions,
+            Object expectedResults) {
 
-        // GIVEN
-        List<Action> actionsToProcess = Arrays.asList(ADD_FILE, ADD_FILE, ADD_FILE);
+        ActionProcessor processor = new ActionProcessor(false, true);
 
-        // WHEN
-        ChangesPerVersion<AddFile> actualResult =
-            processor.processActions(prepareChangesToProcess(actionsToProcess));
+        testProcessor(inputActions, expectedResults, processor);
+    }
 
-        // THEN
-        assertThat(actualResult.getChanges().size(), equalTo(actionsToProcess.size()));
-        assertThat(actualResult.getSnapshotVersion(), equalTo(SNAPSHOT_VERSION));
-        assertThat(
-            hasItems(actionsToProcess.toArray()).matches(actualResult.getChanges()),
-            equalTo(true));
+    @ParameterizedTest(name = "{index}: Actions = {0}")
+    @VariableSource("arguments_ignoreChanges")
+    public void ignoreChangesAndIgnoreDeletes(List<Action> inputActions, Object expectedResults) {
+
+        ActionProcessor processor = new ActionProcessor(true, true);
+
+        testProcessor(inputActions, expectedResults, processor);
+    }
+
+    @ParameterizedTest(name = "{index}: Actions = {0}")
+    @VariableSource("arguments_ignoreChanges")
+    public void ignoreChangesAndNotIgnoreDeletes(
+            List<Action> inputActions,
+            Object expectedResults) {
+
+        ActionProcessor processor = new ActionProcessor(true, false);
+
+        testProcessor(inputActions, expectedResults, processor);
     }
 
     @Test
     public void shouldThrowIfInvalidActionInVersion() {
 
         // GIVEN
-        List<Action> actionsToProcess = Arrays.asList(ADD_FILE, REMOVE_FILE, ADD_FILE);
+        ActionProcessor processor = new ActionProcessor(false, false);
+        List<Action> actionsToProcess =
+            asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE, ADD_ACTION_DATA_CHANGE);
         DeltaSourceException caughtException = null;
 
         // WHEN
@@ -85,9 +88,11 @@ public class ActionProcessorTest {
 
     @Test
     public void shouldFilterOutRemoveIfIgnoreChangesFlag() {
+
         // GIVEN
-        processor = new ActionProcessor(true, false);
-        List<Action> actionsToProcess = Arrays.asList(ADD_FILE, REMOVE_FILE, ADD_FILE);
+        ActionProcessor processor = new ActionProcessor(true, false);
+        List<Action> actionsToProcess =
+            asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE, ADD_ACTION_DATA_CHANGE);
 
         processor.processActions(prepareChangesToProcess(actionsToProcess));
 
@@ -99,7 +104,8 @@ public class ActionProcessorTest {
         assertThat(actualResult.getChanges().size(), equalTo(actionsToProcess.size() - 1));
         assertThat(actualResult.getSnapshotVersion(), equalTo(SNAPSHOT_VERSION));
         assertThat(
-            hasItems(new Action[] {ADD_FILE, ADD_FILE}).matches(actualResult.getChanges()),
+            hasItems(new Action[]{ADD_ACTION_DATA_CHANGE, ADD_ACTION_DATA_CHANGE}).matches(
+                actualResult.getChanges()),
             equalTo(true));
     }
 
@@ -107,4 +113,60 @@ public class ActionProcessorTest {
         return new ChangesPerVersion<>(TABLE_PATH, SNAPSHOT_VERSION, actions);
     }
 
+    private Stream<Arguments> arguments_notIgnoreChangesAndNotIgnoreDeletes() {
+        return Stream.of(
+            Arguments.of(singletonList(ADD_ACTION_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(singletonList(ADD_ACTION_NO_DATA_CHANGE), emptyList()),
+            Arguments.of(singletonList(REMOVE_ACTION_DATA_CHANGE), DeltaSourceException.class),
+            Arguments.of(singletonList(REMOVE_ACTION_NO_DATA_CHANGE), emptyList()),
+
+            Arguments.of(asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE),
+                DeltaSourceException.class),
+            Arguments.of(asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_NO_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(asList(ADD_ACTION_NO_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE),
+                DeltaSourceException.class),
+            Arguments.of(asList(ADD_ACTION_NO_DATA_CHANGE, REMOVE_ACTION_NO_DATA_CHANGE),
+                emptyList())
+        );
+    }
+
+    private Stream<Arguments> arguments_notIgnoreChangesAndIgnoreDeletes() {
+        return Stream.of(
+            Arguments.of(singletonList(ADD_ACTION_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(singletonList(ADD_ACTION_NO_DATA_CHANGE), emptyList()),
+            Arguments.of(singletonList(REMOVE_ACTION_DATA_CHANGE), emptyList()),
+            Arguments.of(singletonList(REMOVE_ACTION_NO_DATA_CHANGE), emptyList()),
+
+            Arguments.of(asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE),
+                DeltaSourceException.class),
+            Arguments.of(asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_NO_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(asList(ADD_ACTION_NO_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE),
+                emptyList()),
+            Arguments.of(asList(ADD_ACTION_NO_DATA_CHANGE, REMOVE_ACTION_NO_DATA_CHANGE),
+                emptyList())
+        );
+    }
+
+    private Stream<Arguments> arguments_ignoreChanges() {
+        return Stream.of(
+            Arguments.of(singletonList(ADD_ACTION_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(singletonList(ADD_ACTION_NO_DATA_CHANGE), emptyList()),
+            Arguments.of(singletonList(REMOVE_ACTION_DATA_CHANGE), emptyList()),
+            Arguments.of(singletonList(REMOVE_ACTION_NO_DATA_CHANGE), emptyList()),
+
+            Arguments.of(asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(asList(ADD_ACTION_DATA_CHANGE, REMOVE_ACTION_NO_DATA_CHANGE),
+                singletonList(ADD_ACTION_DATA_CHANGE)),
+            Arguments.of(asList(ADD_ACTION_NO_DATA_CHANGE, REMOVE_ACTION_DATA_CHANGE),
+                emptyList()),
+            Arguments.of(asList(ADD_ACTION_NO_DATA_CHANGE, REMOVE_ACTION_NO_DATA_CHANGE),
+                emptyList())
+        );
+    }
 }

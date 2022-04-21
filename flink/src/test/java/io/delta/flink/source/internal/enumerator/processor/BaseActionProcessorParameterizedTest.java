@@ -7,8 +7,8 @@ import java.util.Map;
 import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
 import io.delta.flink.source.internal.exceptions.DeltaSourceException;
 import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertThat;
 
 import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
@@ -40,25 +40,25 @@ public abstract class BaseActionProcessorParameterizedTest {
     protected static final RemoveFile REMOVE_ACTION_NO_DATA_CHANGE =
         ADD_ACTION_NO_DATA_CHANGE.remove(false);
 
-    protected final boolean ignoreChanges;
-
-    protected final boolean ignoreDeletes;
-
-    protected final ExpectedResults expectedResults;
-
-    protected ActionProcessor processor;
-
     protected ChangesPerVersion<Action> changesToProcess;
 
-    protected ChangesPerVersion<AddFile> actualResult;
+    protected void testProcessor(List<Action> inputActions, Object expectedResults,
+        ActionProcessor processor) {
+        boolean gotDeltaException = false;
 
-    public BaseActionProcessorParameterizedTest(
-            boolean ignoreChanges,
-            boolean ignoreDeletes,
-            ExpectedResults expectedResults) {
-        this.ignoreChanges = ignoreChanges;
-        this.ignoreDeletes = ignoreDeletes;
-        this.expectedResults = expectedResults;
+        // GIVEN dataChangeFlag == true;
+        changesToProcess = prepareChangesToProcess(inputActions);
+
+        // WHEN
+        ChangesPerVersion<AddFile> actualResult = null;
+        try {
+            actualResult = processor.processActions(changesToProcess);
+        } catch (DeltaSourceException e) {
+            gotDeltaException = true;
+        }
+
+        // THEN
+        assertResult(actualResult, expectedResults, gotDeltaException);
     }
 
     /**
@@ -75,44 +75,24 @@ public abstract class BaseActionProcessorParameterizedTest {
      *                          method thrown an exception during a test.
      */
     protected void assertResult(
-            ChangesPerVersion<AddFile> actualResult,
-            List<Object> expectedResults,
-            boolean gotDeltaException) {
+        ChangesPerVersion<AddFile> actualResult,
+        Object expectedResults,
+        boolean gotDeltaException) {
 
         // Case when the Exception is the expected result.
-        if (expectedResults.size() == 1
-            && expectedResults.get(0).equals(DeltaSourceException.class)) {
-            assertThat(gotDeltaException, equalTo(true));
+        if (DeltaSourceException.class.equals(expectedResults)) {
+            assertThat("An exception was expected from ActionProcessor", gotDeltaException,
+                equalTo(true));
         } else {
-            assertThat(actualResult.getChanges().size(), equalTo(expectedResults.size()));
+            List<?> castedExpectedResults = (List<?>) expectedResults;
+            assertThat(actualResult.getChanges().size(), equalTo(castedExpectedResults.size()));
             assertThat(
-                hasItems(expectedResults.toArray()).matches(actualResult.getChanges()),
+                hasItems(castedExpectedResults.toArray()).matches(actualResult.getChanges()),
                 equalTo(true));
         }
     }
 
     protected ChangesPerVersion<Action> prepareChangesToProcess(List<Action> actions) {
         return new ChangesPerVersion<>(TABLE_PATH, SNAPSHOT_VERSION, actions);
-    }
-
-    public static class ExpectedResults {
-
-        private final List<Object> dataChangeResults;
-
-        private final List<Object> noDataChangeResults;
-
-        public ExpectedResults(List<Object> dataChangeResults,
-            List<Object> noDataChangeResults) {
-            this.dataChangeResults = dataChangeResults;
-            this.noDataChangeResults = noDataChangeResults;
-        }
-
-        public List<Object> getDataChangeResults() {
-            return dataChangeResults;
-        }
-
-        public List<Object> getNoDataChangeResults() {
-            return noDataChangeResults;
-        }
     }
 }
