@@ -23,31 +23,12 @@ public class SourceExamples {
             .build();
     }
 
-    public void stepBuilderBounded() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataStepBuilder()
-            .tablePath(new Path("s3://some/path"))
-            .columnNames(COLUMN_NAMES)
-            .columnTypes(COLUMN_TYPES)
-            .hadoopConfiguration(DeltaSinkTestUtils.getHadoopConf())
-            .build();
-    }
-
     public void builderContinuous() {
         DeltaSource<RowData> source = DeltaSource.forRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
                 DeltaSinkTestUtils.getHadoopConf())
-            .continuousMode()
-            .build();
-    }
-
-    public void stepBuilderContinuous() {
-        DeltaSource<RowData> source = DeltaSource.forRowDataStepBuilder()
-            .tablePath(new Path("s3://some/path"))
-            .columnNames(COLUMN_NAMES)
-            .columnTypes(COLUMN_TYPES)
-            .hadoopConfiguration(DeltaSinkTestUtils.getHadoopConf())
             .continuousMode()
             .build();
     }

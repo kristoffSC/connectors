@@ -1,6 +1,5 @@
 package io.delta.flink.source;
 
-import io.delta.flink.source.builder.DeltaSourceBuilderSteps.TablePathStep;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
@@ -8,7 +7,6 @@ import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
 
@@ -51,14 +49,6 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
         SplitEnumeratorProvider splitEnumeratorProvider,
         Configuration configuration, DeltaSourceConfiguration sourceConfiguration) {
         super(tablePath, readerFormat, splitEnumeratorProvider, configuration, sourceConfiguration);
-    }
-
-    /**
-     * Creates a {@link RowDataDeltaSourceStepBuilder} and expose first mandatory build step -
-     * {@link TablePathStep}.
-     */
-    public static TablePathStep<RowData> forRowDataStepBuilder() {
-        return RowDataDeltaSourceStepBuilder.stepBuilder();
     }
 
     /**

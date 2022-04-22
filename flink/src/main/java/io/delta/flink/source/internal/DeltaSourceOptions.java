@@ -53,8 +53,8 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>timestampAsOf</b>.
      */
-    public static final ConfigOption<Long> TIMESTAMP_AS_OF =
-        ConfigOptions.key("timestampAsOf").longType().noDefaultValue();
+    public static final ConfigOption<String> TIMESTAMP_AS_OF =
+        ConfigOptions.key("timestampAsOf").stringType().noDefaultValue();
 
     /**
      * An option to specify a {@link io.delta.standalone.Snapshot} version to only read changes

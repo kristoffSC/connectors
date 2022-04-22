@@ -30,8 +30,8 @@ public final class RowDataDeltaSourceBuilder
     }
 
     /**
-     * Creates {@link RowDataDeltaSourceStepBuilder} for {@link DeltaSource} that produces elements
-     * of type {@link RowData}
+     * Creates {@link RowDataDeltaSourceBuilder} for {@link DeltaSource} that produces elements of
+     * type {@link RowData}
      */
     static RowDataDeltaSourceBuilder builder(
         Path tablePath, String[] columnNames, LogicalType[] columnTypes,
@@ -46,12 +46,13 @@ public final class RowDataDeltaSourceBuilder
     */
 
     /**
-     * Sets value of "versionAsOf" option. An option that allow time travel to given {@link
-     * io.delta.standalone.Snapshot} version and read from it. Applicable for {@link
-     * org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode only.
+     * Sets value of "versionAsOf" option. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED}
+     * mode only. With this option we can time travel to given {@link io.delta.standalone.Snapshot}
+     * version and read from it.
      *
      * <p>
-     * This option is mutual exclusive with {@link #timestampAsOf(long)} option.
+     * This option is mutual exclusive with {@link #timestampAsOf(String)} option.
      *
      * @param snapshotVersion Delta {@link io.delta.standalone.Snapshot} version to time travel to.
      */
@@ -61,29 +62,33 @@ public final class RowDataDeltaSourceBuilder
     }
 
     /**
-     * Sets value of "timestampAsOf" option. An option that allow time travel to the latest {@link
-     * io.delta.standalone.Snapshot} that was generated at or before given timestamp. Applicable for
-     * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode only
+     * Sets value of "timestampAsOf" option. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED}
+     * mode only. With this option we can time travel to the latest {@link
+     * io.delta.standalone.Snapshot} that was generated at or before given timestamp.
      * <p>
      * This option is mutual exclusive with {@link #versionAsOf(long)} option.
      *
      * @param snapshotTimestamp The timestamp we should time travel to.
      */
     @Override
-    public RowDataDeltaSourceBuilder timestampAsOf(long snapshotTimestamp) {
+    public RowDataDeltaSourceBuilder timestampAsOf(String snapshotTimestamp) {
         return super.timestampAsOf(snapshotTimestamp);
     }
 
     /**
-     * Sets value of "staringVersion" option. An option to specify a {@link
-     * io.delta.standalone.Snapshot} version to only read changes from. Applicable for {@link
-     * org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode only.
+     * Sets value of "staringVersion" option. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only. This option specifies the {@link io.delta.standalone.Snapshot} version from which
+     * we want to start reading the changes.
      *
      * <p>
      * This option is mutual exclusive with {@link #startingTimestamp(String)} option.
      *
      * @param startingVersion Delta {@link io.delta.standalone.Snapshot} version to start reading
-     *                        changes from.
+     *                        changes from. The values can be string numbers like "1", "10" etc. or
+     *                        keyword "latest", where in that case, changes from the latest Delta
+     *                        table version will be read.
      */
     @Override
     public RowDataDeltaSourceBuilder startingVersion(String startingVersion) {
@@ -91,12 +96,30 @@ public final class RowDataDeltaSourceBuilder
     }
 
     /**
-     * Sets value of "startingTimestamp" option. An option used to read only changes from {@link
-     * io.delta.standalone.Snapshot} that was generated at or before given timestamp. Applicable for
-     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode only.
+     * Sets value of "staringVersion" option. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only. This option specifies the {@link io.delta.standalone.Snapshot} version from which
+     * we want to start reading the changes.
      *
      * <p>
-     * This option is mutual exclusive with {@link #startingVersion(String)} option.
+     * This option is mutual exclusive with {@link #startingTimestamp(String)} option.
+     *
+     * @param startingVersion Delta {@link io.delta.standalone.Snapshot} version to start reading
+     *                        changes from.
+     */
+    public RowDataDeltaSourceBuilder startingVersion(long startingVersion) {
+        return super.startingVersion(String.valueOf(startingVersion));
+    }
+
+    /**
+     * Sets value of "startingTimestamp" option. Applicable for {@link
+     * org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode only. This
+     * option is used to read only changes from {@link io.delta.standalone.Snapshot} that was
+     * generated at or before given timestamp.
+     *
+     * <p>
+     * This option is mutual exclusive with {@link #startingVersion(String)} and {@link
+     * #startingVersion(long)} option.
      *
      * @param startingTimestamp The timestamp of {@link io.delta.standalone.Snapshot} that we start
      *                          reading changes from.
@@ -107,9 +130,10 @@ public final class RowDataDeltaSourceBuilder
     }
 
     /**
-     * Sets the value for "updateCheckIntervalMillis" option. An option to specify check interval
-     * (in milliseconds) for monitoring Delta table changes. Applicable for {@link
-     * org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode only.
+     * Sets the value for "updateCheckIntervalMillis" option. Applicable for {@link
+     * org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode only. This
+     * option to specify check interval (in milliseconds) used for periodic Delta table changes
+     * checks.
      *
      * <p>
      * The default value for this option is 5000 ms.
@@ -122,8 +146,10 @@ public final class RowDataDeltaSourceBuilder
     }
 
     /**
-     * Sets an "ignoreDeletes" option. An option used to allow processing Delta table versions
-     * containing only {@link io.delta.standalone.actions.RemoveFile} actions.
+     * Sets an "ignoreDeletes" option. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only. This option allows processing Delta table versions containing only {@link
+     * io.delta.standalone.actions.RemoveFile} actions.
      *
      * <p> If this option is set to true, Source connector will not throw an exception when
      * processing version containing only {@link io.delta.standalone.actions.RemoveFile} actions
@@ -138,10 +164,11 @@ public final class RowDataDeltaSourceBuilder
     }
 
     /**
-     * Sets "ignoreChanges" option. An option used to allow processing Delta table versions
-     * containing both {@link io.delta.standalone.actions.RemoveFile} {@link
-     * io.delta.standalone.actions.AddFile} actions. This option subsumes {@link #ignoreDeletes}
-     * option.
+     * Sets "ignoreChanges" option. Applicable for
+     * {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode only. This option allows processing Delta table versions containing both {@link
+     * io.delta.standalone.actions.RemoveFile} and {@link io.delta.standalone.actions.AddFile}
+     * actions. This option subsumes {@link #ignoreDeletes} option.
      *
      * <p> If this option is set to true, Source connector will not
      * throw an exception when processing version containing combination of {@link
@@ -225,6 +252,9 @@ public final class RowDataDeltaSourceBuilder
     @Override
     @SuppressWarnings("unchecked")
     public DeltaSource<RowData> build() {
+
+        validateMandatoryOptions();
+
         // TODO test this
         validateOptionExclusions();
 

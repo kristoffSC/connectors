@@ -1,6 +1,8 @@
 package io.delta.flink.source.internal;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
@@ -16,6 +18,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.PARQUET_BATCH_SIZE;
@@ -24,6 +27,8 @@ import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * The base Builder class for {@link io.delta.flink.source.DeltaSource}
@@ -147,11 +152,10 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         return self();
     }
 
-    // TODO PR 9 Ask TD adn Scott about type and format
     /**
      * Sets "timestampAsOf"
      */
-    public SELF timestampAsOf(long snapshotTimestamp) {
+    public SELF timestampAsOf(String snapshotTimestamp) {
         sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
         return self();
     }
@@ -261,6 +265,30 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     }
 
     public abstract <V extends DeltaSourceInternal<T>> V build();
+
+    protected void validateMandatoryOptions() {
+
+        // validate against null references
+        checkNotNull(tablePath, "DeltaSourceBuilder - missing path to Delta table.");
+        checkNotNull(columnNames, "DeltaSourceBuilder - missing Delta table column names.");
+        checkNotNull(columnTypes, "DeltaSourceBuilder - missing Delta table column types.");
+        checkNotNull(hadoopConfiguration, "DeltaSourceBuilder - missing Hadoop configuration.");
+
+        // validate arrays size
+        checkArgument(columnNames.length > 0, "DeltaSourceBuilder - empty array with column names");
+        checkArgument(columnTypes.length > 0, "DeltaSourceBuilder - empty array with column names");
+        checkArgument(columnNames.length == columnTypes.length,
+            "DeltaSourceBuilder - column names and column types size does not match.");
+
+        // validate invalid array element
+        checkArgument(Stream.of(columnNames)
+                .noneMatch(StringUtils::isNullOrWhitespaceOnly),
+            "DeltaSourceBuilder - Column names array contains at least one element that is null, "
+                + "empty, or contains only whitespace characters");
+        checkArgument(Stream.of(columnTypes)
+            .noneMatch(Objects::isNull), "DeltaSourceBuilder - Column type array contains at "
+            + "least one null element.");
+    }
 
     protected void validateOptionExclusions() {
 

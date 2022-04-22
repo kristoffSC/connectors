@@ -193,11 +193,11 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     private DeltaSource<RowData> initContinuousSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 
-        return DeltaSource.forRowDataStepBuilder()
-            .tablePath(Path.fromLocalFile(new File(tablePath)))
-            .columnNames(columnNames)
-            .columnTypes(columnTypes)
-            .hadoopConfiguration(DeltaTestUtils.getHadoopConf())
+        return DeltaSource.forRowData(
+                Path.fromLocalFile(new File(tablePath)),
+                columnNames,
+                columnTypes,
+                DeltaTestUtils.getHadoopConf())
             .continuousMode()
             .build();
     }
