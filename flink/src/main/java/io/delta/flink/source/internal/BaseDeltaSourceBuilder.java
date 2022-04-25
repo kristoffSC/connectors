@@ -65,6 +65,11 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         new ContinuousSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
             DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
 
+    /**
+     * Message prefix for validation exceptions.
+     */
+    protected static final String EXCEPTION_PREFIX = "DeltaSourceBuilder - ";
+
     // -------------- Hardcoded Non Public Options ----------
     /**
      * Hardcoded option for {@link ParquetColumnarRowInputFormat} to threat timestamps as a UTC
@@ -148,6 +153,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      * Sets "versionAsOf"
      */
     public SELF versionAsOf(long snapshotVersion) {
+        validateOptionValue(VERSION_AS_OF.key(), snapshotVersion);
         sourceConfiguration.addOption(VERSION_AS_OF.key(), snapshotVersion);
         return self();
     }
@@ -156,6 +162,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      * Sets "timestampAsOf"
      */
     public SELF timestampAsOf(String snapshotTimestamp) {
+        validateOptionValue(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
         sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
         return self();
     }
@@ -164,6 +171,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      * Sets "startingVersion"
      */
     public SELF startingVersion(String startingVersion) {
+        validateOptionValue(STARTING_VERSION.key(), startingVersion);
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
         return self();
     }
@@ -172,6 +180,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      * Sets "startingTimestamp"
      */
     public SELF startingTimestamp(String startingTimestamp) {
+        validateOptionValue(STARTING_TIMESTAMP.key(), startingTimestamp);
         sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
         return self();
     }
@@ -180,6 +189,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      * Sets "updateCheckIntervalMillis"
      */
     public SELF updateCheckIntervalMillis(long updateCheckInterval) {
+        validateOptionValue(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
         sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
         return self();
     }
@@ -208,6 +218,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      */
     public SELF option(String optionName, String optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
+        validateOptionValue(configOption.key(), optionValue);
         sourceConfiguration.addOption(configOption.key(), optionValue);
         return self();
     }
@@ -232,6 +243,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      */
     public SELF option(String optionName, int optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
+        validateOptionValue(configOption.key(), optionValue);
         sourceConfiguration.addOption(configOption.key(), optionValue);
         return self();
     }
@@ -244,6 +256,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      */
     public SELF option(String optionName, long optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
+        validateOptionValue(configOption.key(), optionValue);
         sourceConfiguration.addOption(configOption.key(), optionValue);
         return self();
     }
@@ -252,6 +265,12 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      * Set list of partition columns.
      */
     public SELF partitions(List<String> partitions) {
+        checkNotNull(partitions, EXCEPTION_PREFIX + "partition list cannot be null.");
+        checkArgument(partitions.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
+            EXCEPTION_PREFIX
+                + "List with partition columns contains at least one element that is null, "
+                + "empty, or contains only whitespace characters.");
+
         this.partitions = partitions;
         return self();
     }
@@ -269,24 +288,24 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     protected void validateMandatoryOptions() {
 
         // validate against null references
-        checkNotNull(tablePath, "DeltaSourceBuilder - missing path to Delta table.");
-        checkNotNull(columnNames, "DeltaSourceBuilder - missing Delta table column names.");
-        checkNotNull(columnTypes, "DeltaSourceBuilder - missing Delta table column types.");
-        checkNotNull(hadoopConfiguration, "DeltaSourceBuilder - missing Hadoop configuration.");
+        checkNotNull(tablePath, EXCEPTION_PREFIX + "missing path to Delta table.");
+        checkNotNull(columnNames, EXCEPTION_PREFIX + "missing Delta table column names.");
+        checkNotNull(columnTypes, EXCEPTION_PREFIX + "missing Delta table column types.");
+        checkNotNull(hadoopConfiguration, EXCEPTION_PREFIX + "missing Hadoop configuration.");
 
         // validate arrays size
-        checkArgument(columnNames.length > 0, "DeltaSourceBuilder - empty array with column names");
-        checkArgument(columnTypes.length > 0, "DeltaSourceBuilder - empty array with column names");
+        checkArgument(columnNames.length > 0, EXCEPTION_PREFIX + "empty array with column names.");
+        checkArgument(columnTypes.length > 0, EXCEPTION_PREFIX + "empty array with column names.");
         checkArgument(columnNames.length == columnTypes.length,
-            "DeltaSourceBuilder - column names and column types size does not match.");
+            EXCEPTION_PREFIX + "column names and column types size does not match.");
 
         // validate invalid array element
         checkArgument(Stream.of(columnNames)
                 .noneMatch(StringUtils::isNullOrWhitespaceOnly),
-            "DeltaSourceBuilder - Column names array contains at least one element that is null, "
-                + "empty, or contains only whitespace characters");
+            EXCEPTION_PREFIX + "Column names array contains at least one element that is null, "
+                + "empty, or contains only whitespace characters.");
         checkArgument(Stream.of(columnTypes)
-            .noneMatch(Objects::isNull), "DeltaSourceBuilder - Column type array contains at "
+            .noneMatch(Objects::isNull), EXCEPTION_PREFIX + "Column type array contains at "
             + "least one null element.");
     }
 
@@ -327,6 +346,30 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
                 SourceUtils.pathToString(tablePath), optionName);
         }
         return option;
+    }
+
+    private void validateOptionValue(String optionName, String optionValue) {
+        boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
+        if (!valid) {
+            throw new IllegalArgumentException(
+                "Provided invalid value [" + optionValue + "] for option " + optionName);
+        }
+    }
+
+    private void validateOptionValue(String optionName, int optionValue) {
+        boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
+        if (!valid) {
+            throw new IllegalArgumentException(
+                "Provided invalid value [" + optionValue + "] for option " + optionName);
+        }
+    }
+
+    private void validateOptionValue(String optionName, long optionValue) {
+        boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
+        if (!valid) {
+            throw new IllegalArgumentException(
+                "Provided invalid value [" + optionValue + "] for option " + optionName);
+        }
     }
 
     @SuppressWarnings("unchecked")

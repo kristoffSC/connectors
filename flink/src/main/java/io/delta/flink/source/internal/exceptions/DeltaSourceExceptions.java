@@ -129,14 +129,14 @@ public final class DeltaSourceExceptions {
                 action.getClass(), snapshotVersion, tablePath));
     }
 
-    public static DeltaSourceException usedMutualExcludedOptionsException(
+    public static IllegalArgumentException usedMutualExcludedOptionsException(
         String tablePath,
-        String... excludedOption) {
+        String... mutualExcludedOptions) {
 
-        return new DeltaSourceException(
-            tablePath, null,
-            String.format("Used Mutual Excluded options for Source definition [%s]",
-                String.join(";", excludedOption)));
+        return new IllegalArgumentException(
+            String.format(
+                "Used Mutual Excluded options for Source definition for Delta table [%s]. Used "
+                    + "options [%s]", tablePath, String.join(";", mutualExcludedOptions)));
     }
 
     public static DeltaSourceException invalidOptionNameException(

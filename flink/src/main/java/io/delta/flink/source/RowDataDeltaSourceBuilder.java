@@ -254,8 +254,6 @@ public final class RowDataDeltaSourceBuilder
     public DeltaSource<RowData> build() {
 
         validateMandatoryOptions();
-
-        // TODO test this
         validateOptionExclusions();
 
         // TODO add option value validation. Check for null, empty values, numbers for

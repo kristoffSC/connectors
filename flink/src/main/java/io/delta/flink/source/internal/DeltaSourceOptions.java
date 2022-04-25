@@ -33,6 +33,10 @@ public class DeltaSourceOptions {
      */
     public static final Map<String, ConfigOption<?>> VALID_SOURCE_OPTIONS = new HashMap<>();
 
+    private static final Map<String, OptionValidator> VALIDATORS = new HashMap<>();
+
+    private static final OptionValidator DEFAULT_VALIDATOR = new OptionValidator.DefaultValidator();
+
     /**
      * An option that allow time travel to {@link io.delta.standalone.Snapshot} version to read
      * from. Applicable for {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode
@@ -138,7 +142,11 @@ public class DeltaSourceOptions {
     public static final ConfigOption<Boolean> IGNORE_CHANGES =
         ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false);
 
-    // TODO PR 9 add doc
+    /**
+     * An option to set the number of rows read per Parquet Readr per batch from underlying Parquet
+     * file. This can improve read performance reducing IO cals to Parquet file at cost of memory
+     * consumption on Task Manager nodes.
+     */
     public static final ConfigOption<Integer> PARQUET_BATCH_SIZE =
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
@@ -154,5 +162,17 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
         VALID_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
+
+        VALIDATORS.put(VERSION_AS_OF.key(), new NumberValidator());
+        VALIDATORS.put(TIMESTAMP_AS_OF.key(), new StringValidator());
+        VALIDATORS.put(STARTING_VERSION.key(), new StartingVersionValidator());
+        VALIDATORS.put(STARTING_TIMESTAMP.key(), new StringValidator());
+        VALIDATORS.put(UPDATE_CHECK_INTERVAL.key(), new NumberValidator());
+        VALIDATORS.put(UPDATE_CHECK_INITIAL_DELAY.key(), new NumberValidator());
+        VALIDATORS.put(PARQUET_BATCH_SIZE.key(), new NumberValidator());
+    }
+
+    public static OptionValidator getValidator(String optionName) {
+        return VALIDATORS.getOrDefault(optionName, DEFAULT_VALIDATOR);
     }
 }
