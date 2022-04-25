@@ -184,12 +184,6 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     // TODO PR 8 Add tests for Partitions
 
-    // TODO PR 9 for future PRs
-    //  This is a temporary method for creating DeltaSourceInternal.
-    //  The Desired state is to use DeltaSourceBuilder which was not included in this PR.
-    //  For reference how DeltaSourceInternal creation will look like please go to:
-    //  https://github.com/delta-io/connectors/pull/256/files#:~:text=testWithoutPartitions()
-
     private DeltaSource<RowData> initContinuousSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 

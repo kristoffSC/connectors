@@ -7,6 +7,7 @@ import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
 
@@ -17,8 +18,36 @@ import io.delta.standalone.actions.AddFile;
  *
  * <p>This source supports all (distributed) file systems and object stores that can be accessed
  * via the Flink's {@link FileSystem} class.
+ * <p>
+ * To create new instance of the source to a non-partitioned Delta table for stream of {@link
+ * RowData}:
+ * <pre>
+ *     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+ *     ...
+ *     // sets a source to a non-partitioned Delta table
+ *     // in {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forRowData(
+ *                new Path("s3://some/path"),
+ *                new String[] {"name", "surname", "age"},
+ *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
+ *                new Configuration())
+ *             .build();
  *
- * </p>
+ *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
+ *
+ *     ..........
+ *     // sets a source to a non-partitioned Delta table
+ *     // in {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forRowData(
+ *                new Path("s3://some/path"),
+ *                new String[] {"name", "surname", "age"},
+ *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
+ *                new Configuration())
+ *              .continuous()
+ *              .build();
+ *
+ *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
+ * </pre>
  *
  * @param <T> The type of the events/records produced by this source.
  * @implNote <h2>Batch and Streaming</h2>
@@ -40,8 +69,6 @@ import io.delta.standalone.actions.AddFile;
  * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
  * read in parallel.
  */
-// TODO PR 9 include basic bounded + continuous creation example (when BaseDeltaSourceStepBuilder
-//  .java API is finalized).
 public class DeltaSource<T> extends DeltaSourceInternal<T> {
 
     DeltaSource(

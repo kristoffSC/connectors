@@ -55,8 +55,6 @@ import io.delta.standalone.actions.AddFile;
  * responsible to select the relevant {@link AddFile} and to optionally splits files into multiple
  * regions (file source splits) that can be read in parallel.
  */
-// TODO PR 9 include basic bounded + continuous creation example (when BaseDeltaSourceStepBuilder
-//  .java API is finalized).
 public class DeltaSourceInternal<T>
     implements Source<T, DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>,
     ResultTypeQueryable<T> {
