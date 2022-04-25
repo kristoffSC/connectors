@@ -49,6 +49,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      */
     private static final int INITIAL_DATA_SIZE = 2;
 
+    /**
+     * Type of Failover
+     */
     private final FailoverType failoverType;
 
     public DeltaSourceContinuousExecutionITCaseTest(FailoverType failoverType) {
@@ -84,7 +87,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
         // FailoverType.NONE.
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new ContinuousTestDescriptor(2),
+            new ContinuousTestDescriptor(INITIAL_DATA_SIZE),
             (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
 
         // total number of read rows.
