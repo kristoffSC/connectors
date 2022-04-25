@@ -6,12 +6,12 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
-import io.delta.flink.source.VariableSource;
 import io.delta.flink.source.internal.enumerator.monitor.ChangesPerVersion;
 import io.delta.flink.source.internal.exceptions.DeltaSourceException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -23,7 +23,7 @@ import io.delta.standalone.actions.AddFile;
 public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
 
     @ParameterizedTest(name = "{index}: Actions = {0}")
-    @VariableSource("arguments_notIgnoreChangesAndNotIgnoreDeletes")
+    @MethodSource("arguments_notIgnoreChangesAndNotIgnoreDeletes")
     public void notIgnoreChangesAndNotIgnoreDeletes(
             List<Action> inputActions,
             Object expectedResults) {
@@ -34,7 +34,7 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
     }
 
     @ParameterizedTest(name = "{index}: Actions = {0}")
-    @VariableSource("arguments_notIgnoreChangesAndIgnoreDeletes")
+    @MethodSource("arguments_notIgnoreChangesAndIgnoreDeletes")
     public void notIgnoreChangesAndIgnoreDeletes(
             List<Action> inputActions,
             Object expectedResults) {
@@ -45,7 +45,7 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
     }
 
     @ParameterizedTest(name = "{index}: Actions = {0}")
-    @VariableSource("arguments_ignoreChanges")
+    @MethodSource("arguments_ignoreChanges")
     public void ignoreChangesAndIgnoreDeletes(List<Action> inputActions, Object expectedResults) {
 
         ActionProcessor processor = new ActionProcessor(true, true);
@@ -54,7 +54,7 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
     }
 
     @ParameterizedTest(name = "{index}: Actions = {0}")
-    @VariableSource("arguments_ignoreChanges")
+    @MethodSource("arguments_ignoreChanges")
     public void ignoreChangesAndNotIgnoreDeletes(
             List<Action> inputActions,
             Object expectedResults) {
@@ -113,7 +113,7 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
         return new ChangesPerVersion<>(TABLE_PATH, SNAPSHOT_VERSION, actions);
     }
 
-    private Stream<Arguments> arguments_notIgnoreChangesAndNotIgnoreDeletes() {
+    private static Stream<Arguments> arguments_notIgnoreChangesAndNotIgnoreDeletes() {
         return Stream.of(
             Arguments.of(singletonList(ADD_ACTION_DATA_CHANGE),
                 singletonList(ADD_ACTION_DATA_CHANGE)),
@@ -132,7 +132,7 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
         );
     }
 
-    private Stream<Arguments> arguments_notIgnoreChangesAndIgnoreDeletes() {
+    private static Stream<Arguments> arguments_notIgnoreChangesAndIgnoreDeletes() {
         return Stream.of(
             Arguments.of(singletonList(ADD_ACTION_DATA_CHANGE),
                 singletonList(ADD_ACTION_DATA_CHANGE)),
@@ -151,7 +151,7 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
         );
     }
 
-    private Stream<Arguments> arguments_ignoreChanges() {
+    private static Stream<Arguments> arguments_ignoreChanges() {
         return Stream.of(
             Arguments.of(singletonList(ADD_ACTION_DATA_CHANGE),
                 singletonList(ADD_ACTION_DATA_CHANGE)),
