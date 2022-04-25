@@ -264,7 +264,17 @@ public class RowDataDeltaSourceBuilderTest {
     // PR 8 ADD tests for partition validation null reference and null element.
 
     @Test
-    public void shouldValidateOptionValue() {
+    public void shouldValidateStartingTimestamp() {
+        Optional<Class<? extends Exception>> nullValue = testValidation(
+            () -> RowDataDeltaSourceBuilder.builder(
+                    new Path(TABLE_PATH),
+                    COLUMN_NAMES,
+                    COLUMN_TYPES,
+                    DeltaSinkTestUtils.getHadoopConf()
+                ).option("startingTimestamp", null)
+                .build()
+        );
+
         Optional<Class<? extends Exception>> emptyValue = testValidation(
             () -> RowDataDeltaSourceBuilder.builder(
                     new Path(TABLE_PATH),
@@ -272,6 +282,16 @@ public class RowDataDeltaSourceBuilderTest {
                     COLUMN_TYPES,
                     DeltaSinkTestUtils.getHadoopConf()
                 ).option("startingTimestamp", "")
+                .build()
+        );
+
+        Optional<Class<? extends Exception>> blankValue = testValidation(
+            () -> RowDataDeltaSourceBuilder.builder(
+                    new Path(TABLE_PATH),
+                    COLUMN_NAMES,
+                    COLUMN_TYPES,
+                    DeltaSinkTestUtils.getHadoopConf()
+                ).option("startingTimestamp", "  ")
                 .build()
         );
     }
