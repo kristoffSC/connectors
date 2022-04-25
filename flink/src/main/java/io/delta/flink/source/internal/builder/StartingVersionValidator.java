@@ -1,4 +1,6 @@
-package io.delta.flink.source.internal;
+package io.delta.flink.source.internal.builder;
+
+import io.delta.flink.source.internal.DeltaSourceOptions;
 
 public class StartingVersionValidator implements OptionValidator {
 

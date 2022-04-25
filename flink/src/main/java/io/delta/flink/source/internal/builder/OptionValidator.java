@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal;
+package io.delta.flink.source.internal.builder;
 
 public interface OptionValidator {
 

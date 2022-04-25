@@ -3,6 +3,10 @@ package io.delta.flink.source.internal;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.delta.flink.source.internal.builder.NumberValidator;
+import io.delta.flink.source.internal.builder.OptionValidator;
+import io.delta.flink.source.internal.builder.StartingVersionValidator;
+import io.delta.flink.source.internal.builder.StringValidator;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 

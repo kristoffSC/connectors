@@ -2,8 +2,8 @@ package io.delta.flink.source;
 
 import java.util.List;
 
-import io.delta.flink.source.internal.BaseDeltaSourceBuilder;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.builder.BaseDeltaSourceBuilder;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;

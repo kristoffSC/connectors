@@ -265,13 +265,15 @@ public class RowDataDeltaSourceBuilderTest {
 
     @Test
     public void shouldValidateOptionValue() {
-        RowDataDeltaSourceBuilder.builder(
-                new Path(TABLE_PATH),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                DeltaSinkTestUtils.getHadoopConf()
-            ).option("startingTimestamp", "dsfgfdsfs")
-            .build();
+        Optional<Class<? extends Exception>> emptyValue = testValidation(
+            () -> RowDataDeltaSourceBuilder.builder(
+                    new Path(TABLE_PATH),
+                    COLUMN_NAMES,
+                    COLUMN_TYPES,
+                    DeltaSinkTestUtils.getHadoopConf()
+                ).option("startingTimestamp", "")
+                .build()
+        );
     }
 
     private Optional<Class<? extends Exception>> testValidation(Producer<DeltaSource<?>> builder) {

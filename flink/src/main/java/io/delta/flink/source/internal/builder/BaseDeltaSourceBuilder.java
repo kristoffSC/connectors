@@ -1,9 +1,12 @@
-package io.delta.flink.source.internal;
+package io.delta.flink.source.internal.builder;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.DeltaSourceInternal;
+import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
