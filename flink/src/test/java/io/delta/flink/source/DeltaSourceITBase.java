@@ -341,9 +341,9 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         // Main thread waits up to 2 minutes for all threads to finish. Fails of timeout.
         List<List<T>> totalResults = new ArrayList<>();
-        totalResults.add(initialDataFuture.get(2, TimeUnit.MINUTES));
-        totalResults.add(tableUpdaterFuture.get(2, TimeUnit.MINUTES));
-        client.client.cancel().get(2, TimeUnit.MINUTES);
+        totalResults.add(initialDataFuture.get(3, TimeUnit.MINUTES));
+        totalResults.add(tableUpdaterFuture.get(3, TimeUnit.MINUTES));
+        client.client.cancel().get(3, TimeUnit.MINUTES);
 
         return totalResults;
     }
