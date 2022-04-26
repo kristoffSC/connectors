@@ -28,17 +28,17 @@ public abstract class BaseActionProcessorParameterizedTest {
 
     protected static final String PATH = TABLE_PATH + "file.parquet";
 
-    protected static final AddFile ADD_ACTION_DATA_CHANGE =
+    protected static final AddFile ADD_FILE =
         new AddFile(PATH, PARTITIONS, SIZE, System.currentTimeMillis(), true, "", TAGS);
 
-    protected static final RemoveFile REMOVE_ACTION_DATA_CHANGE =
-        ADD_ACTION_DATA_CHANGE.remove(true);
+    protected static final RemoveFile REMOVE_FILE =
+        ADD_FILE.remove(true);
 
-    protected static final AddFile ADD_ACTION_NO_DATA_CHANGE =
+    protected static final AddFile ADD_FILE_NO_CHANGE =
         new AddFile(PATH, PARTITIONS, 100, System.currentTimeMillis(), false, "", TAGS);
 
-    protected static final RemoveFile REMOVE_ACTION_NO_DATA_CHANGE =
-        ADD_ACTION_NO_DATA_CHANGE.remove(false);
+    protected static final RemoveFile REMOVE_FILE_NO_CHANGE =
+        ADD_FILE_NO_CHANGE.remove(false);
 
     protected ChangesPerVersion<Action> changesToProcess;
 
@@ -74,17 +74,18 @@ public abstract class BaseActionProcessorParameterizedTest {
      * {@link ActionProcessor#processActions(ChangesPerVersion)}
      *                          method thrown an exception during a test.
      */
+    @SuppressWarnings("unchecked")
     protected void assertResult(
-        ChangesPerVersion<AddFile> actualResult,
-        Object expectedResults,
-        boolean gotDeltaException) {
+            ChangesPerVersion<AddFile> actualResult,
+            Object expectedResults,
+            boolean gotDeltaException) {
 
         // Case when the Exception is the expected result.
         if (DeltaSourceException.class.equals(expectedResults)) {
             assertThat("An exception was expected from ActionProcessor", gotDeltaException,
                 equalTo(true));
         } else {
-            List<?> castedExpectedResults = (List<?>) expectedResults;
+            List<AddFile> castedExpectedResults = (List<AddFile>) expectedResults;
             assertThat(actualResult.getChanges().size(), equalTo(castedExpectedResults.size()));
             assertThat(
                 hasItems(castedExpectedResults.toArray()).matches(actualResult.getChanges()),
