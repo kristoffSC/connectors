@@ -2,13 +2,13 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
+import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
 
 import io.delta.standalone.actions.AddFile;
@@ -78,20 +78,17 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
         super(tablePath, readerFormat, splitEnumeratorProvider, configuration, sourceConfiguration);
     }
 
-    /**
-     * Creates a {@link RowDataDeltaSourceBuilder}
-     *
-     * @param tablePath           A {@link Path} to Delta table.
-     * @param columnNames         - An array of string with column names that should be read from
-     *                            Delta table.
-     * @param columnTypes         An array of {@link LogicalType} objects describing a data type for
-     *                            each column name defined in {@code columnNames} parameter.
-     * @param hadoopConfiguration A Hadoop configuration object.
-     */
-    public static RowDataDeltaSourceBuilder forRowData(
-        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
+    public static <T> BoundedDeltaSourceBuilder<T> boundedSourceBuilder(
+        Path tablePath, DeltaBulkFormat<T> bulkFormat,
         Configuration hadoopConfiguration) {
-        return RowDataDeltaSourceBuilder.builder(
-            tablePath, columnNames, columnTypes, hadoopConfiguration);
+
+        return new BoundedDeltaSourceBuilder<>(tablePath, bulkFormat, hadoopConfiguration);
+    }
+
+    public static <T> ContinuousDeltaSourceBuilder<T> continuousSourceBuilder(
+        Path tablePath, DeltaBulkFormat<T> bulkFormat,
+        Configuration hadoopConfiguration) {
+
+        return new ContinuousDeltaSourceBuilder<>(tablePath, bulkFormat, hadoopConfiguration);
     }
 }

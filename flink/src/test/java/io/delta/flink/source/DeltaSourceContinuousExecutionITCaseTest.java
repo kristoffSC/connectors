@@ -15,6 +15,7 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -198,12 +199,16 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     private DeltaSource<RowData> initContinuousSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 
-        return DeltaSource.forRowData(
-                Path.fromLocalFile(new File(tablePath)),
-                columnNames,
-                columnTypes,
-                DeltaTestUtils.getHadoopConf())
-            .continuousMode()
+        Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
+
+        RowDataFormat dataFormat = RowDataFormat
+            .builder(columnNames, columnTypes, hadoopConf)
             .build();
+
+        return DeltaSource.continuousSourceBuilder(
+            Path.fromLocalFile(new File(tablePath)),
+            dataFormat,
+            hadoopConf
+        ).build();
     }
 }

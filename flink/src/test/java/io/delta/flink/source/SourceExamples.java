@@ -1,11 +1,11 @@
 package io.delta.flink.source;
 
-import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.hadoop.conf.Configuration;
 
 public class SourceExamples {
 
@@ -15,56 +15,81 @@ public class SourceExamples {
     protected static final String[] COLUMN_NAMES = {"name", "surname", "age"};
 
     public void builderBounded() {
-        DeltaSource<RowData> source = DeltaSource.forRowData(
-                new Path("s3://some/path"),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                DeltaSinkTestUtils.getHadoopConf())
+        Configuration hadoopConf = new Configuration();
+
+        RowDataFormat dataFormat = RowDataFormat
+            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
             .build();
+
+        DeltaSource<RowData> source = DeltaSource.boundedSourceBuilder(
+            new Path("s3://some/path"),
+            dataFormat,
+            hadoopConf
+        ).build();
     }
 
     public void builderContinuous() {
-        DeltaSource<RowData> source = DeltaSource.forRowData(
+        Configuration hadoopConf = new Configuration();
+
+        RowDataFormat dataFormat = RowDataFormat
+            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
+            .build();
+
+        DeltaSource<RowData> source = DeltaSource.continuousSourceBuilder(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                DeltaSinkTestUtils.getHadoopConf())
-            .continuousMode()
+                dataFormat,
+                hadoopConf
+            )
             .build();
     }
 
-    // Starting from here all examples are using DeltaSourceBuilder and not DeltaSourceStepBuilder
-    // In both implementations, options are defined in the same way.
     public void builderBoundedPublicOption() {
-        DeltaSource<RowData> source = DeltaSource.forRowData(
+        Configuration hadoopConf = new Configuration();
+
+        RowDataFormat dataFormat = RowDataFormat
+            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
+            .build();
+
+        DeltaSource<RowData> source = DeltaSource.boundedSourceBuilder(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                DeltaSinkTestUtils.getHadoopConf())
-            .ignoreChanges(true)
+                dataFormat,
+                hadoopConf
+            )
+            .versionAsOf(10)
             .build();
     }
 
     public void builderContinuousPublicOption() {
-        DeltaSource<RowData> source = DeltaSource.forRowData(
+        Configuration hadoopConf = new Configuration();
+
+        RowDataFormat dataFormat = RowDataFormat
+            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
+            .build();
+
+        DeltaSource<RowData> source = DeltaSource.continuousSourceBuilder(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                DeltaSinkTestUtils.getHadoopConf())
-            .ignoreChanges(true)
-            .continuousMode()
-            //.ignoreChanges(true)
+                dataFormat,
+                hadoopConf
+            )
+            .updateCheckIntervalMillis(1000)
+            .startingVersion(10)
             .build();
     }
 
     public void builderContinuousNonPublicOption() {
-        DeltaSource<RowData> source = DeltaSource.forRowData(
+
+        Configuration hadoopConf = new Configuration();
+
+        RowDataFormat dataFormat = RowDataFormat
+            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
+            .build();
+
+        DeltaSource<RowData> source = DeltaSource.continuousSourceBuilder(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                DeltaSinkTestUtils.getHadoopConf())
-            .continuousMode()
-            .option("parquetBatchSize", 1024)
+                dataFormat,
+                hadoopConf
+            )
+            .startingVersion(10)
             .build();
     }
 

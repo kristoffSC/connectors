@@ -1,14 +1,10 @@
 package io.delta.flink.source.internal.builder;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
 import io.delta.flink.source.internal.DeltaSourceOptions;
-import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
-import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.file.DeltaFileEnumerator;
@@ -18,19 +14,11 @@ import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.formats.parquet.ParquetColumnarRowInputFormat;
-import org.apache.flink.table.types.logical.LogicalType;
-import org.apache.flink.table.types.logical.RowType;
-import org.apache.flink.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_DELETES;
-import static io.delta.flink.source.internal.DeltaSourceOptions.PARQUET_BATCH_SIZE;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
-import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
-import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
@@ -51,41 +39,9 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         DEFAULT_SPLITTABLE_FILE_ENUMERATOR = DeltaFileEnumerator::new;
 
     /**
-     * The provider for {@link org.apache.flink.api.connector.source.SplitEnumerator} in {@link
-     * org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
-     */
-    protected static final BoundedSplitEnumeratorProvider
-        DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER =
-        new BoundedSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
-            DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
-
-    /**
-     * The provider for {@link org.apache.flink.api.connector.source.SplitEnumerator} in {@link
-     * org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode.
-     */
-    protected static final ContinuousSplitEnumeratorProvider
-        DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER =
-        new ContinuousSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
-            DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
-
-    /**
      * Message prefix for validation exceptions.
      */
     protected static final String EXCEPTION_PREFIX = "DeltaSourceBuilder - ";
-
-    // -------------- Hardcoded Non Public Options ----------
-    /**
-     * Hardcoded option for {@link ParquetColumnarRowInputFormat} to threat timestamps as a UTC
-     * timestamps.
-     */
-    protected static final boolean PARQUET_UTC_TIMESTAMP = true;
-
-    /**
-     * Hardcoded option for {@link ParquetColumnarRowInputFormat} to use case-sensitive in column
-     * name processing for Parquet files.
-     */
-    protected static final boolean PARQUET_CASE_SENSITIVE = true;
-    // ------------------------------------------------------
 
     /**
      * A placeholder object for Delta source configuration used for {@link BaseDeltaSourceBuilder}
@@ -99,17 +55,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      */
     protected final Path tablePath;
 
-    /**
-     * A array of column names that should be raed from Delta table by created {@link
-     * io.delta.flink.source.DeltaSource}.
-     */
-    protected final String[] columnNames;
-
-    /**
-     * A array of column types ({@link LogicalType} corresponding to {@link
-     * BaseDeltaSourceBuilder#columnNames}.
-     */
-    protected final LogicalType[] columnTypes;
+    protected final DeltaBulkFormat<T> bulkFormat;
 
     /**
      * The Hadoop's {@link Configuration} for this Source.
@@ -132,158 +78,11 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     protected List<String> partitions;
 
     protected BaseDeltaSourceBuilder(
-        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
+        Path tablePath, DeltaBulkFormat<T> bulkFormat,
         Configuration hadoopConfiguration) {
         this.tablePath = tablePath;
-        this.columnNames = columnNames;
-        this.columnTypes = columnTypes;
+        this.bulkFormat = bulkFormat;
         this.hadoopConfiguration = hadoopConfiguration;
-    }
-
-    protected static ParquetColumnarRowInputFormat<DeltaSourceSplit> buildFormatWithoutPartitions(
-        String[] columnNames, LogicalType[] columnTypes, Configuration configuration,
-        DeltaSourceConfiguration sourceConfiguration) {
-
-        return new ParquetColumnarRowInputFormat<>(
-            configuration,
-            RowType.of(columnTypes, columnNames),
-            sourceConfiguration.getValue(PARQUET_BATCH_SIZE),
-            PARQUET_UTC_TIMESTAMP,
-            PARQUET_CASE_SENSITIVE);
-    }
-
-    /**
-     * Sets "versionAsOf"
-     */
-    public SELF versionAsOf(long snapshotVersion) {
-        validateOptionValue(VERSION_AS_OF.key(), snapshotVersion);
-        sourceConfiguration.addOption(VERSION_AS_OF.key(), snapshotVersion);
-        return self();
-    }
-
-    /**
-     * Sets "timestampAsOf"
-     */
-    public SELF timestampAsOf(String snapshotTimestamp) {
-        validateOptionValue(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
-        sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
-        return self();
-    }
-
-    /**
-     * Sets "startingVersion"
-     */
-    public SELF startingVersion(String startingVersion) {
-        validateOptionValue(STARTING_VERSION.key(), startingVersion);
-        sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
-        return self();
-    }
-
-    /**
-     * Sets "startingTimestamp"
-     */
-    public SELF startingTimestamp(String startingTimestamp) {
-        validateOptionValue(STARTING_TIMESTAMP.key(), startingTimestamp);
-        sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
-        return self();
-    }
-
-    /**
-     * Sets "updateCheckIntervalMillis"
-     */
-    public SELF updateCheckIntervalMillis(long updateCheckInterval) {
-        validateOptionValue(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
-        sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
-        return self();
-    }
-
-    /**
-     * Sets "ignoreDeletes" flag
-     */
-    public SELF ignoreDeletes(boolean ignoreDeletes) {
-        sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreDeletes);
-        return self();
-    }
-
-    /**
-     * Sets "ignoreChanges" flag
-     */
-    public SELF ignoreChanges(boolean ignoreChanges) {
-        sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreChanges);
-        return self();
-    }
-
-    /**
-     * Sets a configuration option.
-     *
-     * @param optionName  Option name to set.
-     * @param optionValue Option {@link String} value to set.
-     */
-    public SELF option(String optionName, String optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        validateOptionValue(configOption.key(), optionValue);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    /**
-     * Sets a configuration option.
-     *
-     * @param optionName  Option name to set.
-     * @param optionValue Option boolean value to set.
-     */
-    public SELF option(String optionName, boolean optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    /**
-     * Sets a configuration option.
-     *
-     * @param optionName  Option name to set.
-     * @param optionValue Option int value to set.
-     */
-    public SELF option(String optionName, int optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        validateOptionValue(configOption.key(), optionValue);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    /**
-     * Sets a configuration option.
-     *
-     * @param optionName  Option name to set.
-     * @param optionValue Option long value to set.
-     */
-    public SELF option(String optionName, long optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        validateOptionValue(configOption.key(), optionValue);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    /**
-     * Set list of partition columns.
-     */
-    public SELF partitions(List<String> partitions) {
-        checkNotNull(partitions, EXCEPTION_PREFIX + "partition list cannot be null.");
-        checkArgument(partitions.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
-            EXCEPTION_PREFIX
-                + "List with partition columns contains at least one element that is null, "
-                + "empty, or contains only whitespace characters.");
-
-        this.partitions = partitions;
-        return self();
-    }
-
-    /**
-     * Sets source to work in Continuous mode.
-     */
-    public SELF continuousMode() {
-        this.continuousMode = true;
-        return self();
     }
 
     public abstract <V extends DeltaSourceInternal<T>> V build();
@@ -292,7 +91,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
 
         // validate against null references
         checkNotNull(tablePath, EXCEPTION_PREFIX + "missing path to Delta table.");
-        checkNotNull(columnNames, EXCEPTION_PREFIX + "missing Delta table column names.");
+        /*checkNotNull(columnNames, EXCEPTION_PREFIX + "missing Delta table column names.");
         checkNotNull(columnTypes, EXCEPTION_PREFIX + "missing Delta table column types.");
         checkNotNull(hadoopConfiguration, EXCEPTION_PREFIX + "missing Hadoop configuration.");
 
@@ -309,7 +108,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
                 + "empty, or contains only whitespace characters.");
         checkArgument(Stream.of(columnTypes)
             .noneMatch(Objects::isNull), EXCEPTION_PREFIX + "Column type array contains at "
-            + "least one null element.");
+            + "least one null element.");*/
     }
 
     protected void validateOptionExclusions() {
@@ -342,7 +141,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         return this.continuousMode;
     }
 
-    private ConfigOption<?> validateOptionName(String optionName) {
+    protected ConfigOption<?> validateOptionName(String optionName) {
         ConfigOption<?> option = DeltaSourceOptions.VALID_SOURCE_OPTIONS.get(optionName);
         if (option == null) {
             throw DeltaSourceExceptions.invalidOptionNameException(
@@ -351,7 +150,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         return option;
     }
 
-    private void validateOptionValue(String optionName, String optionValue) {
+    protected void validateOptionValue(String optionName, String optionValue) {
         boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
         if (!valid) {
             throw new IllegalArgumentException(
@@ -359,7 +158,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         }
     }
 
-    private void validateOptionValue(String optionName, int optionValue) {
+    protected void validateOptionValue(String optionName, int optionValue) {
         boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
         if (!valid) {
             throw new IllegalArgumentException(
@@ -367,7 +166,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
         }
     }
 
-    private void validateOptionValue(String optionName, long optionValue) {
+    protected void validateOptionValue(String optionName, long optionValue) {
         boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
         if (!valid) {
             throw new IllegalArgumentException(
@@ -376,7 +175,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     }
 
     @SuppressWarnings("unchecked")
-    private SELF self() {
+    protected SELF self() {
         return (SELF) this;
     }
 }
