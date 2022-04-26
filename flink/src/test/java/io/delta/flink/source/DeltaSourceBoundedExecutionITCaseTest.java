@@ -11,8 +11,6 @@ import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.BigIntType;
-import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.junit.After;
 import org.junit.Before;
@@ -20,8 +18,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.assertThat;
 
 @RunWith(Parameterized.class)
 public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
@@ -59,8 +57,8 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         DeltaSource<RowData> deltaSource =
             initBoundedSource(
                 nonPartitionedLargeTablePath,
-                new String[]{"col1", "col2", "col3"},
-                new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
+                LARGE_TABLE_COLUMN_NAMES,
+                LARGE_TABLE_COLUMN_TYPES);
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if

@@ -12,8 +12,6 @@ import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.BigIntType;
-import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
@@ -24,7 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @RunWith(Parameterized.class)
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
@@ -44,6 +42,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      */
     private static final int INITIAL_DATA_SIZE = 2;
 
+    /**
+     * Type of Failover
+     */
     private final FailoverType failoverType;
 
     public DeltaSourceContinuousExecutionITCaseTest(FailoverType failoverType) {
@@ -72,13 +73,17 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
+            initContinuousSource(
+                nonPartitionedTablePath,
+                SMALL_TABLE_COLUMN_NAMES,
+                SMALL_TABLE_COLUMN_TYPES
+            );
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
         // FailoverType.NONE.
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new ContinuousTestDescriptor(2),
+            new ContinuousTestDescriptor(INITIAL_DATA_SIZE),
             (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
 
         // total number of read rows.
@@ -106,8 +111,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         DeltaSource<RowData> deltaSource =
             initContinuousSource(
                 nonPartitionedLargeTablePath,
-                new String[]{"col1", "col2", "col3"},
-                new LogicalType[]{new BigIntType(), new BigIntType(), new CharType()});
+                LARGE_TABLE_COLUMN_NAMES,
+                LARGE_TABLE_COLUMN_TYPES
+            );
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -137,7 +143,11 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES, COLUMN_TYPES);
+            initContinuousSource(
+                nonPartitionedTablePath,
+                SMALL_TABLE_COLUMN_NAMES,
+                SMALL_TABLE_COLUMN_TYPES
+            );
 
         ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
 
@@ -177,7 +187,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
                 newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
             }
-            testDescriptor.add(RowType.of(COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES), newRows);
+            testDescriptor.add(
+                RowType.of(SMALL_TABLE_COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES), newRows);
         }
         return testDescriptor;
     }

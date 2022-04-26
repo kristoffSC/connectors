@@ -29,6 +29,7 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
+import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -43,7 +44,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     @ClassRule
     public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
-    protected static final LogicalType[] COLUMN_TYPES =
+    protected static final LogicalType[] SMALL_TABLE_COLUMN_TYPES =
         {new CharType(), new CharType(), new IntType()};
 
     protected static final Set<String> SMALL_TABLE_EXPECTED_VALUES =
@@ -52,6 +53,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final String[] SMALL_TABLE_COLUMN_NAMES = {"name", "surname", "age"};
 
     protected static final int SMALL_TABLE_COUNT = 2;
+
+    protected static final String[] LARGE_TABLE_COLUMN_NAMES = {"col1", "col2", "col3"};
+
+    protected static final LogicalType[] LARGE_TABLE_COLUMN_TYPES =
+        {new BigIntType(), new BigIntType(), new CharType()};
 
     protected static final int LARGE_TABLE_RECORD_COUNT = 1100;
 
@@ -296,8 +302,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
      *       <li>
      *           When the main thread sees that fail.complete was executed by the Source
      *          thread, it triggers the "generic" failover based on failoverType by calling
-     *          {@code triggerFailover(
-     *          ...)}.
+     *          {@code triggerFailover(...)}.
      *      </li>
      *      <li>
      *          After failover is complied, the main thread calls
@@ -355,11 +360,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
             RecordCounterToFail::continueProcessing,
             miniClusterResource.getMiniCluster());
 
-        // Main thread waits up to 2 mMinutes for all threads to finish. Fails of timeout.
+        // Main thread waits up to 2 minutes for all threads to finish. Fails of timeout.
         List<List<T>> totalResults = new ArrayList<>();
-        totalResults.add(initialDataFuture.get(2, TimeUnit.MINUTES));
-        totalResults.add(tableUpdaterFuture.get(2, TimeUnit.MINUTES));
-        client.client.cancel().get(2, TimeUnit.MINUTES);
+        totalResults.add(initialDataFuture.get(3, TimeUnit.MINUTES));
+        totalResults.add(tableUpdaterFuture.get(3, TimeUnit.MINUTES));
+        client.client.cancel().get(3, TimeUnit.MINUTES);
 
         return totalResults;
     }
