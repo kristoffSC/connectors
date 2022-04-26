@@ -46,7 +46,7 @@ public abstract class BaseActionProcessorParameterizedTest {
         ActionProcessor processor) {
         boolean gotDeltaException = false;
 
-        // GIVEN dataChangeFlag == true;
+        // GIVEN
         changesToProcess = prepareChangesToProcess(inputActions);
 
         // WHEN

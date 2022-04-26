@@ -112,9 +112,9 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
         );
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    // test case & arguments for ignoreChanges = true and ignoreDeletes = true //
-    /////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////
+    // test case & arguments for ignoreChanges = true and ignoreDeletes = true/false //
+    ///////////////////////////////////////////////////////////////////////////////////
     @ParameterizedTest(name = "{index}: Actions = {0}")
     @MethodSource("arguments_ignoreChanges")
     public void ignoreChangesAndIgnoreDeletes(List<Action> inputActions, Object expectedResults) {
@@ -124,9 +124,6 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
         testProcessor(inputActions, expectedResults, processor);
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    // test case & arguments for ignoreChanges = true and ignoreDeletes = true //
-    /////////////////////////////////////////////////////////////////////////////
     @ParameterizedTest(name = "{index}: Actions = {0}")
     @MethodSource("arguments_ignoreChanges")
     public void ignoreChangesAndNotIgnoreDeletes(
@@ -159,6 +156,10 @@ public class ActionProcessorTest extends BaseActionProcessorParameterizedTest {
             Arguments.of(asList(ADD_FILE_NO_CHANGE, REMOVE_FILE_NO_CHANGE), emptyList())
         );
     }
+
+    //////////////////////
+    // Other test cases //
+    //////////////////////
 
     @Test
     public void shouldThrowIfInvalidActionInVersion() {
