@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.source.internal.builder;
 
 import java.util.List;
 import java.util.Objects;
@@ -21,13 +21,13 @@ public class RowDataFormatBuilder {
 
     // -------------- Hardcoded Non Public Options ----------
     /**
-     * Hardcoded option for {@link RowDataFormat} to threat timestamps as a UTC
+     * Hardcoded option for {@link InnerRowDataFormat} to threat timestamps as a UTC
      * timestamps.
      */
     protected static final boolean PARQUET_UTC_TIMESTAMP = true;
 
     /**
-     * Hardcoded option for {@link RowDataFormat} to use case-sensitive in column
+     * Hardcoded option for {@link InnerRowDataFormat} to use case-sensitive in column
      * name processing for Parquet files.
      */
     protected static final boolean PARQUET_CASE_SENSITIVE = true;
@@ -41,7 +41,7 @@ public class RowDataFormatBuilder {
 
     private List<String> partitions;
 
-    RowDataFormatBuilder(String[] columnNames,
+    public RowDataFormatBuilder(String[] columnNames,
         LogicalType[] columnTypes, Configuration hadoopConfiguration) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
@@ -62,9 +62,9 @@ public class RowDataFormatBuilder {
         return this;
     }
 
-    public RowDataFormat build() {
+    public InnerRowDataFormat build() {
         validateMandatoryOptions();
-        RowDataFormat format;
+        InnerRowDataFormat format;
         if (partitions == null || partitions.isEmpty()) {
             format = buildFormatWithoutPartitions(columnNames, columnTypes, hadoopConfiguration);
         } else {
@@ -77,10 +77,10 @@ public class RowDataFormatBuilder {
         return format;
     }
 
-    private RowDataFormat buildFormatWithoutPartitions(
+    private InnerRowDataFormat buildFormatWithoutPartitions(
         String[] columnNames, LogicalType[] columnTypes, Configuration configuration) {
 
-        return new RowDataFormat(
+        return new InnerRowDataFormat(
             configuration,
             RowType.of(columnTypes, columnNames),
             2048, // get this from user...
@@ -89,7 +89,7 @@ public class RowDataFormatBuilder {
     }
 
     // TODO PR 8
-    private RowDataFormat buildPartitionedFormat(
+    private InnerRowDataFormat buildPartitionedFormat(
         String[] columnNames, LogicalType[] columnTypes, Configuration configuration,
         List<String> partitionKeys, DeltaSourceConfiguration sourceConfiguration) {
 

@@ -201,13 +201,10 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
-        RowDataFormat dataFormat = RowDataFormat
-            .builder(columnNames, columnTypes, hadoopConf)
-            .build();
-
-        return DeltaSource.continuousSourceBuilder(
+        return DeltaSource.continuousRowDataSourceBuilder(
             Path.fromLocalFile(new File(tablePath)),
-            dataFormat,
+            columnNames,
+            columnTypes,
             hadoopConf
         ).build();
     }

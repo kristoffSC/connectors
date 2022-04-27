@@ -9,8 +9,7 @@ import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
 
-public class BoundedDeltaSourceBuilder<T>
-    extends BaseDeltaSourceBuilder<T, BoundedDeltaSourceBuilder<T>> {
+public class BoundedDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
 
     /**
      * The provider for {@link org.apache.flink.api.connector.source.SplitEnumerator} in {@link

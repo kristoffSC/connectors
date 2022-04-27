@@ -24,7 +24,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * The base Builder class for {@link io.delta.flink.source.DeltaSource}
  */
-public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuilder<T, SELF>> {
+public abstract class BaseDeltaSourceBuilder<T> {
 
     /**
      * The provider for {@link FileSplitAssigner}.
@@ -172,10 +172,5 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
             throw new IllegalArgumentException(
                 "Provided invalid value [" + optionValue + "] for option " + optionName);
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    protected SELF self() {
-        return (SELF) this;
     }
 }

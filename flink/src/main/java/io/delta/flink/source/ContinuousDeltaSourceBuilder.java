@@ -11,8 +11,7 @@ import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTA
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
 import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
-public class ContinuousDeltaSourceBuilder<T>
-    extends BaseDeltaSourceBuilder<T, ContinuousDeltaSourceBuilder<T>> {
+public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
 
     /**
      * The provider for {@link org.apache.flink.api.connector.source.SplitEnumerator} in {@link

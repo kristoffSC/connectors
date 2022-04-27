@@ -2,13 +2,14 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
-import io.delta.flink.source.internal.builder.DeltaBulkFormat;
+import io.delta.flink.source.internal.builder.InnerRowDataFormat;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
 
 import io.delta.standalone.actions.AddFile;
@@ -24,26 +25,28 @@ import io.delta.standalone.actions.AddFile;
  * <pre>
  *     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
  *     ...
- *     // sets a source to a non-partitioned Delta table
- *     // in {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
- *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forRowData(
+ *     // {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.boundedRowDataSourceBuilder(
  *                new Path("s3://some/path"),
  *                new String[] {"name", "surname", "age"},
  *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
- *                new Configuration())
+ *                new Configuration()
+ *             )
+ *             .versionAsOf(10)
  *             .build();
  *
  *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
  *
  *     ..........
- *     // sets a source to a non-partitioned Delta table
- *     // in {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
- *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forRowData(
+ *     // {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.continuousRowDataSourceBuilder(
  *                new Path("s3://some/path"),
  *                new String[] {"name", "surname", "age"},
  *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
- *                new Configuration())
- *              .continuous()
+ *                new Configuration()
+*               )
+ *              .updateCheckIntervalMillis(1000)
+ *              .startingVersion(10)
  *              .build();
  *
  *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
@@ -78,16 +81,24 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
         super(tablePath, readerFormat, splitEnumeratorProvider, configuration, sourceConfiguration);
     }
 
-    public static <T> BoundedDeltaSourceBuilder<T> boundedSourceBuilder(
-        Path tablePath, DeltaBulkFormat<T> bulkFormat,
+    public static BoundedDeltaSourceBuilder<RowData> boundedRowDataSourceBuilder(
+        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
+
+        InnerRowDataFormat bulkFormat = InnerRowDataFormat
+            .builder(columnNames, columnTypes, hadoopConfiguration)
+            .build();
 
         return new BoundedDeltaSourceBuilder<>(tablePath, bulkFormat, hadoopConfiguration);
     }
 
-    public static <T> ContinuousDeltaSourceBuilder<T> continuousSourceBuilder(
-        Path tablePath, DeltaBulkFormat<T> bulkFormat,
+    public static ContinuousDeltaSourceBuilder<RowData> continuousRowDataSourceBuilder(
+        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
+
+        InnerRowDataFormat bulkFormat = InnerRowDataFormat
+            .builder(columnNames, columnTypes, hadoopConfiguration)
+            .build();
 
         return new ContinuousDeltaSourceBuilder<>(tablePath, bulkFormat, hadoopConfiguration);
     }

@@ -17,13 +17,10 @@ public class SourceExamples {
     public void builderBounded() {
         Configuration hadoopConf = new Configuration();
 
-        RowDataFormat dataFormat = RowDataFormat
-            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
-            .build();
-
-        DeltaSource<RowData> source = DeltaSource.boundedSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.boundedRowDataSourceBuilder(
             new Path("s3://some/path"),
-            dataFormat,
+            COLUMN_NAMES,
+            COLUMN_TYPES,
             hadoopConf
         ).build();
     }
@@ -31,13 +28,10 @@ public class SourceExamples {
     public void builderContinuous() {
         Configuration hadoopConf = new Configuration();
 
-        RowDataFormat dataFormat = RowDataFormat
-            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
-            .build();
-
-        DeltaSource<RowData> source = DeltaSource.continuousSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.continuousRowDataSourceBuilder(
                 new Path("s3://some/path"),
-                dataFormat,
+                COLUMN_NAMES,
+                COLUMN_TYPES,
                 hadoopConf
             )
             .build();
@@ -46,13 +40,10 @@ public class SourceExamples {
     public void builderBoundedPublicOption() {
         Configuration hadoopConf = new Configuration();
 
-        RowDataFormat dataFormat = RowDataFormat
-            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
-            .build();
-
-        DeltaSource<RowData> source = DeltaSource.boundedSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.boundedRowDataSourceBuilder(
                 new Path("s3://some/path"),
-                dataFormat,
+                COLUMN_NAMES,
+                COLUMN_TYPES,
                 hadoopConf
             )
             .versionAsOf(10)
@@ -62,13 +53,10 @@ public class SourceExamples {
     public void builderContinuousPublicOption() {
         Configuration hadoopConf = new Configuration();
 
-        RowDataFormat dataFormat = RowDataFormat
-            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
-            .build();
-
-        DeltaSource<RowData> source = DeltaSource.continuousSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.continuousRowDataSourceBuilder(
                 new Path("s3://some/path"),
-                dataFormat,
+                COLUMN_NAMES,
+                COLUMN_TYPES,
                 hadoopConf
             )
             .updateCheckIntervalMillis(1000)
@@ -80,13 +68,10 @@ public class SourceExamples {
 
         Configuration hadoopConf = new Configuration();
 
-        RowDataFormat dataFormat = RowDataFormat
-            .builder(COLUMN_NAMES, COLUMN_TYPES, hadoopConf)
-            .build();
-
-        DeltaSource<RowData> source = DeltaSource.continuousSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.continuousRowDataSourceBuilder(
                 new Path("s3://some/path"),
-                dataFormat,
+                COLUMN_NAMES,
+                COLUMN_TYPES,
                 hadoopConf
             )
             .startingVersion(10)
