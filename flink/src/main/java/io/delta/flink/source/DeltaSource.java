@@ -2,7 +2,6 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
-import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
@@ -23,28 +22,34 @@ import io.delta.standalone.actions.AddFile;
  * RowData}:
  * <pre>
  *     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+ *     Configuration hadoopConf = new Configuration();
+ *     RowDataFormat format = RowDataFormat.builder(
+ *                  new String[] {"name", "surname", "age"},
+ *                  new LogicalType[] {new CharType(), new CharType(), new IntType()},
+ *                  hadoopConf
+*                  ).build();
  *     ...
- *     // sets a source to a non-partitioned Delta table
- *     // in {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
- *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forRowData(
- *                new Path("s3://some/path"),
- *                new String[] {"name", "surname", "age"},
- *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
- *                new Configuration())
- *             .build();
+ *     // {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.boundedSourceBuilder(
+ *                   new Path("s3://some/path"),
+ *                   format,
+ *                   hadoopConf
+*                 )
+ *                .versionAsOf(10)
+ *                .build();
  *
  *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
  *
  *     ..........
- *     // sets a source to a non-partitioned Delta table
- *     // in {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
- *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forRowData(
- *                new Path("s3://some/path"),
- *                new String[] {"name", "surname", "age"},
- *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
- *                new Configuration())
- *              .continuous()
- *              .build();
+ *     // {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.continuousSourceBuilder(
+ *                  new Path("s3://some/path"),
+ *                  format,
+ *                  hadoopConf
+*                )
+*                .updateCheckIntervalMillis(1000)
+*                .startingVersion(10)
+*                .build();
  *
  *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
  * </pre>

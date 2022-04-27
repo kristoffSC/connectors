@@ -55,7 +55,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
      */
     protected final Path tablePath;
 
-    protected final DeltaBulkFormat<T> bulkFormat;
+    protected final DeltaBulkFormatInternal<T> bulkFormat;
 
     /**
      * The Hadoop's {@link Configuration} for this Source.
@@ -78,7 +78,7 @@ public abstract class BaseDeltaSourceBuilder<T, SELF extends BaseDeltaSourceBuil
     protected List<String> partitions;
 
     protected BaseDeltaSourceBuilder(
-        Path tablePath, DeltaBulkFormat<T> bulkFormat,
+        Path tablePath, DeltaBulkFormatInternal<T> bulkFormat,
         Configuration hadoopConfiguration) {
         this.tablePath = tablePath;
         this.bulkFormat = bulkFormat;

@@ -1,7 +1,6 @@
 package io.delta.flink.source;
 
 import io.delta.flink.source.internal.builder.BaseDeltaSourceBuilder;
-import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
