@@ -21,13 +21,13 @@ public class RowDataFormatBuilder {
 
     // -------------- Hardcoded Non Public Options ----------
     /**
-     * Hardcoded option for {@link InnerRowDataFormat} to threat timestamps as a UTC
+     * Hardcoded option for {@link RowDataFormat} to threat timestamps as a UTC
      * timestamps.
      */
     protected static final boolean PARQUET_UTC_TIMESTAMP = true;
 
     /**
-     * Hardcoded option for {@link InnerRowDataFormat} to use case-sensitive in column
+     * Hardcoded option for {@link RowDataFormat} to use case-sensitive in column
      * name processing for Parquet files.
      */
     protected static final boolean PARQUET_CASE_SENSITIVE = true;
@@ -62,9 +62,9 @@ public class RowDataFormatBuilder {
         return this;
     }
 
-    public InnerRowDataFormat build() {
+    public RowDataFormat build() {
         validateMandatoryOptions();
-        InnerRowDataFormat format;
+        RowDataFormat format;
         if (partitions == null || partitions.isEmpty()) {
             format = buildFormatWithoutPartitions(columnNames, columnTypes, hadoopConfiguration);
         } else {
@@ -77,10 +77,10 @@ public class RowDataFormatBuilder {
         return format;
     }
 
-    private InnerRowDataFormat buildFormatWithoutPartitions(
+    private RowDataFormat buildFormatWithoutPartitions(
         String[] columnNames, LogicalType[] columnTypes, Configuration configuration) {
 
-        return new InnerRowDataFormat(
+        return new RowDataFormat(
             configuration,
             RowType.of(columnTypes, columnNames),
             2048, // get this from user...
@@ -89,7 +89,7 @@ public class RowDataFormatBuilder {
     }
 
     // TODO PR 8
-    private InnerRowDataFormat buildPartitionedFormat(
+    private RowDataFormat buildPartitionedFormat(
         String[] columnNames, LogicalType[] columnTypes, Configuration configuration,
         List<String> partitionKeys, DeltaSourceConfiguration sourceConfiguration) {
 

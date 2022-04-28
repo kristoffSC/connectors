@@ -8,16 +8,16 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
-public class InnerRowDataFormat extends ParquetColumnarRowInputFormat<DeltaSourceSplit>
+public class RowDataFormat extends ParquetColumnarRowInputFormat<DeltaSourceSplit>
     implements DeltaBulkFormat<RowData> {
 
-    InnerRowDataFormat(Configuration hadoopConfig,
+    RowDataFormat(Configuration hadoopConfig,
         RowType projectedType, int batchSize,
         boolean isUtcTimestamp, boolean isCaseSensitive) {
         super(hadoopConfig, projectedType, batchSize, isUtcTimestamp, isCaseSensitive);
     }
 
-    InnerRowDataFormat(Configuration hadoopConfig,
+    RowDataFormat(Configuration hadoopConfig,
         RowType projectedType, RowType producedType,
         ColumnBatchFactory<DeltaSourceSplit> batchFactory,
         int batchSize, boolean isUtcTimestamp, boolean isCaseSensitive) {

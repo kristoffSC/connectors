@@ -2,7 +2,7 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
-import io.delta.flink.source.internal.builder.InnerRowDataFormat;
+import io.delta.flink.source.internal.builder.RowDataFormat;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
@@ -85,7 +85,7 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
         Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
 
-        InnerRowDataFormat bulkFormat = InnerRowDataFormat
+        RowDataFormat bulkFormat = RowDataFormat
             .builder(columnNames, columnTypes, hadoopConfiguration)
             .build();
 
@@ -96,7 +96,7 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
         Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
 
-        InnerRowDataFormat bulkFormat = InnerRowDataFormat
+        RowDataFormat bulkFormat = RowDataFormat
             .builder(columnNames, columnTypes, hadoopConfiguration)
             .build();
 
