@@ -2,6 +2,8 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.builder.ContinuousDeltaSourceBuilder;
 import io.delta.flink.source.internal.builder.DeltaBulkFormat;
+import io.delta.flink.source.internal.builder.FormatBuilder;
+import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
@@ -10,9 +12,9 @@ public class RowDataContinuousDeltaSourceBuilder
     extends ContinuousDeltaSourceBuilder<RowData, RowDataContinuousDeltaSourceBuilder> {
 
     RowDataContinuousDeltaSourceBuilder(Path tablePath,
-        DeltaBulkFormat<RowData> bulkFormat,
+        FormatBuilder<RowData> formatBuilder,
         Configuration hadoopConfiguration) {
-        super(tablePath, bulkFormat, hadoopConfiguration);
+        super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
     //////////////////////////////////////////////////////////
@@ -73,13 +75,13 @@ public class RowDataContinuousDeltaSourceBuilder
 
     @Override
     @SuppressWarnings("unchecked")
-    public DeltaSource<RowData> build() {
-        validateMandatoryOptions();
-        validateOptionExclusions();
+    public DeltaSource<RowData> build() throws DeltaSourceValidationException {
+
+        DeltaBulkFormat<RowData> format = validateSourceAndFormat();
 
         return new DeltaSource<>(
             tablePath,
-            bulkFormat,
+            format,
             DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER,
             hadoopConfiguration,
             sourceConfiguration

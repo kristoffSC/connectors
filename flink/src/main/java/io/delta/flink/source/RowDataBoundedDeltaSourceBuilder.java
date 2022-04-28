@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import io.delta.flink.source.internal.builder.BoundedDeltaSourceBuilder;
 import io.delta.flink.source.internal.builder.DeltaBulkFormat;
+import io.delta.flink.source.internal.builder.FormatBuilder;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
@@ -11,9 +12,9 @@ public class RowDataBoundedDeltaSourceBuilder
 
     RowDataBoundedDeltaSourceBuilder(
         Path tablePath,
-        DeltaBulkFormat<RowData> bulkFormat,
+        FormatBuilder<RowData> formatBuilder,
         Configuration hadoopConfiguration) {
-        super(tablePath, bulkFormat, hadoopConfiguration);
+        super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
     //////////////////////////////////////////////////////////
@@ -53,15 +54,14 @@ public class RowDataBoundedDeltaSourceBuilder
     @Override
     @SuppressWarnings("unchecked")
     public DeltaSource<RowData> build() {
-        validateMandatoryOptions();
-        validateOptionExclusions();
+
+        DeltaBulkFormat<RowData> format = validateSourceAndFormat();
 
         return new DeltaSource<>(
             tablePath,
-            bulkFormat,
+            format,
             DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER,
             hadoopConfiguration,
-            sourceConfiguration
-        );
+            sourceConfiguration);
     }
 }

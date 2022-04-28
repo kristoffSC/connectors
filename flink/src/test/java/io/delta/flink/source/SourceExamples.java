@@ -1,5 +1,7 @@
 package io.delta.flink.source;
 
+import java.util.Arrays;
+
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.CharType;
@@ -18,11 +20,25 @@ public class SourceExamples {
         Configuration hadoopConf = new Configuration();
 
         DeltaSource<RowData> source = DeltaSource.forBoundedRowData(
-            new Path("s3://some/path"),
-            COLUMN_NAMES,
-            COLUMN_TYPES,
-            hadoopConf
-        ).build();
+                new Path("s3://some/path"),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                hadoopConf
+            )
+            .build();
+    }
+
+    public void builderBoundedWithPartitions() {
+        Configuration hadoopConf = new Configuration();
+
+        DeltaSource<RowData> source = DeltaSource.forBoundedRowData(
+                new Path("s3://some/path"),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                hadoopConf
+            )
+            .partitions(Arrays.asList("col1", "col2"))
+            .build();
     }
 
     public void builderContinuous() {
@@ -34,6 +50,19 @@ public class SourceExamples {
                 COLUMN_TYPES,
                 hadoopConf
             )
+            .build();
+    }
+
+    public void builderContinuousWithPartitions() {
+        Configuration hadoopConf = new Configuration();
+
+        DeltaSource<RowData> source = DeltaSource.forContinuousRowData(
+                new Path("s3://some/path"),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                hadoopConf
+            )
+            .partitions(Arrays.asList("col1", "col2"))
             .build();
     }
 

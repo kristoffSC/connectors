@@ -1,5 +1,6 @@
 package io.delta.flink.source.internal.builder;
 
+import io.delta.flink.source.internal.builder.validation.Validator;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
@@ -7,7 +8,7 @@ import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
 
-public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuilderBase<T> {
+public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuilderBase<T, SELF> {
 
     /**
      * The provider for {@link org.apache.flink.api.connector.source.SplitEnumerator} in {@link
@@ -19,8 +20,8 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
             DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
 
     public BoundedDeltaSourceBuilder(Path tablePath,
-        DeltaBulkFormat<T> bulkFormat, Configuration hadoopConfiguration) {
-        super(tablePath, bulkFormat, hadoopConfiguration);
+        FormatBuilder<T> formatBuilder, Configuration hadoopConfiguration) {
+        super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
     /**
@@ -104,8 +105,14 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
         return self();
     }
 
-    @SuppressWarnings("unchecked")
-    private SELF self() {
-        return (SELF) this;
+    protected Validator validateOptionExclusions() {
+
+        return new Validator()
+
+            // mutually exclusive check for VERSION_AS_OF and TIMESTAMP_AS_OF in Bounded mode.
+            .checkArgument(
+                !sourceConfiguration.hasOption(VERSION_AS_OF)
+                    || !sourceConfiguration.hasOption(TIMESTAMP_AS_OF),
+                prepareOptionExclusionMessage(VERSION_AS_OF.key(), TIMESTAMP_AS_OF.key()));
     }
 }

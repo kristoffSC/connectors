@@ -3,6 +3,7 @@ package io.delta.flink.source;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceInternal;
 import io.delta.flink.source.internal.builder.RowDataFormat;
+import io.delta.flink.source.internal.builder.RowDataFormatBuilder;
 import io.delta.flink.source.internal.enumerator.SplitEnumeratorProvider;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.connector.file.src.reader.BulkFormat;
@@ -44,7 +45,7 @@ import io.delta.standalone.actions.AddFile;
  *                new String[] {"name", "surname", "age"},
  *                new LogicalType[] {new CharType(), new CharType(), new IntType()},
  *                new Configuration()
-*               )
+ *               )
  *              .updateCheckIntervalMillis(1000)
  *              .startingVersion(10)
  *              .build();
@@ -75,31 +76,38 @@ import io.delta.standalone.actions.AddFile;
 public class DeltaSource<T> extends DeltaSourceInternal<T> {
 
     DeltaSource(
-        Path tablePath, BulkFormat<T, DeltaSourceSplit> readerFormat,
+        Path tablePath,
+        BulkFormat<T, DeltaSourceSplit> readerFormat,
         SplitEnumeratorProvider splitEnumeratorProvider,
-        Configuration configuration, DeltaSourceConfiguration sourceConfiguration) {
+        Configuration configuration,
+        DeltaSourceConfiguration sourceConfiguration) {
         super(tablePath, readerFormat, splitEnumeratorProvider, configuration, sourceConfiguration);
     }
 
     public static RowDataBoundedDeltaSourceBuilder forBoundedRowData(
-        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
+        Path tablePath,
+        String[] columnNames,
+        LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
 
-        RowDataFormat bulkFormat = RowDataFormat
-            .builder(columnNames, columnTypes, hadoopConfiguration)
-            .build();
+        RowDataFormatBuilder formatBuilder = RowDataFormat
+            .builder(columnNames, columnTypes, hadoopConfiguration);
 
-        return new RowDataBoundedDeltaSourceBuilder(tablePath, bulkFormat, hadoopConfiguration);
+        return new RowDataBoundedDeltaSourceBuilder(tablePath, formatBuilder, hadoopConfiguration);
     }
 
     public static RowDataContinuousDeltaSourceBuilder forContinuousRowData(
-        Path tablePath, String[] columnNames, LogicalType[] columnTypes,
+        Path tablePath,
+        String[] columnNames,
+        LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
 
-        RowDataFormat bulkFormat = RowDataFormat
-            .builder(columnNames, columnTypes, hadoopConfiguration)
-            .build();
+        RowDataFormatBuilder formatBuilder = RowDataFormat
+            .builder(columnNames, columnTypes, hadoopConfiguration);
 
-        return new RowDataContinuousDeltaSourceBuilder(tablePath, bulkFormat, hadoopConfiguration);
+        return new RowDataContinuousDeltaSourceBuilder(
+            tablePath,
+            formatBuilder,
+            hadoopConfiguration);
     }
 }
