@@ -24,7 +24,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * The base Builder class for {@link io.delta.flink.source.DeltaSource}
  */
-public abstract class BaseDeltaSourceBuilder<T> {
+public abstract class DeltaSourceBuilderBase<T> {
 
     /**
      * The provider for {@link FileSplitAssigner}.
@@ -44,7 +44,7 @@ public abstract class BaseDeltaSourceBuilder<T> {
     protected static final String EXCEPTION_PREFIX = "DeltaSourceBuilder - ";
 
     /**
-     * A placeholder object for Delta source configuration used for {@link BaseDeltaSourceBuilder}
+     * A placeholder object for Delta source configuration used for {@link DeltaSourceBuilderBase}
      * instance.
      */
     protected final DeltaSourceConfiguration sourceConfiguration = new DeltaSourceConfiguration();
@@ -77,7 +77,7 @@ public abstract class BaseDeltaSourceBuilder<T> {
      */
     protected List<String> partitions;
 
-    protected BaseDeltaSourceBuilder(
+    protected DeltaSourceBuilderBase(
         Path tablePath, DeltaBulkFormat<T> bulkFormat,
         Configuration hadoopConfiguration) {
         this.tablePath = tablePath;

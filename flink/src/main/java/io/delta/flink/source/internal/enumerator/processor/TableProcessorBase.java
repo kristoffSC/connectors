@@ -12,7 +12,7 @@ import org.apache.flink.core.fs.Path;
 
 import io.delta.standalone.actions.AddFile;
 
-public abstract class BaseTableProcessor implements TableProcessor {
+public abstract class TableProcessorBase implements TableProcessor {
 
     /**
      * A {@link Path} to Delta Table that this processor reads.
@@ -25,7 +25,7 @@ public abstract class BaseTableProcessor implements TableProcessor {
      */
     protected final AddFileEnumerator<DeltaSourceSplit> fileEnumerator;
 
-    public BaseTableProcessor(
+    public TableProcessorBase(
         Path deltaTablePath, AddFileEnumerator<DeltaSourceSplit> fileEnumerator) {
         this.deltaTablePath = deltaTablePath;
         this.fileEnumerator = fileEnumerator;

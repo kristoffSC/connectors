@@ -14,7 +14,7 @@ import io.delta.standalone.actions.Action;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.actions.RemoveFile;
 
-public abstract class BaseActionProcessorParameterizedTest {
+public abstract class ActionProcessorParameterizedTestBase {
 
     protected static final int SIZE = 100;
 
