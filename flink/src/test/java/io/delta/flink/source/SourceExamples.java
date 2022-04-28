@@ -17,7 +17,7 @@ public class SourceExamples {
     public void builderBounded() {
         Configuration hadoopConf = new Configuration();
 
-        DeltaSource<RowData> source = DeltaSource.boundedRowDataSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.forBoundedRowData(
             new Path("s3://some/path"),
             COLUMN_NAMES,
             COLUMN_TYPES,
@@ -28,7 +28,7 @@ public class SourceExamples {
     public void builderContinuous() {
         Configuration hadoopConf = new Configuration();
 
-        DeltaSource<RowData> source = DeltaSource.continuousRowDataSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -40,7 +40,7 @@ public class SourceExamples {
     public void builderBoundedPublicOption() {
         Configuration hadoopConf = new Configuration();
 
-        DeltaSource<RowData> source = DeltaSource.boundedRowDataSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.forBoundedRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -53,7 +53,7 @@ public class SourceExamples {
     public void builderContinuousPublicOption() {
         Configuration hadoopConf = new Configuration();
 
-        DeltaSource<RowData> source = DeltaSource.continuousRowDataSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
@@ -68,7 +68,7 @@ public class SourceExamples {
 
         Configuration hadoopConf = new Configuration();
 
-        DeltaSource<RowData> source = DeltaSource.continuousRowDataSourceBuilder(
+        DeltaSource<RowData> source = DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,

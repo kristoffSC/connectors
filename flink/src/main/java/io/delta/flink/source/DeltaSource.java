@@ -69,7 +69,7 @@ import io.delta.standalone.actions.AddFile;
  * @implNote <h2>Discovering / Enumerating Files</h2>
  * <p>The way that the source lists the files to be processes is defined by the {@code
  * AddFileEnumerator}. The {@code AddFileEnumerator} is responsible to select the relevant {@code
- * AddFile} and to optionally splits files into multiple regions (= file source splits) that can be
+ * AddFile} and to optionally splits files into multiple regions (file source splits) that can be
  * read in parallel.
  */
 public class DeltaSource<T> extends DeltaSourceInternal<T> {
@@ -81,7 +81,7 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
         super(tablePath, readerFormat, splitEnumeratorProvider, configuration, sourceConfiguration);
     }
 
-    public static BoundedDeltaSourceBuilder<RowData> boundedRowDataSourceBuilder(
+    public static RowDataBoundedDeltaSourceBuilder forBoundedRowData(
         Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
 
@@ -89,10 +89,10 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
             .builder(columnNames, columnTypes, hadoopConfiguration)
             .build();
 
-        return new BoundedDeltaSourceBuilder<>(tablePath, bulkFormat, hadoopConfiguration);
+        return new RowDataBoundedDeltaSourceBuilder(tablePath, bulkFormat, hadoopConfiguration);
     }
 
-    public static ContinuousDeltaSourceBuilder<RowData> continuousRowDataSourceBuilder(
+    public static RowDataContinuousDeltaSourceBuilder forContinuousRowData(
         Path tablePath, String[] columnNames, LogicalType[] columnTypes,
         Configuration hadoopConfiguration) {
 
@@ -100,6 +100,6 @@ public class DeltaSource<T> extends DeltaSourceInternal<T> {
             .builder(columnNames, columnTypes, hadoopConfiguration)
             .build();
 
-        return new ContinuousDeltaSourceBuilder<>(tablePath, bulkFormat, hadoopConfiguration);
+        return new RowDataContinuousDeltaSourceBuilder(tablePath, bulkFormat, hadoopConfiguration);
     }
 }

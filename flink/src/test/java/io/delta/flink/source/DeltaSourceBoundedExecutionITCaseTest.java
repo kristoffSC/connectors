@@ -84,7 +84,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
-        return DeltaSource.boundedRowDataSourceBuilder(
+        return DeltaSource.forBoundedRowData(
             Path.fromLocalFile(new File(tablePath)),
             columnNames,
             columnTypes,

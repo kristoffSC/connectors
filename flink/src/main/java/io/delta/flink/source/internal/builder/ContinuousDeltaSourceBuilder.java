@@ -1,7 +1,5 @@
-package io.delta.flink.source;
+package io.delta.flink.source.internal.builder;
 
-import io.delta.flink.source.internal.builder.BaseDeltaSourceBuilder;
-import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
@@ -11,7 +9,7 @@ import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTA
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
 import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
-public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
+public abstract class ContinuousDeltaSourceBuilder<T, SELF> extends BaseDeltaSourceBuilder<T> {
 
     /**
      * The provider for {@link org.apache.flink.api.connector.source.SplitEnumerator} in {@link
@@ -22,7 +20,7 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
         new ContinuousSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
             DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
 
-    ContinuousDeltaSourceBuilder(Path tablePath,
+    public ContinuousDeltaSourceBuilder(Path tablePath,
         DeltaBulkFormat<T> bulkFormat, Configuration hadoopConfiguration) {
         super(tablePath, bulkFormat, hadoopConfiguration);
     }
@@ -41,10 +39,10 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      *                        keyword "latest", where in that case, changes from the latest Delta
      *                        table version will be read.
      */
-    public ContinuousDeltaSourceBuilder<T> startingVersion(String startingVersion) {
+    public SELF startingVersion(String startingVersion) {
         validateOptionValue(STARTING_VERSION.key(), startingVersion);
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
-        return this;
+        return self();
     }
 
     /**
@@ -59,9 +57,9 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * @param startingVersion Delta {@link io.delta.standalone.Snapshot} version to start reading
      *                        changes from.
      */
-    public ContinuousDeltaSourceBuilder<T> startingVersion(long startingVersion) {
+    public SELF startingVersion(long startingVersion) {
         startingVersion(String.valueOf(startingVersion));
-        return this;
+        return self();
     }
 
     /**
@@ -77,10 +75,10 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * @param startingTimestamp The timestamp of {@link io.delta.standalone.Snapshot} that we start
      *                          reading changes from.
      */
-    public ContinuousDeltaSourceBuilder<T> startingTimestamp(String startingTimestamp) {
+    public SELF startingTimestamp(String startingTimestamp) {
         validateOptionValue(STARTING_TIMESTAMP.key(), startingTimestamp);
         sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
-        return this;
+        return self();
     }
 
     /**
@@ -94,10 +92,10 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      *
      * @param updateCheckInterval The update check internal in milliseconds.
      */
-    public ContinuousDeltaSourceBuilder<T> updateCheckIntervalMillis(long updateCheckInterval) {
+    public SELF updateCheckIntervalMillis(long updateCheckInterval) {
         validateOptionValue(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
         sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
-        return this;
+        return self();
     }
 
     /**
@@ -113,9 +111,9 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * <p>
      * The default value for these options is false.
      */
-    public ContinuousDeltaSourceBuilder<T> ignoreDeletes(boolean ignoreDeletes) {
+    public SELF ignoreDeletes(boolean ignoreDeletes) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreDeletes);
-        return this;
+        return self();
     }
 
     /**
@@ -130,9 +128,9 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * io.delta.standalone.actions.RemoveFile} and {@link io.delta.standalone.actions.AddFile}
      * actions regardless of {@link io.delta.standalone.actions.RemoveFile#isDataChange()} flag.
      */
-    public ContinuousDeltaSourceBuilder<T> ignoreChanges(boolean ignoreChanges) {
+    public SELF ignoreChanges(boolean ignoreChanges) {
         sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreChanges);
-        return this;
+        return self();
     }
 
     /**
@@ -141,10 +139,10 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * @param optionName  Option name to set.
      * @param optionValue Option {@link String} value to set.
      */
-    public ContinuousDeltaSourceBuilder<T> option(String optionName, String optionValue) {
+    public SELF option(String optionName, String optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
@@ -153,10 +151,10 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * @param optionName  Option name to set.
      * @param optionValue Option boolean value to set.
      */
-    public ContinuousDeltaSourceBuilder<T> option(String optionName, boolean optionValue) {
+    public SELF option(String optionName, boolean optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
@@ -165,10 +163,10 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * @param optionName  Option name to set.
      * @param optionValue Option int value to set.
      */
-    public ContinuousDeltaSourceBuilder<T> option(String optionName, int optionValue) {
+    public SELF option(String optionName, int optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
 
     /**
@@ -177,25 +175,14 @@ public class ContinuousDeltaSourceBuilder<T> extends BaseDeltaSourceBuilder<T> {
      * @param optionName  Option name to set.
      * @param optionValue Option long value to set.
      */
-    public ContinuousDeltaSourceBuilder<T> option(String optionName, long optionValue) {
+    public SELF option(String optionName, long optionValue) {
         ConfigOption<?> configOption = validateOptionName(optionName);
         sourceConfiguration.addOption(configOption.key(), optionValue);
-        return this;
+        return self();
     }
-
 
     @SuppressWarnings("unchecked")
-    public DeltaSource<T> build() {
-        validateMandatoryOptions();
-        validateOptionExclusions();
-
-        return new DeltaSource<>(
-            tablePath,
-            bulkFormat,
-            DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER,
-            hadoopConfiguration,
-            sourceConfiguration
-        );
+    private SELF self() {
+        return (SELF) this;
     }
-
 }
