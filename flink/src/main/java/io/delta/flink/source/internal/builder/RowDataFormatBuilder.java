@@ -118,28 +118,39 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
 
     private Validator validateMandatoryOptions() {
 
-        return new Validator()
+        Validator validator = new Validator()
             // validate against null references
             .checkNotNull(columnNames, EXCEPTION_PREFIX + "missing Delta table column names.")
             .checkNotNull(columnTypes, EXCEPTION_PREFIX + "missing Delta table column types.")
-            .checkNotNull(hadoopConfiguration, EXCEPTION_PREFIX + "missing Hadoop configuration.")
+            .checkNotNull(hadoopConfiguration, EXCEPTION_PREFIX + "missing Hadoop configuration.");
 
-            // validate arrays size
-            .checkArgument(columnNames.length > 0,
-                EXCEPTION_PREFIX + "empty array with column names.")
-            .checkArgument(columnTypes.length > 0,
-                EXCEPTION_PREFIX + "empty array with column names.")
-            .checkArgument(columnNames.length == columnTypes.length,
-                EXCEPTION_PREFIX + "column names and column types size does not match.")
+        if (columnNames != null) {
+            validator
+                .checkArgument(columnNames.length > 0,
+                    EXCEPTION_PREFIX + "empty array with column names.")
+                // validate invalid array element
+                .checkArgument(Stream.of(columnNames)
+                        .noneMatch(StringUtils::isNullOrWhitespaceOnly),
+                    EXCEPTION_PREFIX
+                        + "Column names array contains at least one element that is null, "
+                        + "empty, or contains only whitespace characters.");
+        }
 
-            // validate invalid array element
-            .checkArgument(Stream.of(columnNames)
-                    .noneMatch(StringUtils::isNullOrWhitespaceOnly),
-                EXCEPTION_PREFIX + "Column names array contains at least one element that is null, "
-                    + "empty, or contains only whitespace characters.")
-            .checkArgument(Stream.of(columnTypes)
-                .noneMatch(Objects::isNull), EXCEPTION_PREFIX + "Column type array contains at "
-                + "least one null element.");
+        if (columnTypes != null) {
+            validator
+                .checkArgument(columnTypes.length > 0,
+                    EXCEPTION_PREFIX + "empty array with column names.")
+                .checkArgument(Stream.of(columnTypes)
+                    .noneMatch(Objects::isNull), EXCEPTION_PREFIX + "Column type array contains at "
+                    + "least one null element.");
+        }
+
+        if (columnNames != null && columnTypes != null) {
+            validator
+                .checkArgument(columnNames.length == columnTypes.length,
+                    EXCEPTION_PREFIX + "column names and column types size does not match.");
+        }
+
+        return validator;
     }
-
 }

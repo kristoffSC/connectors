@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
-import io.delta.flink.source.internal.DeltaSourceInternal;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.builder.validation.Validator;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
@@ -55,6 +55,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      */
     protected final Path tablePath;
 
+    /**
+     * An instance of {@link FormatBuilder} that will be used to build {@link DeltaBulkFormat}
+     * instance.
+     */
     protected final FormatBuilder<T> formatBuilder;
 
     /**
@@ -75,7 +79,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         return self();
     }
 
-    public abstract <V extends DeltaSourceInternal<T>> V build();
+    public abstract <V extends DeltaSource<T>> V build();
 
     protected abstract Validator validateOptionExclusions();
 
@@ -95,18 +99,21 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         Validator mandatoryValidator = validateMandatoryOptions();
         Validator exclusionsValidator = validateOptionExclusions();
 
+        List<String> validationMessages = new LinkedList<>();
         if (mandatoryValidator.containsMessages() || exclusionsValidator.containsMessages()) {
 
-            List<String> validationMessages = new LinkedList<>();
             validationMessages.addAll(mandatoryValidator.getValidationMessages());
             validationMessages.addAll(exclusionsValidator.getValidationMessages());
-            if (extraValidationMessages != null) {
-                validationMessages.addAll(extraValidationMessages);
-            }
+        }
 
-            throw new DeltaSourceValidationException(
-                SourceUtils.pathToString(tablePath),
-                validationMessages);
+        if (extraValidationMessages != null) {
+            validationMessages.addAll(extraValidationMessages);
+        }
+
+        if (!validationMessages.isEmpty()) {
+            String tablePathString =
+                (tablePath != null) ? SourceUtils.pathToString(tablePath) : "null";
+            throw new DeltaSourceValidationException(tablePathString, validationMessages);
         }
     }
 
