@@ -8,7 +8,6 @@ import java.util.List;
 import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
-import io.delta.flink.source.internal.builder.validation.Validator;
 import io.delta.flink.source.internal.exceptions.DeltaSourceExceptions;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
@@ -138,30 +137,6 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
                 SourceUtils.pathToString(tablePath), optionName);
         }
         return option;
-    }
-
-    protected void validateOptionValue(String optionName, String optionValue) {
-        boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
-        if (!valid) {
-            throw new IllegalArgumentException(
-                "Provided invalid value [" + optionValue + "] for option " + optionName);
-        }
-    }
-
-    protected void validateOptionValue(String optionName, int optionValue) {
-        boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
-        if (!valid) {
-            throw new IllegalArgumentException(
-                "Provided invalid value [" + optionValue + "] for option " + optionName);
-        }
-    }
-
-    protected void validateOptionValue(String optionName, long optionValue) {
-        boolean valid = DeltaSourceOptions.getValidator(optionName).validate(optionValue);
-        if (!valid) {
-            throw new IllegalArgumentException(
-                "Provided invalid value [" + optionValue + "] for option " + optionName);
-        }
     }
 
     @SuppressWarnings("unchecked")

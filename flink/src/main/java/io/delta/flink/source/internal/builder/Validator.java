@@ -1,4 +1,4 @@
-package io.delta.flink.source.internal.builder.validation;
+package io.delta.flink.source.internal.builder;
 
 import java.util.Collections;
 import java.util.HashSet;

@@ -1,6 +1,5 @@
 package io.delta.flink.source.internal.builder;
 
-import io.delta.flink.source.internal.builder.validation.Validator;
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
@@ -36,7 +35,6 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
      * @param snapshotVersion Delta {@link io.delta.standalone.Snapshot} version to time travel to.
      */
     public SELF versionAsOf(long snapshotVersion) {
-        validateOptionValue(VERSION_AS_OF.key(), snapshotVersion);
         sourceConfiguration.addOption(VERSION_AS_OF.key(), snapshotVersion);
         return self();
     }
@@ -52,7 +50,6 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
      * @param snapshotTimestamp The timestamp we should time travel to.
      */
     public SELF timestampAsOf(String snapshotTimestamp) {
-        validateOptionValue(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
         sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
         return self();
     }

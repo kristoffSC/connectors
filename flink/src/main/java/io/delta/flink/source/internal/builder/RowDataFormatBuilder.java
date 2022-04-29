@@ -6,7 +6,6 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
-import io.delta.flink.source.internal.builder.validation.Validator;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;

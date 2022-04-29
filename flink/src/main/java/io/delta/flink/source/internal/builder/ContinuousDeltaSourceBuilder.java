@@ -1,6 +1,5 @@
 package io.delta.flink.source.internal.builder;
 
-import io.delta.flink.source.internal.builder.validation.Validator;
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
@@ -43,7 +42,6 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
      *                        table version will be read.
      */
     public SELF startingVersion(String startingVersion) {
-        validateOptionValue(STARTING_VERSION.key(), startingVersion);
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
         return self();
     }
@@ -79,7 +77,6 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
      *                          reading changes from.
      */
     public SELF startingTimestamp(String startingTimestamp) {
-        validateOptionValue(STARTING_TIMESTAMP.key(), startingTimestamp);
         sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
         return self();
     }
@@ -96,7 +93,6 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
      * @param updateCheckInterval The update check internal in milliseconds.
      */
     public SELF updateCheckIntervalMillis(long updateCheckInterval) {
-        validateOptionValue(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
         sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
         return self();
     }

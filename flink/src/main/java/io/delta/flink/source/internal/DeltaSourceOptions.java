@@ -3,10 +3,6 @@ package io.delta.flink.source.internal;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.delta.flink.source.internal.builder.validation.NumberValidator;
-import io.delta.flink.source.internal.builder.validation.OptionValidator;
-import io.delta.flink.source.internal.builder.validation.StartingVersionValidator;
-import io.delta.flink.source.internal.builder.validation.StringValidator;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 
@@ -36,10 +32,6 @@ public class DeltaSourceOptions {
      * to {@code VALID_SOURCE_OPTIONS} map.
      */
     public static final Map<String, ConfigOption<?>> VALID_SOURCE_OPTIONS = new HashMap<>();
-
-    private static final Map<String, OptionValidator> VALIDATORS = new HashMap<>();
-
-    private static final OptionValidator DEFAULT_VALIDATOR = new OptionValidator.DefaultValidator();
 
     /**
      * An option that allow time travel to {@link io.delta.standalone.Snapshot} version to read
@@ -166,17 +158,5 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
         VALID_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
-
-        VALIDATORS.put(VERSION_AS_OF.key(), new NumberValidator());
-        VALIDATORS.put(TIMESTAMP_AS_OF.key(), new StringValidator());
-        VALIDATORS.put(STARTING_VERSION.key(), new StartingVersionValidator());
-        VALIDATORS.put(STARTING_TIMESTAMP.key(), new StringValidator());
-        VALIDATORS.put(UPDATE_CHECK_INTERVAL.key(), new NumberValidator());
-        VALIDATORS.put(UPDATE_CHECK_INITIAL_DELAY.key(), new NumberValidator());
-        VALIDATORS.put(PARQUET_BATCH_SIZE.key(), new NumberValidator());
-    }
-
-    public static OptionValidator getValidator(String optionName) {
-        return VALIDATORS.getOrDefault(optionName, DEFAULT_VALIDATOR);
     }
 }
