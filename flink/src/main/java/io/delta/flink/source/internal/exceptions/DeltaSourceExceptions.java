@@ -30,9 +30,9 @@ public final class DeltaSourceExceptions {
      * @return {@link DeltaSourceException} wrapping original {@link Throwable}
      */
     public static DeltaSourceException generalSourceException(
-        String tablePath,
-        long snapshotVersion,
-        Throwable t) {
+            String tablePath,
+            long snapshotVersion,
+            Throwable t) {
         return new DeltaSourceException(tablePath, snapshotVersion, t);
     }
 
