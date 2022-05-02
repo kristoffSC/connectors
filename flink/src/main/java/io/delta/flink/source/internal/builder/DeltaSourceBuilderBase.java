@@ -21,7 +21,24 @@ import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * The base Builder class for {@link io.delta.flink.source.DeltaSource}
+ * The base class for {@link io.delta.flink.source.DeltaSource} builder.
+ * <p>
+ * This builder carries a <i>SELF</i> type to make it convenient to extend this for subclasses,
+ * using the following pattern.
+ *
+ * <pre>{@code
+ * public class SubBuilder<T> extends DeltaSourceBuilderBase<T, SubBuilder<T>> {
+ *     ...
+ * }
+ * }</pre>
+ *
+ * <p>That way, all return values from builder method defined here are typed to the sub-class
+ * type and support fluent chaining.
+ *
+ * <p>We don't make the publicly visible builder generic with a SELF type, because it leads to
+ * generic signatures that can look complicated and confusing.
+ *
+ * @param <T> A type that this source produces.
  */
 public abstract class DeltaSourceBuilderBase<T, SELF> {
 
@@ -66,8 +83,9 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     protected final Configuration hadoopConfiguration;
 
     protected DeltaSourceBuilderBase(
-        Path tablePath, FormatBuilder<T> formatBuilder,
-        Configuration hadoopConfiguration) {
+            Path tablePath,
+            FormatBuilder<T> formatBuilder,
+            Configuration hadoopConfiguration) {
         this.tablePath = tablePath;
         this.formatBuilder = formatBuilder;
         this.hadoopConfiguration = hadoopConfiguration;
@@ -80,8 +98,20 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
 
     public abstract <V extends DeltaSource<T>> V build();
 
+    /**
+     * This method should implement any logic for validation of mutual excluded options.
+     *
+     * @return {@link Validator} instance with validation error message.
+     */
     protected abstract Validator validateOptionExclusions();
 
+    /**
+     * Validates {@link FormatBuilder} and returns new instance of {@link DeltaBulkFormat}.
+     *
+     * @return {@link DeltaBulkFormat} instance.
+     * @throws DeltaSourceValidationException if {@link FormatBuilder} definition has anny
+     *                                        validation issues.
+     */
     protected DeltaBulkFormat<T> validateSourceAndFormat() {
         DeltaBulkFormat<T> format = null;
         Collection<String> formatValidationMessages = Collections.emptySet();
@@ -94,6 +124,13 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         return format;
     }
 
+    /**
+     * Validate definition of Delta source builder including mandatory and optional options.
+     *
+     * @param extraValidationMessages other validation messages that should be included in this
+     *                                validation check. If collection is not empty, the {@link
+     *                                DeltaSourceValidationException} will be thrown.
+     */
     protected void validateSource(Collection<String> extraValidationMessages) {
         Validator mandatoryValidator = validateMandatoryOptions();
         Validator exclusionsValidator = validateOptionExclusions();
@@ -130,6 +167,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
             String.join(";", mutualExcludedOptions));
     }
 
+    // TODO Refactor Option name validation in PR 9.1
     protected ConfigOption<?> validateOptionName(String optionName) {
         ConfigOption<?> option = DeltaSourceOptions.VALID_SOURCE_OPTIONS.get(optionName);
         if (option == null) {

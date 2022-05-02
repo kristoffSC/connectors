@@ -3,6 +3,10 @@ package io.delta.flink.source.internal.exceptions;
 import java.util.Collection;
 import java.util.Collections;
 
+/**
+ * Exception throw during validation of Delta source builder. It contains all validation error
+ * messages that occurred during this validation.
+ */
 public class DeltaSourceValidationException extends RuntimeException {
 
     /**
@@ -11,12 +15,10 @@ public class DeltaSourceValidationException extends RuntimeException {
      */
     private final String tablePath;
 
+    /**
+     * Collection with all validation error messages that were recorded for this exception.
+     */
     private final Collection<String> validationMessages;
-
-    public DeltaSourceValidationException(String tablePath, String validationMessage) {
-        this.tablePath = String.valueOf(tablePath);
-        this.validationMessages = Collections.singletonList(validationMessage);
-    }
 
     public DeltaSourceValidationException(String tablePath, Collection<String> validationMessages) {
         this.tablePath = String.valueOf(tablePath);

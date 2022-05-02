@@ -3,17 +3,27 @@ package io.delta.flink.source;
 import io.delta.flink.source.internal.builder.ContinuousDeltaSourceBuilder;
 import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.builder.FormatBuilder;
-import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
 
+/**
+ * A builder class for {@link DeltaSource} for a stream of {@link RowData}. Created source instance
+ * will operate in {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED}
+ * mode.
+ * <p>
+ * For most common use cases use {@link DeltaSource#forContinuousRowData} utility method to
+ * instantiate the source. After instantiation of this builder you can either call {@link
+ * RowDataBoundedDeltaSourceBuilder#build()} method to get the instance of a {@link DeltaSource} or
+ * configure additional options using builder's API.
+ */
 public class RowDataContinuousDeltaSourceBuilder
     extends ContinuousDeltaSourceBuilder<RowData, RowDataContinuousDeltaSourceBuilder> {
 
-    RowDataContinuousDeltaSourceBuilder(Path tablePath,
-        FormatBuilder<RowData> formatBuilder,
-        Configuration hadoopConfiguration) {
+    RowDataContinuousDeltaSourceBuilder(
+            Path tablePath,
+            FormatBuilder<RowData> formatBuilder,
+            Configuration hadoopConfiguration) {
         super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
@@ -172,9 +182,19 @@ public class RowDataContinuousDeltaSourceBuilder
         return super.option(optionName, optionValue);
     }
 
+    /**
+     * Creates an instance of {@link DeltaSource} for a stream of {@link RowData}. Created source
+     * will work in Continuous mode, actively monitoring Delta table for new changes.
+     *
+     * <p>
+     * This method can throw {@code DeltaSourceValidationException} in case of invalid arguments
+     * passed to Delta source builder.
+     *
+     * @return New {@link DeltaSource} instance.
+     */
     @Override
     @SuppressWarnings("unchecked")
-    public DeltaSource<RowData> build() throws DeltaSourceValidationException {
+    public DeltaSource<RowData> build() {
 
         DeltaBulkFormat<RowData> format = validateSourceAndFormat();
 

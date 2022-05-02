@@ -139,7 +139,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
      * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
-     * DeltaSourceInternal} instance without any failover.
+     * DeltaSource} instance without any failover.
      *
      * @param source The {@link DeltaSource} that should be used in this test.
      * @param <T>    Type of objects produced by source.
@@ -158,11 +158,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
      * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
-     * DeltaSourceInternal} instance.
+     * DeltaSource} instance.
      * <p>
      * <p>
      * The created environment can perform a failover after condition described by {@link FailCheck}
-     * which is evaluated every record produced by {@code DeltaSourceInternal}
+     * which is evaluated every record produced by {@code DeltaSource}
      *
      * @param failoverType The {@link FailoverType} type that should be performed for given test
      *                     setup.
@@ -234,7 +234,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(
-                failingStreamDecorator, "Bounded DeltaSourceInternal Test");
+                failingStreamDecorator, "Bounded Delta Source Test");
         JobID jobId = client.client.getJobID();
 
         // Wait with main thread until FailCheck from RecordCounterToFail.wrapWithFailureAfter
@@ -341,7 +341,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         ClientAndIterator<T> client =
             DataStreamUtils.collectWithClient(failingStreamDecorator,
-                "Continuous DeltaSourceInternal  Test");
+                "Continuous Delta Source Test");
 
         JobID jobId = client.client.getJobID();
 

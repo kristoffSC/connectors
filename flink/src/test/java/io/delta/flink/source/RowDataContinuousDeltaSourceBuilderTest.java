@@ -61,4 +61,41 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
             DeltaSinkTestUtils.getHadoopConf()
         );
     }
+
+    @Override
+    protected RowDataContinuousDeltaSourceBuilder getBuilderWithMutualExcludedOptions() {
+        return DeltaSource.forContinuousRowData(
+                new Path(TABLE_PATH),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                DeltaSinkTestUtils.getHadoopConf()
+            )
+            .startingVersion(10)
+            .startingTimestamp("2022-02-24T04:55:00.001");
+    }
+
+    @Override
+    protected RowDataContinuousDeltaSourceBuilder getBuilderWithGenericMutualExcludedOptions() {
+        return DeltaSource.forContinuousRowData(
+                new Path(TABLE_PATH),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                DeltaSinkTestUtils.getHadoopConf()
+            )
+            .option(DeltaSourceOptions.STARTING_VERSION.key(), 10)
+            .option(DeltaSourceOptions.STARTING_TIMESTAMP.key(), "2022-02-24T04:55:00.001");
+    }
+
+    @Override
+    protected RowDataContinuousDeltaSourceBuilder
+        getBuilderWithNullMandatoryFieldsAndExcludedOption() {
+        return DeltaSource.forContinuousRowData(
+                null,
+                null,
+                null,
+                DeltaSinkTestUtils.getHadoopConf()
+            )
+            .startingTimestamp("2022-02-24T04:55:00.001")
+            .option(DeltaSourceOptions.STARTING_VERSION.key(), 10);
+    }
 }

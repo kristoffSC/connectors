@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -15,32 +14,50 @@ import org.apache.hadoop.conf.Configuration;
 import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
+/**
+ * Builder for {@link RowData} implementation io {@link FormatBuilder}
+ */
 public class RowDataFormatBuilder implements FormatBuilder<RowData> {
 
     /**
      * Message prefix for validation exceptions.
      */
-    protected static final String EXCEPTION_PREFIX = "RowDataFormatBuilder - ";
+    private static final String EXCEPTION_PREFIX = "RowDataFormatBuilder - ";
 
     // -------------- Hardcoded Non Public Options ----------
     /**
      * Hardcoded option for {@link RowDataFormat} to threat timestamps as a UTC timestamps.
      */
-    protected static final boolean PARQUET_UTC_TIMESTAMP = true;
+    private static final boolean PARQUET_UTC_TIMESTAMP = true;
 
     /**
      * Hardcoded option for {@link RowDataFormat} to use case-sensitive in column name processing
      * for Parquet files.
      */
-    protected static final boolean PARQUET_CASE_SENSITIVE = true;
+    private static final boolean PARQUET_CASE_SENSITIVE = true;
     // ------------------------------------------------------
 
+    // TODO PR 9.1 get this from options.
+    private static final int BATCH_SIZE = 2048;
+
+    /**
+     * An array with Delta table's column names that should be read.
+     */
     private final String[] columnNames;
 
+    /**
+     * An array of {@link LogicalType} for column names tha should raed from Delta table.
+     */
     private final LogicalType[] columnTypes;
 
+    /**
+     * An instance of Hadoop configuration used to read Parquet files.
+     */
     private final Configuration hadoopConfiguration;
 
+    /**
+     * An array with Delta table partition columns.
+     */
     private List<String> partitions;
 
     RowDataFormatBuilder(String[] columnNames,
@@ -65,6 +82,12 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         return this;
     }
 
+    /**
+     * Creates an instance of {@link RowDataFormat}.
+     *
+     * @throws DeltaSourceValidationException if invalid arguments were passed to {@link
+     *                                        RowDataFormatBuilder}. For example null arguments.
+     */
     public RowDataFormat build() {
         validateFormat();
 
@@ -73,7 +96,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         } else {
             // TODO PR 8
             throw new UnsupportedOperationException("Partition support will be added later.");
-            /*format =
+            /* return
                 buildPartitionedFormat(columnNames, columnTypes, configuration, partitions,
                     sourceConfiguration);*/
         }
@@ -94,27 +117,21 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         return new RowDataFormat(
             configuration,
             RowType.of(columnTypes, columnNames),
-            2048, // get this from user...
+            BATCH_SIZE,
             PARQUET_UTC_TIMESTAMP,
             PARQUET_CASE_SENSITIVE);
     }
 
-    // TODO PR 8
-    private RowDataFormat buildPartitionedFormat(
-        String[] columnNames, LogicalType[] columnTypes, Configuration configuration,
-        List<String> partitionKeys, DeltaSourceConfiguration sourceConfiguration) {
-
-        // TODO PR 8
-        /*return DeltaRowDataFormat.createPartitionedFormat(
-            configuration,
-            RowType.of(columnTypes, columnNames),
-            partitionKeys, new DeltaPartitionFieldExtractor<>(),
-            sourceConfiguration.getValue(PARQUET_BATCH_SIZE),
-            PARQUET_UTC_TIMESTAMP,
-            PARQUET_CASE_SENSITIVE);*/
-        return null;
-    }
-
+    /**
+     * Validates a mandatory options for {@link RowDataFormatBuilder} such as
+     * <ul>
+     *     <li>null check on arguments</li>
+     *     <li>null values in arrays</li>
+     *     <li>size mismatch for column name and type arrays.</li>
+     * </ul>
+     *
+     * @return {@link Validator} instance containing validation error messages if any.
+     */
     private Validator validateMandatoryOptions() {
 
         Validator validator = new Validator()

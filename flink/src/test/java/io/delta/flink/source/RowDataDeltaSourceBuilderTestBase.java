@@ -69,19 +69,6 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         );
     }
 
-    @Test
-    public void testNullArgumentsValidation() {
-
-        Optional<Exception> validation = testValidation(() -> getBuilderWithNulls().build());
-
-        DeltaSourceValidationException exception =
-            (DeltaSourceValidationException) validation.orElseThrow(
-                () -> new AssertionError("Builder should throw exception on null arguments."));
-
-        // expected number is 5 because Hadoop is used and validated by Format and Source builders.
-        assertThat(exception.getValidationMessages().size(), equalTo(5));
-    }
-
     @ParameterizedTest
     @MethodSource("columnArrays")
     public void testColumnArrays(
@@ -102,11 +89,76 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         assertThat(exception.getValidationMessages().size(), equalTo(expectedCount));
     }
 
+    @Test
+    public void testNullArgumentsValidation() {
+
+        Optional<Exception> validation = testValidation(() -> getBuilderWithNulls().build());
+
+        DeltaSourceValidationException exception =
+            (DeltaSourceValidationException) validation.orElseThrow(
+                () -> new AssertionError("Builder should throw exception on null arguments."));
+
+        // expected number is 5 because Hadoop is used and validated by Format and Source builders.
+        assertThat(exception.getValidationMessages().size(), equalTo(5));
+    }
+
+    @Test
+    public void testMutualExclusiveOptions() {
+        // using dedicated builder methods
+        Optional<Exception> validation = testValidation(
+            () -> getBuilderWithMutualExcludedOptions().build()
+        );
+
+        DeltaSourceValidationException exception =
+            (DeltaSourceValidationException) validation.orElseThrow(
+                () -> new AssertionError(
+                    "Builder should throw exception when using mutual excluded options."));
+
+        assertThat(exception.getValidationMessages().size(), equalTo(1));
+    }
+
+    @Test
+    public void testMutualExcludedGenericOptions() {
+        // using dedicated builder methods
+        Optional<Exception> validation = testValidation(
+            () -> getBuilderWithGenericMutualExcludedOptions().build()
+        );
+
+        DeltaSourceValidationException exception =
+            (DeltaSourceValidationException) validation.orElseThrow(
+                () -> new AssertionError(
+                    "Builder should throw exception when using mutual excluded options."));
+
+        assertThat(exception.getValidationMessages().size(), equalTo(1));
+    }
+
+    @Test
+    public void testNullMandatoryFieldsAndExcludedOption() {
+
+        Optional<Exception> validation = testValidation(
+            () -> getBuilderWithNullMandatoryFieldsAndExcludedOption().build()
+        );
+
+        DeltaSourceValidationException exception =
+            (DeltaSourceValidationException) validation.orElseThrow(
+                () -> new AssertionError("Builder should throw validation exception."));
+
+        // expected number is 5 because Hadoop is used and validated by Format and Source builders.
+        assertThat(exception.getValidationMessages().size(), equalTo(4));
+    }
+
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithNulls();
 
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderForColumns(
         String[] columnNames,
         LogicalType[] columnTypes);
+
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithMutualExcludedOptions();
+
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithGenericMutualExcludedOptions();
+
+    protected abstract DeltaSourceBuilderBase<?, ?>
+        getBuilderWithNullMandatoryFieldsAndExcludedOption();
 
     protected Optional<Exception> testValidation(Producer<DeltaSource<?>> builder) {
         try {

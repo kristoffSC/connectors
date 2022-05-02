@@ -1,6 +1,7 @@
 package io.delta.flink.source.internal.exceptions;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
 import org.apache.flink.core.fs.Path;
@@ -50,9 +51,9 @@ public final class DeltaSourceExceptions {
      * @return {@link DeltaSourceException} wrapping original {@code IOException}
      */
     public static DeltaSourceException fileEnumerationException(
-        AddFileEnumeratorContext context,
-        Path filePath,
-        IOException e) {
+            AddFileEnumeratorContext context,
+            Path filePath,
+            IOException e) {
         return new DeltaSourceException(context.getTablePath(), context.getSnapshotVersion(),
             String.format("An Exception while processing Parquet Files for path %s and version %d",
                 filePath, context.getSnapshotVersion()), e);
@@ -69,8 +70,8 @@ public final class DeltaSourceExceptions {
      * @return A {@link DeltaSourceException} object.
      */
     public static DeltaSourceException deltaSourceIgnoreChangesException(
-        String tablePath,
-        long snapshotVersion) {
+            String tablePath,
+            long snapshotVersion) {
 
         return new DeltaSourceException(
             tablePath, snapshotVersion,
@@ -92,8 +93,8 @@ public final class DeltaSourceExceptions {
      * @return A {@link DeltaSourceException} object.
      */
     public static DeltaSourceException deltaSourceIgnoreDeleteException(
-        String tablePath,
-        long snapshotVersion) {
+            String tablePath,
+            long snapshotVersion) {
         return new DeltaSourceException(
             tablePath, snapshotVersion,
             String.format("Detected deleted data (for example $removedFile) from streaming source "
@@ -102,7 +103,8 @@ public final class DeltaSourceExceptions {
     }
 
     public static DeltaSourceException tableMonitorException(
-        String deltaTablePath, Throwable error) {
+            String deltaTablePath,
+            Throwable error) {
         return new DeltaSourceException(
             deltaTablePath, null,
             String.format("Exception during monitoring Delta table [%s] for changes",
@@ -120,7 +122,9 @@ public final class DeltaSourceExceptions {
      * @return A {@link DeltaSourceException} object.
      */
     public static DeltaSourceException unsupportedDeltaActionException(
-        String tablePath, long snapshotVersion, Action action) {
+            String tablePath,
+            long snapshotVersion,
+            Action action) {
         return new DeltaSourceException(
             tablePath, snapshotVersion,
             String.format(
@@ -129,13 +133,15 @@ public final class DeltaSourceExceptions {
                 action.getClass(), snapshotVersion, tablePath));
     }
 
-    public static DeltaSourceException invalidOptionNameException(
-        String tablePath,
-        String invalidOption) {
+    public static DeltaSourceValidationException invalidOptionNameException(
+            String tablePath,
+            String invalidOption) {
 
-        return new DeltaSourceException(
-            tablePath, null,
-            String.format("Invalid option [%s] used for Delta Source Connector.", invalidOption));
+        return new DeltaSourceValidationException(
+            tablePath,
+            Collections.singletonList(
+                String.format("Invalid option [%s] used for Delta Source Connector.",
+                    invalidOption)));
     }
 
     // Add other methods in future PRs.

@@ -10,6 +10,16 @@ import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
+/**
+ * A base class for Delta source builders that should create Delta source instance for {@link
+ * org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode. This implementation
+ * contains methods from {@link DeltaSourceBuilderBase} base class and methods applicable only for
+ * Continuous mode.
+ *
+ * @param <T> Type of element produced by created source.
+ * @param <SELF> This builder carries a <i>SELF</i> type to make it convenient to extend this for
+ *               subclasses. Please, see {@link DeltaSourceBuilderBase} for details.
+ */
 public abstract class ContinuousDeltaSourceBuilder<T, SELF>
     extends DeltaSourceBuilderBase<T, SELF> {
 
