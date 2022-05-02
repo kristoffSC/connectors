@@ -1,8 +1,8 @@
 package io.delta.flink.source;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -16,16 +16,15 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@RunWith(Parameterized.class)
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
 
     /**
@@ -43,34 +42,29 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      */
     private static final int INITIAL_DATA_SIZE = 2;
 
-    /**
-     * Type of Failover
-     */
-    private final FailoverType failoverType;
-
-    public DeltaSourceContinuousExecutionITCaseTest(FailoverType failoverType) {
-        this.failoverType = failoverType;
+    @BeforeAll
+    public static void beforeAll() throws IOException {
+        DeltaSourceITBase.beforeAll();
     }
 
-    @Parameters(name = "{index}: FailoverType = [{0}]")
-    public static Collection<Object[]> param() {
-        return Arrays.asList(new Object[][]{
-            {FailoverType.NONE}, {FailoverType.TASK_MANAGER}, {FailoverType.JOB_MANAGER}
-        });
+    @AfterAll
+    public static void afterAll() {
+        DeltaSourceITBase.afterAll();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         super.setup();
     }
 
-    @After
+    @AfterEach
     public void after() {
         super.after();
     }
 
-    @Test
-    public void shouldReadTableWithNoUpdates() throws Exception {
+    @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
+    @EnumSource(FailoverType.class)
+    public void shouldReadTableWithNoUpdates(FailoverType failoverType) throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
@@ -105,8 +99,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             equalTo(SMALL_TABLE_EXPECTED_VALUES));
     }
 
-    @Test
-    public void shouldReadLargeDeltaTableWithNoUpdates() throws Exception {
+    @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
+    @EnumSource(FailoverType.class)
+    public void shouldReadLargeDeltaTableWithNoUpdates(FailoverType failoverType) throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
@@ -138,9 +133,11 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
-    @Test
+    @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
+    @EnumSource(FailoverType.class)
     // This test updates Delta Table 5 times, so it will take some time to finish. About 1 minute.
-    public void shouldReadDeltaTableFromSnapshotAndUpdates() throws Exception {
+    public void shouldReadDeltaTableFromSnapshotAndUpdates(FailoverType failoverType)
+        throws Exception {
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
@@ -176,6 +173,30 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
     }
 
+    @Override
+    protected List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource) throws Exception {
+        return testContinuousDeltaSource(FailoverType.NONE, deltaSource,
+            new ContinuousTestDescriptor(2), (FailCheck) integer -> true).get(0);
+    }
+
+    @Override
+    protected DeltaSource<RowData> initPartitionedSource(
+        String tablePath,
+        String[] columnNames,
+        LogicalType[] columnTypes,
+        List<String> partitions) {
+
+        Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
+
+        return DeltaSource.forContinuousRowData(
+                Path.fromLocalFile(new File(tablePath)),
+                columnNames,
+                columnTypes,
+                hadoopConf
+            ).partitions(partitions)
+            .build();
+    }
+
     /**
      * Creates a {@link ContinuousTestDescriptor} for tests. The descriptor created by this method
      * describes a scenario where Delta table will be updated {@link #NUMBER_OF_TABLE_UPDATE_BULKS}
@@ -193,8 +214,6 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         }
         return testDescriptor;
     }
-
-    // TODO PR 8 Add tests for Partitions
 
     private DeltaSource<RowData> initContinuousSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {

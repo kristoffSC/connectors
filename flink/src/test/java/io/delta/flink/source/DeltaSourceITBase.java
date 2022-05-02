@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -29,19 +30,20 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
+import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.util.TestLogger;
-import org.junit.ClassRule;
-import org.junit.Rule;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 public abstract class DeltaSourceITBase extends TestLogger {
 
-    @ClassRule
     public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
     protected static final LogicalType[] SMALL_TABLE_COLUMN_TYPES =
@@ -64,12 +66,14 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int PARALLELISM = 4;
 
     private static final ExecutorService WORKER_EXECUTOR = Executors.newSingleThreadExecutor();
-    @Rule
+
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
 
     protected String nonPartitionedTablePath;
 
     protected String nonPartitionedLargeTablePath;
+
+    protected String partitionedTablePath;
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster) throws Exception {
@@ -86,7 +90,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         }
     }
 
-    public static void triggerJobManagerFailover(
+    private static void triggerJobManagerFailover(
         JobID jobId, Runnable afterFailAction, MiniCluster miniCluster) throws Exception {
         System.out.println("Triggering Job Manager failover.");
         HaLeadershipControl haLeadershipControl = miniCluster.getHaLeadershipControl().get();
@@ -95,7 +99,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         haLeadershipControl.grantJobMasterLeadership(jobId).get();
     }
 
-    public static void restartTaskManager(Runnable afterFailAction, MiniCluster miniCluster)
+    private static void restartTaskManager(Runnable afterFailAction, MiniCluster miniCluster)
         throws Exception {
         System.out.println("Triggering Task Manager failover.");
         miniCluster.terminateTaskManager(0).get();
@@ -103,23 +107,99 @@ public abstract class DeltaSourceITBase extends TestLogger {
         miniCluster.startTaskManager();
     }
 
+    public static void beforeAll() throws IOException {
+        TMP_FOLDER.create();
+    }
+
+    public static void afterAll() {
+        TMP_FOLDER.delete();
+    }
+
+    protected abstract List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource)
+        throws Exception;
+
+    protected abstract DeltaSource<RowData> initPartitionedSource(
+        String partitionedTablePath,
+        String[] strings,
+        LogicalType[] logicalTypes,
+        List<String> asList);
+
+
+    @Test
+    public void testWithOnePartition() throws Exception {
+
+        // GIVEN
+        DeltaSource<RowData> deltaSource = initPartitionedSource(
+            partitionedTablePath,
+            new String[]{"name", "surname", "age", "col2"},
+            new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType()},
+            Arrays.asList("col1", "col2")
+        );
+
+        // WHEN
+        List<RowData> resultData = testWithPartitions(deltaSource);
+
+        Set<String> actualNames =
+            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.",
+            resultData.size(),
+            equalTo(SMALL_TABLE_COUNT));
+        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
+            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+
+        resultData.forEach(rowData -> assertPartitionValue(rowData, 3, "val2"));
+    }
+
+    @Test
+    public void testWithBothPartitions() throws Exception {
+
+        // GIVEN
+        DeltaSource<RowData> deltaSource = initPartitionedSource(
+            partitionedTablePath,
+            new String[]{"name", "surname", "age", "col1", "col2"},
+            new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType(),
+                new CharType()},
+            Arrays.asList("col1", "col2"));
+
+        // WHEN
+        List<RowData> resultData = testWithPartitions(deltaSource);
+
+        Set<String> actualNames =
+            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
+            equalTo(SMALL_TABLE_COUNT));
+        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
+            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+
+        resultData.forEach(rowData -> {
+            assertPartitionValue(rowData, 3, "val1");
+            assertPartitionValue(rowData, 4, "val2");
+        });
+    }
+
     public void setup() {
         try {
+            miniClusterResource.before();
             nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
             nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+            partitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
 
             // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
-            // TODO PR 8 Add Partitioned table
+            DeltaSinkTestUtils.initTestForPartitionedTable(partitionedTablePath);
             DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
             DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
                 nonPartitionedLargeTablePath);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
     }
 
     public void after() {
-        miniClusterResource.getClusterClient().close();
+        miniClusterResource.after();
     }
 
     private MiniClusterWithClientResource buildCluster() {
@@ -137,28 +217,28 @@ public abstract class DeltaSourceITBase extends TestLogger {
     }
 
     /**
-     * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
-     * DeltaSource} instance without any failover.
+     * Base method used for testing {@link DeltaSource}. This method creates a {@link
+     * StreamExecutionEnvironment} and uses provided {@code DeltaSource} instance without any
+     * failover.
      *
      * @param source The {@link DeltaSource} that should be used in this test.
      * @param <T>    Type of objects produced by source.
      * @return A {@link List} of produced records.
      */
-    protected <T> List<T> testBoundDeltaSource(DeltaSource<T> source)
+    protected <T> List<T> testBoundedDeltaSource(DeltaSource<T> source)
         throws Exception {
 
         // Since we don't do any failover here (used FailoverType.NONE) we don't need any
         // actually FailCheck.
         // We do need to pass the check at least once, to call
         // RecordCounterToFail#continueProcessing.get() hence (FailCheck) integer -> true
-        return testBoundDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
+        return testBoundedDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
     }
 
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
-     * DeltaSource} instance.
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
+     * instance.
      * <p>
      * <p>
      * The created environment can perform a failover after condition described by {@link FailCheck}
@@ -221,6 +301,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 "Not using Bounded source in Bounded test setup. This will not work properly.");
         }
 
+        return testBoundedDeltaSource(failoverType, source, failCheck);
+    }
+
+    private <T> List<T> testBoundedDeltaSource(FailoverType failoverType, DeltaSource<T> source,
+        FailCheck failCheck)
+        throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(PARALLELISM);
         env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
@@ -392,6 +478,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 });
                 return results;
             });
+    }
+
+    protected void assertPartitionValue(RowData rowData, int pos, String val1) {
+        assertThat("Partition column has a wrong value.", rowData.getString(pos).toString(),
+            equalTo(val1));
     }
 
     public enum FailoverType {

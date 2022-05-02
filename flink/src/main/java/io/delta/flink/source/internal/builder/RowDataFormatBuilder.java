@@ -3,9 +3,13 @@ package io.delta.flink.source.internal.builder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.delta.flink.source.internal.DeltaPartitionFieldExtractor;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
+import io.delta.flink.source.internal.state.DeltaSourceSplit;
+import org.apache.flink.formats.parquet.vector.ColumnBatchFactory;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
@@ -68,6 +72,39 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         this.partitions = Collections.emptyList();
     }
 
+    private static RowDataFormat buildPartitionedFormat(
+        String[] columnNames,
+        LogicalType[] columnTypes,
+        Configuration hadoopConfig,
+        List<String> partitionKeys) {
+
+        RowType producedRowType = RowType.of(columnTypes, columnNames);
+        RowType projectedRowType =
+            new RowType(
+                producedRowType.getFields().stream()
+                    .filter(field -> !partitionKeys.contains(field.getName()))
+                    .collect(Collectors.toList()));
+
+        List<String> projectedNames = projectedRowType.getFieldNames();
+
+        ColumnBatchFactory<DeltaSourceSplit> factory =
+            RowBuilderUtils.createPartitionedColumnFactory(
+                producedRowType,
+                projectedNames,
+                partitionKeys,
+                new DeltaPartitionFieldExtractor<>(),
+                BATCH_SIZE);
+
+        return new RowDataFormat(
+                hadoopConfig,
+                projectedRowType,
+                producedRowType,
+                factory,
+                BATCH_SIZE,
+                PARQUET_UTC_TIMESTAMP,
+                PARQUET_CASE_SENSITIVE);
+    }
+
     /**
      * Set list of partition columns.
      */
@@ -94,11 +131,8 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         if (partitions.isEmpty()) {
             return buildFormatWithoutPartitions(columnNames, columnTypes, hadoopConfiguration);
         } else {
-            // TODO PR 8
-            throw new UnsupportedOperationException("Partition support will be added later.");
-            /* return
-                buildPartitionedFormat(columnNames, columnTypes, configuration, partitions,
-                    sourceConfiguration);*/
+            return
+                buildPartitionedFormat(columnNames, columnTypes, hadoopConfiguration, partitions);
         }
     }
 

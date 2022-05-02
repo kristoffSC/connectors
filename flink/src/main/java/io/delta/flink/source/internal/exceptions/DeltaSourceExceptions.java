@@ -144,5 +144,18 @@ public final class DeltaSourceExceptions {
                     invalidOption)));
     }
 
+    public static DeltaSourceException notPartitionedTableException(String columnName) {
+        return new DeltaSourceException(
+            String.format(
+                "Attempt to get a value for partition column from unpartitioned Delta Table. "
+                    + "Column name %s", columnName));
+    }
+
+    public static DeltaSourceException missingPartitionValueException(String partitionName) {
+        return new DeltaSourceException(
+            String.format("Cannot find the partition value in Delta MetaData for column %s",
+                partitionName));
+    }
+
     // Add other methods in future PRs.
 }

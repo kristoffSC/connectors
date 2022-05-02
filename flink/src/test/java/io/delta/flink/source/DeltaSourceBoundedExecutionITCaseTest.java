@@ -1,8 +1,7 @@
 package io.delta.flink.source;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,47 +12,44 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 
-@RunWith(Parameterized.class)
 public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
-    private final FailoverType failoverType;
-
-    public DeltaSourceBoundedExecutionITCaseTest(FailoverType failoverType) {
-        this.failoverType = failoverType;
+    @BeforeAll
+    public static void beforeAll() throws IOException {
+        DeltaSourceITBase.beforeAll();
     }
 
-    @Parameters(name = "{index}: FailoverType = [{0}]")
-    public static Collection<Object[]> param() {
-        return Arrays.asList(new Object[][]{
-            {FailoverType.NONE}, {FailoverType.TASK_MANAGER}, {FailoverType.JOB_MANAGER}
-        });
+    @AfterAll
+    public static void afterAll() {
+        DeltaSourceITBase.afterAll();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         super.setup();
     }
 
-    @After
+    @AfterEach
     public void after() {
         super.after();
     }
 
-    @Test
+    @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
+    @EnumSource(FailoverType.class)
     // NOTE that this test can take some time to finish since we are restarting JM here.
     // It can be around 30 seconds or so.
     // Test if SplitEnumerator::addSplitsBack works well,
     // meaning if splits were added back to the Enumerator's state and reassigned to new TM.
-    public void shouldReadDeltaTable() throws Exception {
+    public void shouldReadDeltaTable(FailoverType failoverType) throws Exception {
 
         DeltaSource<RowData> deltaSource =
             initBoundedSource(
@@ -77,8 +73,6 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
-    // TODO PR 8 ADD Partition tests in later PRs
-
     private DeltaSource<RowData> initBoundedSource(
         String tablePath, String[] columnNames, LogicalType[] columnTypes) {
 
@@ -90,5 +84,28 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             columnTypes,
             hadoopConf
         ).build();
+    }
+
+    @Override
+    protected List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource) throws Exception {
+        return testBoundedDeltaSource(deltaSource);
+    }
+
+    @Override
+    protected DeltaSource<RowData> initPartitionedSource(
+        String tablePath,
+        String[] columnNames,
+        LogicalType[] columnTypes,
+        List<String> partitions) {
+
+        Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
+
+        return DeltaSource.forBoundedRowData(
+                Path.fromLocalFile(new File(tablePath)),
+                columnNames,
+                columnTypes,
+                hadoopConf
+            ).partitions(partitions)
+            .build();
     }
 }

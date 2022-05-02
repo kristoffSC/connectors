@@ -39,11 +39,18 @@ public class DeltaSourceException extends RuntimeException {
         this.snapshotVersion = snapshotVersion;
     }
 
+    public DeltaSourceException(String message) {
+        super(message);
+        this.tablePath = null;
+        this.snapshotVersion = null;
+    }
+
     /**
-     * @return Delta table path for which this exception was thrown.
+     * @return An {@link Optional} value with path to Delta table for which this exception was
+     * thrown.
      */
-    public String getTablePath() {
-        return tablePath;
+    public Optional<String> getTablePath() {
+        return Optional.ofNullable(tablePath);
     }
 
     /**
