@@ -1,7 +1,6 @@
 package io.delta.flink.source.internal.builder;
 
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
-import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
@@ -64,30 +63,6 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
 
     public SELF ignoreChanges(boolean ignoreChanges) {
         sourceConfiguration.addOption(IGNORE_CHANGES.key(), ignoreChanges);
-        return self();
-    }
-
-    public SELF option(String optionName, String optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    public SELF option(String optionName, boolean optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    public SELF option(String optionName, int optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    public SELF option(String optionName, long optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
         return self();
     }
 

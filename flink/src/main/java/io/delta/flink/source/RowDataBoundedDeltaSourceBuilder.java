@@ -1,5 +1,7 @@
 package io.delta.flink.source;
 
+import java.util.List;
+
 import io.delta.flink.source.internal.builder.BoundedDeltaSourceBuilder;
 import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.builder.FormatBuilder;
@@ -68,6 +70,13 @@ public class RowDataBoundedDeltaSourceBuilder
     @Override
     public RowDataBoundedDeltaSourceBuilder timestampAsOf(String snapshotTimestamp) {
         return super.timestampAsOf(snapshotTimestamp);
+    }
+
+    /**
+     * Sets a list of Delta's partition columns.
+     */
+    public RowDataBoundedDeltaSourceBuilder partitionColumns(List<String> partitions) {
+        return super.partitionColumns(partitions);
     }
 
     /**

@@ -1,7 +1,6 @@
 package io.delta.flink.source.internal.builder;
 
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
-import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
@@ -41,30 +40,6 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
 
     public SELF timestampAsOf(String snapshotTimestamp) {
         sourceConfiguration.addOption(TIMESTAMP_AS_OF.key(), snapshotTimestamp);
-        return self();
-    }
-
-    public SELF option(String optionName, String optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    public SELF option(String optionName, boolean optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    public SELF option(String optionName, int optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
-        return self();
-    }
-
-    public SELF option(String optionName, long optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
         return self();
     }
 

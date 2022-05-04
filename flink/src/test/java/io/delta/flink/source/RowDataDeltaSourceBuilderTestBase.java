@@ -105,17 +105,17 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     /**
      * Test for column name and colum type arrays.
      *
-     * @param columnNames   An array with column names.
-     * @param columnTypes   An array with column types.
-     * @param expectedCount Number of expected validation errors for given combination of column
-     *                      names and types.
+     * @param columnNames        An array with column names.
+     * @param columnTypes        An array with column types.
+     * @param expectedErrorCount Number of expected validation errors for given combination of
+     *                           column names and types.
      */
     @ParameterizedTest
     @MethodSource("columnArrays")
     public void testColumnArrays(
-        String[] columnNames,
-        LogicalType[] columnTypes,
-        int expectedCount) {
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            int expectedErrorCount) {
 
         Optional<Exception> validation = testValidation(
             () -> getBuilderForColumns(columnNames, columnTypes).build()
@@ -127,7 +127,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
                     "Builder should throw exception on invalid column names and column types "
                         + "arrays."));
 
-        assertThat(exception.getValidationMessages().size(), equalTo(expectedCount));
+        assertThat(exception.getValidationMessages().size(), equalTo(expectedErrorCount));
     }
 
     @Test
@@ -191,8 +191,8 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithNulls();
 
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderForColumns(
-        String[] columnNames,
-        LogicalType[] columnTypes);
+            String[] columnNames,
+            LogicalType[] columnTypes);
 
 
     /**

@@ -58,27 +58,27 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     /**
      * An array with Delta table partition columns.
      */
-    private List<String> partitions;
+    private List<String> partitionColumns;
 
     RowDataFormatBuilder(String[] columnNames,
         LogicalType[] columnTypes, Configuration hadoopConfiguration) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.hadoopConfiguration = hadoopConfiguration;
-        this.partitions = Collections.emptyList();
+        this.partitionColumns = Collections.emptyList();
     }
 
     /**
      * Set list of partition columns.
      */
-    public RowDataFormatBuilder partitions(List<String> partitions) {
-        checkNotNull(partitions, EXCEPTION_PREFIX + "partition list cannot be null.");
-        checkArgument(partitions.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
+    public RowDataFormatBuilder partitionColumns(List<String> partitionColumns) {
+        checkNotNull(partitionColumns, EXCEPTION_PREFIX + "partition column list cannot be null.");
+        checkArgument(partitionColumns.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
             EXCEPTION_PREFIX
                 + "List with partition columns contains at least one element that is null, "
                 + "empty, or contains only whitespace characters.");
 
-        this.partitions = partitions;
+        this.partitionColumns = partitionColumns;
         return this;
     }
 
@@ -91,7 +91,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     public RowDataFormat build() {
         validateFormat();
 
-        if (partitions.isEmpty()) {
+        if (partitionColumns.isEmpty()) {
             return buildFormatWithoutPartitions(columnNames, columnTypes, hadoopConfiguration);
         } else {
             // TODO PR 8
