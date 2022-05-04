@@ -153,7 +153,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         DeltaSourceValidationException exception =
             (DeltaSourceValidationException) validation.orElseThrow(
                 () -> new AssertionError(
-                    "Builder should throw exception when using mutual excluded options."));
+                    "Builder should throw exception when using mutually exclusive options."));
 
         assertThat(exception.getValidationMessages().size(), equalTo(1));
     }
@@ -168,7 +168,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         DeltaSourceValidationException exception =
             (DeltaSourceValidationException) validation.orElseThrow(
                 () -> new AssertionError(
-                    "Builder should throw exception when using mutual excluded options."));
+                    "Builder should throw exception when using mutually exclusive options."));
 
         assertThat(exception.getValidationMessages().size(), equalTo(1));
     }
