@@ -66,6 +66,7 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
         return self();
     }
 
+    @Override
     protected Validator validateOptionExclusions() {
 
         // mutually exclusive check for STARTING_VERSION and STARTING_TIMESTAMP in Streaming
