@@ -24,12 +24,20 @@ public final class RowBuilderUtils {
      */
     public static <SplitT extends DeltaSourceSplit> ColumnBatchFactory<SplitT>
         createPartitionedColumnFactory(
-        RowType producedRowType,
-        List<String> projectedNames,
-        List<String> partitionKeys,
-        PartitionFieldExtractor<SplitT> extractor,
-        int batchSize) {
+            RowType producedRowType,
+            List<String> projectedNames,
+            List<String> partitionKeys,
+            PartitionFieldExtractor<SplitT> extractor,
+            int batchSize) {
 
+        // This method is copied and adjusted from Flink's
+        // ParquetColumnarRowInputFormat::createPartitionedFormat factory method.
+        // The changes made to the original method were about making this method return an
+        // instance of ColumnBatchFactory object rather than ParquetColumnarRowInputFormat like
+        // the original method is doing.
+        // Thanks to this, we can still have our own implementation of Delta's DeltaBulkFormat
+        // and hide Flink types and API from the end user. This will be helpfully in the future
+        // when we will expose DeltaBulkFormat to the end user.
         return (SplitT split, ColumnVector[] parquetVectors) -> {
             // create and initialize the row batch
             ColumnVector[] vectors = new ColumnVector[producedRowType.getFieldCount()];
