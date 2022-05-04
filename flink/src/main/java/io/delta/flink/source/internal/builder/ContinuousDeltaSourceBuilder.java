@@ -4,10 +4,10 @@ import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvid
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
-import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
 /**
@@ -36,7 +36,7 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
         FormatBuilder<T> formatBuilder, Configuration hadoopConfiguration) {
         super(tablePath, formatBuilder, hadoopConfiguration);
     }
-
+    // TODO PR 9.1 add tests for options.
     public SELF startingVersion(String startingVersion) {
         sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
         return self();
@@ -63,7 +63,7 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
     }
 
     public SELF ignoreChanges(boolean ignoreChanges) {
-        sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreChanges);
+        sourceConfiguration.addOption(IGNORE_CHANGES.key(), ignoreChanges);
         return self();
     }
 
@@ -99,6 +99,6 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
             .checkArgument(
                 !sourceConfiguration.hasOption(STARTING_TIMESTAMP)
                     || !sourceConfiguration.hasOption(STARTING_VERSION),
-                prepareOptionExclusionMessage(STARTING_VERSION.key(), TIMESTAMP_AS_OF.key()));
+                prepareOptionExclusionMessage(STARTING_VERSION.key(), STARTING_TIMESTAMP.key()));
     }
 }

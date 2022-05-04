@@ -139,6 +139,8 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     private void validateFormat() {
         Validator validator = validateMandatoryOptions();
         if (validator.containsMessages()) {
+            // RowDataFormatBuilder does not know Delta's table path,
+            // hence null argument in DeltaSourceValidationException
             throw new DeltaSourceValidationException(null, validator.getValidationMessages());
         }
     }

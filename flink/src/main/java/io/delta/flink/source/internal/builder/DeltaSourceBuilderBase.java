@@ -99,7 +99,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     public abstract <V extends DeltaSource<T>> V build();
 
     /**
-     * This method should implement any logic for validation of mutual excluded options.
+     * This method should implement any logic for validation of mutually exclusive options.
      *
      * @return {@link Validator} instance with validation error message.
      */
@@ -161,10 +161,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
             .checkNotNull(hadoopConfiguration, EXCEPTION_PREFIX + "missing Hadoop configuration.");
     }
 
-    protected String prepareOptionExclusionMessage(String... mutualExcludedOptions) {
+    protected String prepareOptionExclusionMessage(String... mutualExclusiveOptions) {
         return String.format(
-            "Used mutual excluded options for Source definition. Invalid options [%s]",
-            String.join(";", mutualExcludedOptions));
+            "Used mutually exclusive options for Source definition. Invalid options [%s]",
+            String.join(",", mutualExclusiveOptions));
     }
 
     // TODO Refactor Option name validation in PR 9.1

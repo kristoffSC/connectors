@@ -13,6 +13,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTestBase {
 
+    ////////////////////////////////
+    // Continuous-only test cases //
+    ////////////////////////////////
+
     @Test
     public void shouldCreateSource() {
         DeltaSource<RowData> boundedSource = DeltaSource.forBoundedRowData(
@@ -38,7 +42,13 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
         assertThat(boundedSource, notNullValue());
         assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
+        assertThat(boundedSource.getSourceConfiguration()
+            .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(10));
     }
+
+    //////////////////////////////////////////////////////////////
+    // Overridden parent methods for tests in base parent class //
+    //////////////////////////////////////////////////////////////
 
     @Override
     protected RowDataBoundedDeltaSourceBuilder getBuilderWithNulls() {
@@ -63,7 +73,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
     }
 
     @Override
-    protected RowDataBoundedDeltaSourceBuilder getBuilderWithMutualExcludedOptions() {
+    protected RowDataBoundedDeltaSourceBuilder getBuilderWithMutuallyExcludedOptions() {
         return DeltaSource.forBoundedRowData(
                 new Path(TABLE_PATH),
                 COLUMN_NAMES,
@@ -75,7 +85,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
     }
 
     @Override
-    protected RowDataBoundedDeltaSourceBuilder getBuilderWithGenericMutualExcludedOptions() {
+    protected RowDataBoundedDeltaSourceBuilder getBuilderWithGenericMutuallyExcludedOptions() {
         return DeltaSource.forBoundedRowData(
                 new Path(TABLE_PATH),
                 COLUMN_NAMES,

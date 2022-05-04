@@ -5,6 +5,7 @@ import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaPendingSplitsCheckpointSerializer;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.state.DeltaSourceSplitSerializer;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.Source;
@@ -127,8 +128,7 @@ public class DeltaSourceInternal<T>
 
     @Override
     public SplitEnumerator<DeltaSourceSplit, DeltaEnumeratorStateCheckpoint<DeltaSourceSplit>>
-        createEnumerator(
-            SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
+        createEnumerator(SplitEnumeratorContext<DeltaSourceSplit> enumContext) {
         return splitEnumeratorProvider.createInitialStateEnumerator(tablePath,
             serializableConf.conf(),
             enumContext, sourceConfiguration);
@@ -148,7 +148,14 @@ public class DeltaSourceInternal<T>
         return readerFormat.getProducedType();
     }
 
+    @VisibleForTesting
     public Path getTablePath() {
         return tablePath;
     }
+
+    @VisibleForTesting
+    public DeltaSourceConfiguration getSourceConfiguration() {
+        return sourceConfiguration;
+    }
+
 }
