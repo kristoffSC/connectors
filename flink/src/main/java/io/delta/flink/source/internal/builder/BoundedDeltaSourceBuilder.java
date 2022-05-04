@@ -33,6 +33,7 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
         super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
+    // TODO PR 9.1 add tests for options.
     public SELF versionAsOf(long snapshotVersion) {
         sourceConfiguration.addOption(VERSION_AS_OF.key(), snapshotVersion);
         return self();

@@ -30,45 +30,86 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     protected static final LogicalType[] COLUMN_TYPES =
         {new CharType(), new CharType(), new IntType()};
 
+    /**
+     * @return A Stream of arguments for parametrized test such that every element contains:
+     * <ul>
+     *     <li>An array of column names.</li>
+     *     <li>An array of types for requested column name.</li>
+     *     <li>
+     *         Expected number of validation errors for given combination of column names and types.
+     *     </li>
+     * </ul>
+     */
     protected static Stream<Arguments> columnArrays() {
         return Stream.of(
+            // Validation error due to different size of column names and column types array.
             Arguments.of(
                 new String[]{"col1", "col2"},
                 new LogicalType[]{new CharType(), new CharType(), new CharType()},
                 1),
+
+            // Validation error due to different size of column names and column types array.
             Arguments.of(
                 new String[]{"col1", "col2", "col3"},
                 new LogicalType[]{new CharType(), new CharType()},
                 1),
+
+            // Validation error due to null element in column name array.
             Arguments.of(
                 new String[]{"col1", null, "col3"},
                 new LogicalType[]{new CharType(), new CharType(), new CharType()},
                 1),
+
+            // Validation error due to null element in column type array.
             Arguments.of(
                 new String[]{"col1", "col2", "col3"},
                 new LogicalType[]{new CharType(), null, new CharType()},
                 1),
+
+            // Expecting two validation errors due to null element in column name array and array
+            // length mismatch for column names and types.
             Arguments.of(
                 new String[]{"col1", null, "col3"},
                 new LogicalType[]{new CharType(), new CharType()},
                 2),
+
+            // Expecting two validation errors due to null element in column type array and array
+            // length mismatch for column names and types.
             Arguments.of(
                 new String[]{"col1", "col3"},
                 new LogicalType[]{new CharType(), null, new CharType()},
                 2),
+
+            // Expecting two validation errors due to null reference to column name array and
+            // null element in column type array.
             Arguments.of(
                 null,
                 new LogicalType[]{new CharType(), null, new CharType()},
                 2),
+
+            // Validation error due to null reference to column name array.
             Arguments.of(
                 null,
                 new LogicalType[]{new CharType(), new CharType()},
                 1),
+
+            // Validation error due to null reference to column type array.
             Arguments.of(new String[]{"col1", "col3"}, null, 1),
+
+            // Validation error due to null reference to column type array and null element in
+            // column name array.
             Arguments.of(new String[]{"col1", null}, null, 2)
         );
     }
 
+    /**
+     * Test for column name and colum type arrays.
+     *
+     * @param columnNames   An array with column names.
+     * @param columnTypes   An array with column types.
+     * @param expectedCount Number of expected validation errors for given combination of column
+     *                      names and types.
+     */
     @ParameterizedTest
     @MethodSource("columnArrays")
     public void testColumnArrays(
@@ -106,7 +147,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     public void testMutualExclusiveOptions() {
         // using dedicated builder methods
         Optional<Exception> validation = testValidation(
-            () -> getBuilderWithMutualExcludedOptions().build()
+            () -> getBuilderWithMutuallyExcludedOptions().build()
         );
 
         DeltaSourceValidationException exception =
@@ -121,7 +162,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     public void testMutualExcludedGenericOptions() {
         // using dedicated builder methods
         Optional<Exception> validation = testValidation(
-            () -> getBuilderWithGenericMutualExcludedOptions().build()
+            () -> getBuilderWithGenericMutuallyExcludedOptions().build()
         );
 
         DeltaSourceValidationException exception =
@@ -153,9 +194,18 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         String[] columnNames,
         LogicalType[] columnTypes);
 
-    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithMutualExcludedOptions();
 
-    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithGenericMutualExcludedOptions();
+    /**
+     * @return Delta source builder that uses invalid combination od mutually excluded options set
+     * via builder's dedicated methods such as 'startVersion(...)' or 'startingTimeStamp(...).
+     */
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithMutuallyExcludedOptions();
+
+    /**
+     * @return Delta source builder that uses invalid combination od mutually excluded options set
+     * via builder's generic 'option(key, value)' methods such as 'option("startVersion", 10)'.
+     */
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithGenericMutuallyExcludedOptions();
 
     protected abstract DeltaSourceBuilderBase<?, ?>
         getBuilderWithNullMandatoryFieldsAndExcludedOption();

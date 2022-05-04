@@ -93,6 +93,7 @@ public class SourceExamples {
             .build();
     }
 
+    // TODO remove this example after moving this to "examples" module.
     public void builderContinuousNonPublicOption() {
 
         Configuration hadoopConf = new Configuration();
@@ -103,7 +104,7 @@ public class SourceExamples {
                 COLUMN_TYPES,
                 hadoopConf
             )
-            .startingVersion(10)
+            .option("updateCheckDelayMillis", 10000)
             .build();
     }
 

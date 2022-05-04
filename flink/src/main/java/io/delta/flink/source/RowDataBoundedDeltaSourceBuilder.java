@@ -20,9 +20,9 @@ public class RowDataBoundedDeltaSourceBuilder
     extends BoundedDeltaSourceBuilder<RowData, RowDataBoundedDeltaSourceBuilder> {
 
     RowDataBoundedDeltaSourceBuilder(
-            Path tablePath,
-            FormatBuilder<RowData> formatBuilder,
-            Configuration hadoopConfiguration) {
+        Path tablePath,
+        FormatBuilder<RowData> formatBuilder,
+        Configuration hadoopConfiguration) {
         super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
@@ -38,7 +38,7 @@ public class RowDataBoundedDeltaSourceBuilder
      * version and read from it.
      *
      * <p>
-     * This option is mutual exclusive with {@link #timestampAsOf(String)} option.
+     * This option is mutually exclusive with {@link #timestampAsOf(String)} option.
      *
      * @param snapshotVersion Delta {@link io.delta.standalone.Snapshot} version to time travel to.
      */
@@ -53,9 +53,17 @@ public class RowDataBoundedDeltaSourceBuilder
      * mode only. With this option we can time travel to the latest {@link
      * io.delta.standalone.Snapshot} that was generated at or before given timestamp.
      * <p>
-     * This option is mutual exclusive with {@link #versionAsOf(long)} option.
+     * This option is mutually exclusive with {@link #versionAsOf(long)} option.
      *
-     * @param snapshotTimestamp The timestamp we should time travel to.
+     * @param snapshotTimestamp The timestamp we should time travel to. Supported formats are:
+     *                          <ul>
+     *                                <li>2022-02-24</li>
+     *                                <li>2022-02-24 04:55:00</li>
+     *                                <li>2022-02-24 04:55:00.001</li>
+     *                                <li>2022-02-24T04:55:00</li>
+     *                                <li>2022-02-24T04:55:00.001</li>
+     *                                <li>2022-02-24T04:55:00.001Z</li>
+     *                           </ul>
      */
     @Override
     public RowDataBoundedDeltaSourceBuilder timestampAsOf(String snapshotTimestamp) {
@@ -109,7 +117,7 @@ public class RowDataBoundedDeltaSourceBuilder
     /**
      * Creates an instance of {@link DeltaSource} for a stream of {@link RowData}. Created source
      * will work in Bounded mode, meaning it will read content of configured Delta's snapshot
-     * version ignoring all changes done this table after starting of this source.
+     * version ignoring all changes done to this table after starting this source.
      *
      * <p>
      * This method can throw {@code DeltaSourceValidationException} in case of invalid arguments

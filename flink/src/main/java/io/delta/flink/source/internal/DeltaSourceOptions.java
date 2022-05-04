@@ -139,7 +139,7 @@ public class DeltaSourceOptions {
         ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false);
 
     /**
-     * An option to set the number of rows read per Parquet Readr per batch from underlying Parquet
+     * An option to set the number of rows read per Parquet Reader per batch from underlying Parquet
      * file. This can improve read performance reducing IO cals to Parquet file at cost of memory
      * consumption on Task Manager nodes.
      */
@@ -147,7 +147,7 @@ public class DeltaSourceOptions {
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
 
-    // TODO PR 9 test all allowed options
+    // TODO PR 9.1 test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         VALID_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
