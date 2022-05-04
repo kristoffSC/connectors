@@ -73,10 +73,10 @@ public class RowDataBoundedDeltaSourceBuilder
     }
 
     /**
-     * Sets list of Delta's partition columns.
+     * Sets a list of Delta's partition columns.
      */
-    public RowDataBoundedDeltaSourceBuilder partitions(List<String> partitions) {
-        return super.partitions(partitions);
+    public RowDataBoundedDeltaSourceBuilder partitionColumns(List<String> partitionColumns) {
+        return super.partitionColumns(partitionColumns);
     }
 
     /**

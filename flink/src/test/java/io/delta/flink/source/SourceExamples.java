@@ -37,7 +37,7 @@ public class SourceExamples {
                 COLUMN_TYPES,
                 hadoopConf
             )
-            .partitions(Arrays.asList("col1", "col2"))
+            .partitionColumns(Arrays.asList("col1", "col2"))
             .build();
     }
 
@@ -62,7 +62,7 @@ public class SourceExamples {
                 COLUMN_TYPES,
                 hadoopConf
             )
-            .partitions(Arrays.asList("col1", "col2"))
+            .partitionColumns(Arrays.asList("col1", "col2"))
             .build();
     }
 
@@ -92,20 +92,4 @@ public class SourceExamples {
             .startingVersion(10)
             .build();
     }
-
-    // TODO remove this example after moving this to "examples" module.
-    public void builderContinuousNonPublicOption() {
-
-        Configuration hadoopConf = new Configuration();
-
-        DeltaSource<RowData> source = DeltaSource.forContinuousRowData(
-                new Path("s3://some/path"),
-                COLUMN_NAMES,
-                COLUMN_TYPES,
-                hadoopConf
-            )
-            .option("updateCheckDelayMillis", 10000)
-            .build();
-    }
-
 }

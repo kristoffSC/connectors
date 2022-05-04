@@ -92,10 +92,46 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     }
 
     /**
-     * Sets list of Delta's partition columns.
+     * Sets a list of Delta's partition columns.
      */
-    public SELF partitions(List<String> partitions) {
-        formatBuilder.partitions(partitions);
+    public SELF partitionColumns(List<String> partitionColumns) {
+        formatBuilder.partitionColumns(partitionColumns);
+        return self();
+    }
+
+    /**
+     * Sets a configuration option.
+     */
+    public SELF option(String optionName, String optionValue) {
+        ConfigOption<?> configOption = validateOptionName(optionName);
+        sourceConfiguration.addOption(configOption.key(), optionValue);
+        return self();
+    }
+
+    /**
+     * Sets a configuration option.
+     */
+    public SELF option(String optionName, boolean optionValue) {
+        ConfigOption<?> configOption = validateOptionName(optionName);
+        sourceConfiguration.addOption(configOption.key(), optionValue);
+        return self();
+    }
+
+    /**
+     * Sets a configuration option.
+     */
+    public SELF option(String optionName, int optionValue) {
+        ConfigOption<?> configOption = validateOptionName(optionName);
+        sourceConfiguration.addOption(configOption.key(), optionValue);
+        return self();
+    }
+
+    /**
+     * Sets a configuration option.
+     */
+    public SELF option(String optionName, long optionValue) {
+        ConfigOption<?> configOption = validateOptionName(optionName);
+        sourceConfiguration.addOption(configOption.key(), optionValue);
         return self();
     }
 
