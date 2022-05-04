@@ -360,11 +360,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
             RecordCounterToFail::continueProcessing,
             miniClusterResource.getMiniCluster());
 
-        // Main thread waits up to 2 minutes for all threads to finish. Fails of timeout.
+        // Main thread waits up to 5 minutes for all threads to finish. Fails of timeout.
         List<List<T>> totalResults = new ArrayList<>();
-        totalResults.add(initialDataFuture.get(3, TimeUnit.MINUTES));
-        totalResults.add(tableUpdaterFuture.get(3, TimeUnit.MINUTES));
-        client.client.cancel().get(3, TimeUnit.MINUTES);
+        totalResults.add(initialDataFuture.get(5, TimeUnit.MINUTES));
+        totalResults.add(tableUpdaterFuture.get(5, TimeUnit.MINUTES));
+        client.client.cancel().get(5, TimeUnit.MINUTES);
 
         return totalResults;
     }
