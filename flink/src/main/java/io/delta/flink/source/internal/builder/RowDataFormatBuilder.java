@@ -64,19 +64,21 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
      */
     private List<String> partitionColumns;
 
-    RowDataFormatBuilder(String[] columnNames,
-        LogicalType[] columnTypes, Configuration hadoopConfiguration) {
+    RowDataFormatBuilder(
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            Configuration hadoopConfiguration) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.hadoopConfiguration = hadoopConfiguration;
         this.partitionColumns = Collections.emptyList();
     }
 
-    private static RowDataFormat buildPartitionedFormat(
-        String[] columnNames,
-        LogicalType[] columnTypes,
-        Configuration hadoopConfig,
-        List<String> partitionKeys) {
+    private static RowDataFormat buildFormatWithPartitionColumns(
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            Configuration hadoopConfig,
+            List<String> partitionKeys) {
 
         RowType producedRowType = RowType.of(columnTypes, columnNames);
         RowType projectedRowType =
@@ -96,13 +98,13 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
                 BATCH_SIZE);
 
         return new RowDataFormat(
-                hadoopConfig,
-                projectedRowType,
-                producedRowType,
-                factory,
-                BATCH_SIZE,
-                PARQUET_UTC_TIMESTAMP,
-                PARQUET_CASE_SENSITIVE);
+            hadoopConfig,
+            projectedRowType,
+            producedRowType,
+            factory,
+            BATCH_SIZE,
+            PARQUET_UTC_TIMESTAMP,
+            PARQUET_CASE_SENSITIVE);
     }
 
     /**
@@ -129,10 +131,19 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         validateFormat();
 
         if (partitionColumns.isEmpty()) {
-            return buildFormatWithoutPartitions(columnNames, columnTypes, hadoopConfiguration);
+            return buildFormatWithoutPartitionColumns(
+                columnNames,
+                columnTypes,
+                hadoopConfiguration
+            );
         } else {
             return
-                buildPartitionedFormat(columnNames, columnTypes, hadoopConfiguration, partitions);
+                buildFormatWithPartitionColumns(
+                    columnNames,
+                    columnTypes,
+                    hadoopConfiguration,
+                    partitionColumns
+                );
         }
     }
 
@@ -145,7 +156,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         }
     }
 
-    private RowDataFormat buildFormatWithoutPartitions(
+    private RowDataFormat buildFormatWithoutPartitionColumns(
         String[] columnNames,
         LogicalType[] columnTypes,
         Configuration configuration) {

@@ -181,10 +181,10 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     @Override
     protected DeltaSource<RowData> initPartitionedSource(
-        String tablePath,
-        String[] columnNames,
-        LogicalType[] columnTypes,
-        List<String> partitions) {
+            String tablePath,
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            List<String> partitionColumns) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
@@ -193,7 +193,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                 columnNames,
                 columnTypes,
                 hadoopConf
-            ).partitions(partitions)
+            ).partitionColumns(partitionColumns)
             .build();
     }
 
