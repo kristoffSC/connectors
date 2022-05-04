@@ -91,6 +91,9 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         this.hadoopConfiguration = hadoopConfiguration;
     }
 
+    /**
+     * Sets list of Delta's partition columns.
+     */
     public SELF partitions(List<String> partitions) {
         formatBuilder.partitions(partitions);
         return self();

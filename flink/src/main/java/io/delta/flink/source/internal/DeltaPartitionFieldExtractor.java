@@ -8,9 +8,23 @@ import org.apache.flink.table.filesystem.PartitionFieldExtractor;
 import org.apache.flink.table.filesystem.RowPartitionComputer;
 import org.apache.flink.table.types.logical.LogicalType;
 
+/**
+ * An implementation of Flink's {@link PartitionFieldExtractor} for Delta Lake tables. This
+ * implementation extracts partition values from {@link DeltaSourceSplit#getPartitionValues()}. The
+ * value is converted to proper {@link LogicalType} provided via column type arrays in Delta Source
+ * definition.
+ */
 public class DeltaPartitionFieldExtractor<SplitT extends DeltaSourceSplit>
     implements PartitionFieldExtractor<SplitT> {
 
+    /**
+     * Extracts Delta's partition value
+     *
+     * @param split     The {@link DeltaSourceSplit} with partition's value map.
+     * @param fieldName The name of Delta's partition column.
+     * @param fieldType The {@link LogicalType} that partition value should be converted to.
+     * @return Converted value of Delta's partition column for provided split.
+     */
     @Override
     public Object extract(SplitT split, String fieldName, LogicalType fieldType) {
         Map<String, String> partitionValues = split.getPartitionValues();

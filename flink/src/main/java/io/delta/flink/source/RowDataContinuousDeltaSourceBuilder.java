@@ -1,5 +1,7 @@
 package io.delta.flink.source;
 
+import java.util.List;
+
 import io.delta.flink.source.internal.builder.ContinuousDeltaSourceBuilder;
 import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.builder.FormatBuilder;
@@ -144,6 +146,14 @@ public class RowDataContinuousDeltaSourceBuilder
     @Override
     public RowDataContinuousDeltaSourceBuilder ignoreChanges(boolean ignoreChanges) {
         return super.ignoreChanges(ignoreChanges);
+    }
+
+    /**
+     * Sets list of Delta's partition columns.
+     */
+    @Override
+    public RowDataContinuousDeltaSourceBuilder partitions(List<String> partitions) {
+        return super.partitions(partitions);
     }
 
     /**
