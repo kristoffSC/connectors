@@ -100,6 +100,14 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     }
 
     /**
+     * Sets a list of Delta's partition columns.
+     */
+    public SELF partitionColumns(String... partitionColumns) {
+        formatBuilder.partitionColumns(partitionColumns);
+        return self();
+    }
+
+    /**
      * Sets a configuration option.
      */
     public SELF option(String optionName, String optionValue) {

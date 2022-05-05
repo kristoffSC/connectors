@@ -12,4 +12,6 @@ public interface FormatBuilder<T> {
     DeltaBulkFormat<T> build();
 
     FormatBuilder<T> partitionColumns(List<String> partitionColumns);
+
+    FormatBuilder<T> partitionColumns(String... partitionColumns);
 }

@@ -122,7 +122,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         String partitionedTablePath,
         String[] strings,
         LogicalType[] logicalTypes,
-        List<String> asList);
+        List<String> partitionColumns);
 
 
     @Test
@@ -149,7 +149,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
             equalTo(SMALL_TABLE_EXPECTED_VALUES));
 
-        resultData.forEach(rowData -> assertPartitionValue(rowData, 3, "val2"));
+        String col2_partitionValue = "val2";
+        resultData.forEach(rowData -> assertPartitionValue(rowData, 3, col2_partitionValue));
     }
 
     @Test
@@ -159,8 +160,13 @@ public abstract class DeltaSourceITBase extends TestLogger {
         DeltaSource<RowData> deltaSource = initPartitionedSource(
             partitionedTablePath,
             new String[]{"name", "surname", "age", "col1", "col2"},
-            new LogicalType[]{new CharType(), new CharType(), new IntType(), new CharType(),
-                new CharType()},
+            new LogicalType[]{
+                new CharType(),
+                new CharType(),
+                new IntType(),
+                new CharType(),
+                new CharType()
+            },
             Arrays.asList("col1", "col2"));
 
         // WHEN
@@ -175,9 +181,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
             equalTo(SMALL_TABLE_EXPECTED_VALUES));
 
+        String col1_partitionValue = "val1";
+        String col2_partitionValue = "val2";
+
         resultData.forEach(rowData -> {
-            assertPartitionValue(rowData, 3, "val1");
-            assertPartitionValue(rowData, 4, "val2");
+            assertPartitionValue(rowData, 3, col1_partitionValue);
+            assertPartitionValue(rowData, 4, col2_partitionValue);
         });
     }
 
@@ -191,8 +200,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
             // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
             DeltaSinkTestUtils.initTestForPartitionedTable(partitionedTablePath);
             DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
-            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
-                nonPartitionedLargeTablePath);
+            DeltaSinkTestUtils
+                .initTestForNonPartitionedLargeTable(nonPartitionedLargeTablePath);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
@@ -237,8 +246,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
-     * DeltaSource} instance without any failover.
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
+     * instance without any failover.
      *
      * @param source The {@link DeltaSource} that should be used in this test.
      * @param <T>    Type of objects produced by source.
@@ -256,8 +265,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
-     * DeltaSource} instance.
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
+     * instance.
      * <p>
      * <p>
      * The created environment can perform a failover after condition described by {@link FailCheck}

@@ -56,13 +56,44 @@ public class SourceExamples {
     public void builderContinuousWithPartitions() {
         Configuration hadoopConf = new Configuration();
 
-        DeltaSource<RowData> source = DeltaSource.forContinuousRowData(
+        // Partition columns as list
+        DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
                 COLUMN_NAMES,
                 COLUMN_TYPES,
                 hadoopConf
             )
             .partitionColumns(Arrays.asList("col1", "col2"))
+            .build();
+
+        // Partition columns as array
+        DeltaSource.forContinuousRowData(
+                new Path("s3://some/path"),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                hadoopConf
+            )
+            .partitionColumns(new String[]{"col1", "col2"})
+            .build();
+
+        // Partition columns as vararg
+        DeltaSource.forContinuousRowData(
+                new Path("s3://some/path"),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                hadoopConf
+            )
+            .partitionColumns("col1", "col2")
+            .build();
+
+        // Partition columns as single element
+        DeltaSource.forContinuousRowData(
+                new Path("s3://some/path"),
+                COLUMN_NAMES,
+                COLUMN_TYPES,
+                hadoopConf
+            )
+            .partitionColumns("col1")
             .build();
     }
 

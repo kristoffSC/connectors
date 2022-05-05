@@ -1,5 +1,7 @@
 package io.delta.flink.source;
 
+import java.util.List;
+
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import org.apache.flink.api.connector.source.Boundedness;
@@ -62,14 +64,28 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
 
     @Override
     protected RowDataContinuousDeltaSourceBuilder getBuilderForColumns(
-        String[] columnNames,
-        LogicalType[] columnTypes) {
+            String[] columnNames,
+            LogicalType[] columnTypes) {
         return DeltaSource.forContinuousRowData(
             new Path(TABLE_PATH),
             columnNames,
             columnTypes,
             DeltaSinkTestUtils.getHadoopConf()
         );
+    }
+
+    @Override
+    protected RowDataContinuousDeltaSourceBuilder getBuildForPartitions(
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            List<String> partitionColumns) {
+        return DeltaSource.forContinuousRowData(
+                new Path(TABLE_PATH),
+                columnNames,
+                columnTypes,
+                DeltaSinkTestUtils.getHadoopConf()
+            )
+            .partitionColumns(partitionColumns);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package io.delta.flink.source;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -29,6 +31,10 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
 
     protected static final LogicalType[] COLUMN_TYPES =
         {new CharType(), new CharType(), new IntType()};
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //        test case & arguments for column names and column types arrays        //
+    //////////////////////////////////////////////////////////////////////////////////
 
     /**
      * @return A Stream of arguments for parametrized test such that every element contains:
@@ -110,7 +116,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
      * @param expectedErrorCount Number of expected validation errors for given combination of
      *                           column names and types.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = "{index}: Column names = [{0}], Column Types = [{1}]")
     @MethodSource("columnArrays")
     public void testColumnArrays(
             String[] columnNames,
@@ -130,9 +136,57 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         assertThat(exception.getValidationMessages().size(), equalTo(expectedErrorCount));
     }
 
+    /////////////////////////////////////////////////////////////////////////
+    //        test case & arguments for partitions names collection        //
+    /////////////////////////////////////////////////////////////////////////
+
+    /**
+     * @return A Stream of arguments for parametrized test such that every element contains:
+     * <ul>
+     *      <li>Data for partitions column names.</li>
+     *      <li>Expected number of validation errors.</li>
+     *  </ul>
+     */
+    protected static Stream<Arguments> partitionNames() {
+        return Stream.of(
+            Arguments.of(null, 1),
+            Arguments.of(Collections.emptyList(), 1),
+            Arguments.of(Collections.singletonList(null), 2),
+            Arguments.of(Collections.singletonList(""), 2),
+            Arguments.of(Collections.singletonList(" "), 2),
+            Arguments.of(Collections.singletonList("col3"), 1)
+        );
+    }
+
+    /**
+     * Test for partitions column name validation.
+     *
+     * @param partitionColumns   A list with partition column names.
+     * @param expectedErrorCount Number of expected validation errors.
+     */
+    @ParameterizedTest(name = "{index}: Partition columns = [{0}]")
+    @MethodSource("partitionNames")
+    public void testPartitionColumnNamesValidation(
+            List<String> partitionColumns,
+            int expectedErrorCount) {
+
+        String[] columnNames = {"col1", "col2"};
+        LogicalType[] columnTypes = {new CharType(), new CharType()};
+
+        Optional<Exception> validation = testValidation(() ->
+            getBuildForPartitions(columnNames, columnTypes, partitionColumns).build());
+
+        DeltaSourceValidationException exception =
+            (DeltaSourceValidationException) validation.orElseThrow(
+                () -> new AssertionError(
+                    "Builder should throw exception for invalid partition configuration."));
+
+        assertThat(exception.getValidationMessages().size(), equalTo(expectedErrorCount));
+    }
+
     @Test
     public void testNullArgumentsValidation() {
-
+        // using dedicated builder methods
         Optional<Exception> validation = testValidation(() -> getBuilderWithNulls().build());
 
         DeltaSourceValidationException exception =
@@ -194,6 +248,10 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
             String[] columnNames,
             LogicalType[] columnTypes);
 
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuildForPartitions(
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            List<String> partitionColumns);
 
     /**
      * @return Delta source builder that uses invalid combination od mutually excluded options set

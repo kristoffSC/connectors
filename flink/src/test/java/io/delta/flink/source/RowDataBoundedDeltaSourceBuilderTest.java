@@ -1,5 +1,7 @@
 package io.delta.flink.source;
 
+import java.util.List;
+
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import org.apache.flink.api.connector.source.Boundedness;
@@ -13,9 +15,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTestBase {
 
-    ////////////////////////////////
-    // Continuous-only test cases //
-    ////////////////////////////////
+    ///////////////////////////////
+    //  Bounded-only test cases  //
+    ///////////////////////////////
 
     @Test
     public void shouldCreateSource() {
@@ -62,14 +64,28 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
     @Override
     protected RowDataBoundedDeltaSourceBuilder getBuilderForColumns(
-        String[] columnNames,
-        LogicalType[] columnTypes) {
+            String[] columnNames,
+            LogicalType[] columnTypes) {
         return DeltaSource.forBoundedRowData(
             new Path(TABLE_PATH),
             columnNames,
             columnTypes,
             DeltaSinkTestUtils.getHadoopConf()
         );
+    }
+
+    @Override
+    protected RowDataBoundedDeltaSourceBuilder getBuildForPartitions(
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            List<String> partitionColumns) {
+        return DeltaSource.forBoundedRowData(
+                new Path(TABLE_PATH),
+                columnNames,
+                columnTypes,
+                DeltaSinkTestUtils.getHadoopConf()
+            )
+            .partitionColumns(partitionColumns);
     }
 
     @Override

@@ -138,10 +138,18 @@ public class RowDataContinuousDeltaSourceBuilder
     }
 
     /**
-     * Sets a list of Delta's partition columns.
+     * Sets a list with Delta's partition column names.
      */
     @Override
     public RowDataContinuousDeltaSourceBuilder partitionColumns(List<String> partitionColumns) {
+        return super.partitionColumns(partitionColumns);
+    }
+
+    /**
+     * Sets partition column names.
+     */
+    @Override
+    public RowDataContinuousDeltaSourceBuilder partitionColumns(String... partitionColumns) {
         return super.partitionColumns(partitionColumns);
     }
 

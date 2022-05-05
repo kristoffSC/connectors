@@ -1,8 +1,11 @@
 package io.delta.flink.source.internal.builder;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -15,13 +18,20 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.flink.util.Preconditions.checkArgument;
-import static org.apache.flink.util.Preconditions.checkNotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Builder for {@link RowData} implementation io {@link FormatBuilder}
  */
 public class RowDataFormatBuilder implements FormatBuilder<RowData> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RowDataFormatBuilder.class);
+
+    /**
+     * Default reference value for partition column names list.
+     */
+    private static final List<String> DEFAULT_PARTITION_COLUMNS = new ArrayList<>(0);
 
     /**
      * Message prefix for validation exceptions.
@@ -41,7 +51,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     private static final boolean PARQUET_CASE_SENSITIVE = true;
     // ------------------------------------------------------
 
-    // TODO PR 9.1 get this from options.
+    // TODO PR 11 get this from options.
     private static final int BATCH_SIZE = 2048;
 
     /**
@@ -71,7 +81,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.hadoopConfiguration = hadoopConfiguration;
-        this.partitionColumns = Collections.emptyList();
+        this.partitionColumns = DEFAULT_PARTITION_COLUMNS;
     }
 
     private static RowDataFormat buildFormatWithPartitionColumns(
@@ -111,14 +121,13 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
      * Set list of partition columns.
      */
     public RowDataFormatBuilder partitionColumns(List<String> partitionColumns) {
-        checkNotNull(partitionColumns, EXCEPTION_PREFIX + "partition column list cannot be null.");
-        checkArgument(partitionColumns.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
-            EXCEPTION_PREFIX
-                + "List with partition columns contains at least one element that is null, "
-                + "empty, or contains only whitespace characters.");
-
         this.partitionColumns = partitionColumns;
         return this;
+    }
+
+    @Override
+    public FormatBuilder<RowData> partitionColumns(String... partitionColumns) {
+        return partitionColumns(Arrays.asList(partitionColumns));
     }
 
     /**
@@ -130,13 +139,15 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     public RowDataFormat build() {
         validateFormat();
 
-        if (partitionColumns.isEmpty()) {
+        if (partitionColumns == DEFAULT_PARTITION_COLUMNS) {
+            LOG.info("Building format data for none partitioned Delta table.");
             return buildFormatWithoutPartitionColumns(
                 columnNames,
                 columnTypes,
                 hadoopConfiguration
             );
         } else {
+            LOG.info("Building format data for partitioned Delta table.");
             return
                 buildFormatWithPartitionColumns(
                     columnNames,
@@ -148,18 +159,24 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     }
 
     private void validateFormat() {
-        Validator validator = validateMandatoryOptions();
-        if (validator.containsMessages()) {
+        Validator mandatoryValidator = validateMandatoryOptions();
+        Validator optionValidator = validatePartitionColumns();
+
+        Set<String> validationMessages = new HashSet<>();
+        validationMessages.addAll(mandatoryValidator.getValidationMessages());
+        validationMessages.addAll(optionValidator.getValidationMessages());
+
+        if (!validationMessages.isEmpty()) {
             // RowDataFormatBuilder does not know Delta's table path,
             // hence null argument in DeltaSourceValidationException
-            throw new DeltaSourceValidationException(null, validator.getValidationMessages());
+            throw new DeltaSourceValidationException(null, validationMessages);
         }
     }
 
     private RowDataFormat buildFormatWithoutPartitionColumns(
-        String[] columnNames,
-        LogicalType[] columnTypes,
-        Configuration configuration) {
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            Configuration configuration) {
 
         return new RowDataFormat(
             configuration,
@@ -214,6 +231,42 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
                     EXCEPTION_PREFIX + "column names and column types size does not match.");
         }
 
+        return validator;
+    }
+
+    private Validator validatePartitionColumns() {
+        Validator validator = new Validator();
+
+        if (this.partitionColumns != DEFAULT_PARTITION_COLUMNS) {
+            validator.checkNotNull(
+                partitionColumns,
+                EXCEPTION_PREFIX + "Passed a null reference for partition column names.");
+
+            if (partitionColumns != null) {
+                validator.checkArgument(!partitionColumns.isEmpty(),
+                    EXCEPTION_PREFIX + "Partition column names collection is empty.");
+
+                if (!partitionColumns.isEmpty()) {
+                    validator.checkArgument(
+                        partitionColumns.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
+                        EXCEPTION_PREFIX
+                            + "Partition columns names contains at least one element that is null, "
+                            + "empty, or contains only whitespace characters.");
+
+                    if (columnNames != null && columnNames.length > 0) {
+                        List<String> columnNamesList = Arrays.asList(columnNames);
+                        validator.checkArgument(
+                            partitionColumns.stream()
+                                .filter(
+                                    (columnName) -> !StringUtils.isNullOrWhitespaceOnly(columnName))
+                                .anyMatch(columnNamesList::contains),
+                            EXCEPTION_PREFIX
+                                + "None of the partition columns were included in table column "
+                                + "names definition.");
+                    }
+                }
+            }
+        }
         return validator;
     }
 }
