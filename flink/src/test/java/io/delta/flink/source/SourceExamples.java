@@ -59,7 +59,7 @@ public class SourceExamples {
         // Partition columns as list
         DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
+                new String[]{"name", "surname", "age", "col1"},
                 COLUMN_TYPES,
                 hadoopConf
             )
@@ -69,7 +69,7 @@ public class SourceExamples {
         // Partition columns as array
         DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
+                new String[]{"name", "surname", "age", "col1", "col2"},
                 COLUMN_TYPES,
                 hadoopConf
             )
@@ -79,7 +79,7 @@ public class SourceExamples {
         // Partition columns as vararg
         DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
+                new String[]{"name", "surname", "age", "col1", "col2"},
                 COLUMN_TYPES,
                 hadoopConf
             )
@@ -89,7 +89,7 @@ public class SourceExamples {
         // Partition columns as single element
         DeltaSource.forContinuousRowData(
                 new Path("s3://some/path"),
-                COLUMN_NAMES,
+                new String[]{"name", "surname", "age", "col1"},
                 COLUMN_TYPES,
                 hadoopConf
             )

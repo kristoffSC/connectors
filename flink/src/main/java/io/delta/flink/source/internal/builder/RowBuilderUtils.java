@@ -36,7 +36,7 @@ public final class RowBuilderUtils {
         // instance of ColumnBatchFactory object rather than ParquetColumnarRowInputFormat like
         // the original method is doing.
         // Thanks to this, we can still have our own implementation of Delta's DeltaBulkFormat
-        // and hide Flink types and API from the end user. This will be helpfully in the future
+        // and hide Flink types and API from the end user. This will be helpful in the future
         // when we will expose DeltaBulkFormat to the end user.
         return (SplitT split, ColumnVector[] parquetVectors) -> {
             // create and initialize the row batch

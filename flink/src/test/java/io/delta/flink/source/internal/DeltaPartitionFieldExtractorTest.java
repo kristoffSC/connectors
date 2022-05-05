@@ -39,6 +39,11 @@ class DeltaPartitionFieldExtractorTest {
 
     private DeltaPartitionFieldExtractor<DeltaSourceSplit> extractor;
 
+    @BeforeEach
+    public void setUp() {
+        this.extractor = new DeltaPartitionFieldExtractor<>();
+    }
+
     /**
      * @return Stream of test {@link Arguments} elements. Arguments are in order:
      * <ul>
@@ -48,7 +53,7 @@ class DeltaPartitionFieldExtractorTest {
      *     <li>Expected value for partition column</li>
      * </ul>
      */
-    protected static Stream<Arguments> partitions() {
+    private static Stream<Arguments> partitions() {
         return Stream.of(
             Arguments.of("col1", new CharType(), singletonMap("col1", "char"), "char"),
             Arguments.of("col2", new VarCharType(), singletonMap("col2", "varchar"), "varchar"),
@@ -85,11 +90,6 @@ class DeltaPartitionFieldExtractorTest {
         );
     }
 
-    @BeforeEach
-    public void setUp() {
-        this.extractor = new DeltaPartitionFieldExtractor<>();
-    }
-
     /**
      * Test for extracting Delta partition Value using {@link DeltaPartitionFieldExtractor}. This
      * test check extraction for every Flink's {@link LogicalType}.
@@ -124,7 +124,8 @@ class DeltaPartitionFieldExtractorTest {
 
         Assertions.assertEquals(
             "Cannot find the partition value in Delta MetaData for column "
-                + "notExistingPartitionColumn",
+                + "notExistingPartitionColumn. Expected partition column names from MetaData are "
+                + "[col1]",
             exception.getMessage());
     }
 

@@ -14,6 +14,8 @@ import org.apache.hadoop.conf.Configuration;
 public class RowDataFormat extends ParquetColumnarRowInputFormat<DeltaSourceSplit>
     implements DeltaBulkFormat<RowData> {
 
+    // Making this constructor package protected to make sure that only RowDataFormatBuilder can
+    // initialize object of this class.
     RowDataFormat(
             Configuration hadoopConfig,
             RowType projectedType,

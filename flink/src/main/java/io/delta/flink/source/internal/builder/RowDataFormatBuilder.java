@@ -84,39 +84,6 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         this.partitionColumns = DEFAULT_PARTITION_COLUMNS;
     }
 
-    private static RowDataFormat buildFormatWithPartitionColumns(
-            String[] columnNames,
-            LogicalType[] columnTypes,
-            Configuration hadoopConfig,
-            List<String> partitionKeys) {
-
-        RowType producedRowType = RowType.of(columnTypes, columnNames);
-        RowType projectedRowType =
-            new RowType(
-                producedRowType.getFields().stream()
-                    .filter(field -> !partitionKeys.contains(field.getName()))
-                    .collect(Collectors.toList()));
-
-        List<String> projectedNames = projectedRowType.getFieldNames();
-
-        ColumnBatchFactory<DeltaSourceSplit> factory =
-            RowBuilderUtils.createPartitionedColumnFactory(
-                producedRowType,
-                projectedNames,
-                partitionKeys,
-                new DeltaPartitionFieldExtractor<>(),
-                BATCH_SIZE);
-
-        return new RowDataFormat(
-            hadoopConfig,
-            projectedRowType,
-            producedRowType,
-            factory,
-            BATCH_SIZE,
-            PARQUET_UTC_TIMESTAMP,
-            PARQUET_CASE_SENSITIVE);
-    }
-
     /**
      * Set list of partition columns.
      */
@@ -181,6 +148,39 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         return new RowDataFormat(
             configuration,
             RowType.of(columnTypes, columnNames),
+            BATCH_SIZE,
+            PARQUET_UTC_TIMESTAMP,
+            PARQUET_CASE_SENSITIVE);
+    }
+
+    private RowDataFormat buildFormatWithPartitionColumns(
+            String[] columnNames,
+            LogicalType[] columnTypes,
+            Configuration hadoopConfig,
+            List<String> partitionColumns) {
+
+        RowType producedRowType = RowType.of(columnTypes, columnNames);
+        RowType projectedRowType =
+            new RowType(
+                producedRowType.getFields().stream()
+                    .filter(field -> !partitionColumns.contains(field.getName()))
+                    .collect(Collectors.toList()));
+
+        List<String> projectedNames = projectedRowType.getFieldNames();
+
+        ColumnBatchFactory<DeltaSourceSplit> factory =
+            RowBuilderUtils.createPartitionedColumnFactory(
+                producedRowType,
+                projectedNames,
+                partitionColumns,
+                new DeltaPartitionFieldExtractor<>(),
+                BATCH_SIZE);
+
+        return new RowDataFormat(
+            hadoopConfig,
+            projectedRowType,
+            producedRowType,
+            factory,
             BATCH_SIZE,
             PARQUET_UTC_TIMESTAMP,
             PARQUET_CASE_SENSITIVE);
@@ -258,7 +258,8 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
                         validator.checkArgument(
                             partitionColumns.stream()
                                 .filter(
-                                    (columnName) -> !StringUtils.isNullOrWhitespaceOnly(columnName))
+                                    (partitionColName) ->
+                                        !StringUtils.isNullOrWhitespaceOnly(partitionColName))
                                 .anyMatch(columnNamesList::contains),
                             EXCEPTION_PREFIX
                                 + "None of the partition columns were included in table column "

@@ -42,7 +42,10 @@ public class DeltaPartitionFieldExtractor<SplitT extends DeltaSourceSplit>
         }
 
         if (isNotAPartitionColumn(fieldName, partitionValues)) {
-            throw DeltaSourceExceptions.missingPartitionValueException(fieldName);
+            throw DeltaSourceExceptions.missingPartitionValueException(
+                fieldName,
+                partitionValues.keySet()
+            );
         }
     }
 
