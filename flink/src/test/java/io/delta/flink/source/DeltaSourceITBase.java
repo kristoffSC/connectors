@@ -237,8 +237,27 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     /**
      * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
-     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
-     * instance.
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSource} instance without any failover.
+     *
+     * @param source The {@link DeltaSource} that should be used in this test.
+     * @param <T>    Type of objects produced by source.
+     * @return A {@link List} of produced records.
+     */
+    protected <T> List<T> testBoundDeltaSource(DeltaSource<T> source)
+        throws Exception {
+
+        // Since we don't do any failover here (used FailoverType.NONE) we don't need any
+        // actually FailCheck.
+        // We do need to pass the check at least once, to call
+        // RecordCounterToFail#continueProcessing.get() hence (FailCheck) integer -> true
+        return testBoundDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
+    }
+
+    /**
+     * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSource} instance.
      * <p>
      * <p>
      * The created environment can perform a failover after condition described by {@link FailCheck}
