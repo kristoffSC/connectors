@@ -22,9 +22,9 @@ public class RowDataBoundedDeltaSourceBuilder
     extends BoundedDeltaSourceBuilder<RowData, RowDataBoundedDeltaSourceBuilder> {
 
     RowDataBoundedDeltaSourceBuilder(
-        Path tablePath,
-        FormatBuilder<RowData> formatBuilder,
-        Configuration hadoopConfiguration) {
+            Path tablePath,
+            FormatBuilder<RowData> formatBuilder,
+            Configuration hadoopConfiguration) {
         super(tablePath, formatBuilder, hadoopConfiguration);
     }
 
@@ -34,10 +34,8 @@ public class RowDataBoundedDeltaSourceBuilder
     //////////////////////////////////////////////////////////
 
     /**
-     * Sets value of "versionAsOf" option. Applicable for
-     * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED}
-     * mode only. With this option we can time travel to given {@link io.delta.standalone.Snapshot}
-     * version and read from it.
+     * Sets value of "versionAsOf" option. With this option we can time travel to given {@link
+     * io.delta.standalone.Snapshot} version and read from it.
      *
      * <p>
      * This option is mutually exclusive with {@link #timestampAsOf(String)} option.
@@ -50,10 +48,8 @@ public class RowDataBoundedDeltaSourceBuilder
     }
 
     /**
-     * Sets value of "timestampAsOf" option. Applicable for
-     * {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED}
-     * mode only. With this option we can time travel to the latest {@link
-     * io.delta.standalone.Snapshot} that was generated at or before given timestamp.
+     * Sets value of "timestampAsOf" option. With this option we can time travel to the latest
+     * {@link io.delta.standalone.Snapshot} that was generated at or before given timestamp.
      * <p>
      * This option is mutually exclusive with {@link #versionAsOf(long)} option.
      *
