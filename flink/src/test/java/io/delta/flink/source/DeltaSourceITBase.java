@@ -58,6 +58,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     protected static final String[] LARGE_TABLE_COLUMN_NAMES = {"col1", "col2", "col3"};
 
+    protected static final String[] LARGE_TABLE_COLUMN_NAMES_CASE = {"COL1", "col2", "col3"};
+
     protected static final LogicalType[] LARGE_TABLE_COLUMN_TYPES =
         {new BigIntType(), new BigIntType(), new CharType()};
 

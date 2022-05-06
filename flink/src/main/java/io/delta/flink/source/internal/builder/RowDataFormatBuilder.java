@@ -48,7 +48,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
      * Hardcoded option for {@link RowDataFormat} to use case-sensitive in column name processing
      * for Parquet files.
      */
-    private static final boolean PARQUET_CASE_SENSITIVE = true;
+    private static final boolean PARQUET_CASE_SENSITIVE = false;
     // ------------------------------------------------------
 
     // TODO PR 11 get this from options.

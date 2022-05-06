@@ -43,6 +43,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
+import static io.delta.flink.sink.utils.DeltaSinkTestUtils.CONVERTER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -301,7 +302,8 @@ public class DeltaWriterBucketTest {
         for (DeltaCommittable committable : committables) {
             Path filePath = new Path(bucketPath, committable.getDeltaPendingFile().getFileName());
             writtenRecordsCount +=
-                TestParquetReader.parseAndCountRecords(filePath, DeltaSinkTestUtils.TEST_ROW_TYPE);
+                TestParquetReader.parseAndCountRecords(
+                    filePath, DeltaSinkTestUtils.TEST_ROW_TYPE, CONVERTER);
         }
         return writtenRecordsCount;
     }

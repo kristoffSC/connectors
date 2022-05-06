@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import static java.util.Collections.singletonMap;
 
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.internal.DeltaBucketAssigner;
@@ -300,7 +301,8 @@ public class DeltaSinkTestUtils {
             assertTrue(file.length() > 100);
             totalRecordsCount += TestParquetReader.parseAndCountRecords(
                 new Path(file.toURI()),
-                DeltaSinkTestUtils.TEST_ROW_TYPE);
+                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                CONVERTER);
         }
         return totalRecordsCount;
     }
@@ -360,19 +362,27 @@ public class DeltaSinkTestUtils {
     ///////////////////////////////////////////////////////////////////////////
 
     public static DeltaSinkInternal<RowData> createDeltaSink(String deltaTablePath,
-                                                             boolean isTablePartitioned) {
+        boolean isTablePartitioned) {
+        return createDeltaSink(
+            deltaTablePath, DeltaSinkTestUtils.TEST_ROW_TYPE, isTablePartitioned);
+    }
+
+    public static DeltaSinkInternal<RowData> createDeltaSink(
+        String deltaTablePath,
+        RowType rowType,
+        boolean isTablePartitioned) {
         if (isTablePartitioned) {
             DeltaSinkBuilder<RowData> builder = new DeltaSinkBuilder.DefaultDeltaFormatBuilder<>(
                 new Path(deltaTablePath),
                 DeltaSinkTestUtils.getHadoopConf(),
                 ParquetRowDataBuilder.createWriterFactory(
-                    DeltaSinkTestUtils.TEST_ROW_TYPE,
+                    rowType,
                     DeltaSinkTestUtils.getHadoopConf(),
                     true // utcTimestamp
                 ),
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
-                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                rowType,
                 false // mergeSchema
             );
             return builder
@@ -383,7 +393,7 @@ public class DeltaSinkTestUtils {
             .forRowData(
                 new Path(deltaTablePath),
                 DeltaSinkTestUtils.getHadoopConf(),
-                DeltaSinkTestUtils.TEST_ROW_TYPE).build();
+                rowType).build();
     }
 
     public static DeltaBucketAssigner<RowData> getTestPartitionAssigner() {
@@ -403,6 +413,10 @@ public class DeltaSinkTestUtils {
                 .setNumTaskManagers(1)
                 .setNumSlotsPerTaskManager(4)
                 .setConfiguration(config)
+                .setConfiguration(
+                    Configuration.fromMap(
+                        singletonMap("classloader.check-leaked-classloader", "false"))
+                )
                 .build();
         return new MiniCluster(cfg);
     }
