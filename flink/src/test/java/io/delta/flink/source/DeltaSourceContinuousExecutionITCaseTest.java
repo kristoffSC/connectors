@@ -135,7 +135,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
     @EnumSource(FailoverType.class)
-    // This test updates Delta Table 5 times, so it will take some time to finish. About 1 minute.
+    // This test updates Delta Table 5 times, so it will take some time to finish.
     public void shouldReadDeltaTableFromSnapshotAndUpdates(FailoverType failoverType)
         throws Exception {
 

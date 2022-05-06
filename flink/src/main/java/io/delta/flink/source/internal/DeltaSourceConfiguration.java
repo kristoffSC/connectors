@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import io.delta.flink.source.internal.utils.DeltaConfigOption;
 import org.apache.flink.configuration.ConfigOption;
 
 /**
@@ -27,23 +28,12 @@ public class DeltaSourceConfiguration implements Serializable {
      */
     private final Map<String, Object> usedSourceOptions = new HashMap<>();
 
-    public DeltaSourceConfiguration addOption(String name, String value) {
-        return addOptionObject(name, value);
+    public DeltaSourceConfiguration addOption(String name, Object value) {
+        this.usedSourceOptions.put(name, value);
+        return this;
     }
 
-    public DeltaSourceConfiguration addOption(String name, boolean value) {
-        return addOptionObject(name, value);
-    }
-
-    public DeltaSourceConfiguration addOption(String name, int value) {
-        return addOptionObject(name, value);
-    }
-
-    public DeltaSourceConfiguration addOption(String name, long value) {
-        return addOptionObject(name, value);
-    }
-
-    public boolean hasOption(ConfigOption<?> option) {
+    public boolean hasOption(DeltaConfigOption<?> option) {
         return this.usedSourceOptions.containsKey(option.key());
     }
 
@@ -59,17 +49,12 @@ public class DeltaSourceConfiguration implements Serializable {
      * @return A value for given option if used or a default value if defined or null if none.
      */
     @SuppressWarnings("unchecked")
-    public <T> T getValue(ConfigOption<T> option) {
+    public <T> T getValue(DeltaConfigOption<T> option) {
         return (T) getValue(option.key()).orElse(option.defaultValue());
     }
 
     @SuppressWarnings("unchecked")
     private <T> Optional<T> getValue(String optionName) {
         return (Optional<T>) Optional.ofNullable(this.usedSourceOptions.get(optionName));
-    }
-
-    private DeltaSourceConfiguration addOptionObject(String name, Object value) {
-        this.usedSourceOptions.put(name, value);
-        return this;
     }
 }

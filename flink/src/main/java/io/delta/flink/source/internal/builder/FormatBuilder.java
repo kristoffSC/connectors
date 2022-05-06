@@ -14,4 +14,6 @@ public interface FormatBuilder<T> {
     FormatBuilder<T> partitionColumns(List<String> partitionColumns);
 
     FormatBuilder<T> partitionColumns(String... partitionColumns);
+
+    FormatBuilder<T> parquetBatchSize(int size);
 }

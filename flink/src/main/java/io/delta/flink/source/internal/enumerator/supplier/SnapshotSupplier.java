@@ -1,8 +1,8 @@
 package io.delta.flink.source.internal.enumerator.supplier;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
+import io.delta.flink.source.internal.utils.DeltaConfigOption;
 import io.delta.flink.source.internal.utils.TransitiveOptional;
-import org.apache.flink.configuration.ConfigOption;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -53,7 +53,7 @@ public abstract class SnapshotSupplier {
      * A helper method to get the value of {@link io.delta.flink.source.internal.DeltaSourceOptions}
      * from {@link #sourceConfiguration}.
      */
-    protected <T> T getOptionValue(ConfigOption<T> option) {
+    protected <T> T getOptionValue(DeltaConfigOption<T> option) {
         return this.sourceConfiguration.getValue(option);
     }
 }

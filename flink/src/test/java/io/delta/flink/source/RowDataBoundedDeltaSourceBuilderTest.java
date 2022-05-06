@@ -45,7 +45,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
         assertThat(boundedSource, notNullValue());
         assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
         assertThat(boundedSource.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(10));
+            .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(10L));
     }
 
     //////////////////////////////////////////////////////////////

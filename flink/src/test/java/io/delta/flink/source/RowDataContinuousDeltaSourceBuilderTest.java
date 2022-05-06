@@ -45,7 +45,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         assertThat(boundedSource, notNullValue());
         assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
         assertThat(boundedSource.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.STARTING_TIMESTAMP), equalTo(10));
+            .getValue(DeltaSourceOptions.STARTING_TIMESTAMP), equalTo("10"));
     }
 
     //////////////////////////////////////////////////////////////

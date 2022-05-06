@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.DeltaPartitionFieldExtractor;
+import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import org.apache.flink.formats.parquet.vector.ColumnBatchFactory;
@@ -51,9 +52,6 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     private static final boolean PARQUET_CASE_SENSITIVE = true;
     // ------------------------------------------------------
 
-    // TODO PR 11 get this from options.
-    private static final int BATCH_SIZE = 2048;
-
     /**
      * An array with Delta table's column names that should be read.
      */
@@ -74,6 +72,8 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
      */
     private List<String> partitionColumns;
 
+    private int batchSize = DeltaSourceOptions.PARQUET_BATCH_SIZE.defaultValue();
+
     RowDataFormatBuilder(
             String[] columnNames,
             LogicalType[] columnTypes,
@@ -85,16 +85,25 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     }
 
     /**
-     * Set list of partition columns.
+     * Set a list of partition column names.
      */
     public RowDataFormatBuilder partitionColumns(List<String> partitionColumns) {
         this.partitionColumns = partitionColumns;
         return this;
     }
 
+    /**
+     * Set partition column names.
+     */
     @Override
     public FormatBuilder<RowData> partitionColumns(String... partitionColumns) {
         return partitionColumns(Arrays.asList(partitionColumns));
+    }
+
+    @Override
+    public FormatBuilder<RowData> parquetBatchSize(int size) {
+        this.batchSize = size;
+        return this;
     }
 
     /**
@@ -103,6 +112,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
      * @throws DeltaSourceValidationException if invalid arguments were passed to {@link
      *                                        RowDataFormatBuilder}. For example null arguments.
      */
+    @Override
     public RowDataFormat build() {
         validateFormat();
 
@@ -148,7 +158,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
         return new RowDataFormat(
             configuration,
             RowType.of(columnTypes, columnNames),
-            BATCH_SIZE,
+            batchSize,
             PARQUET_UTC_TIMESTAMP,
             PARQUET_CASE_SENSITIVE);
     }
@@ -174,14 +184,14 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
                 projectedNames,
                 partitionColumns,
                 new DeltaPartitionFieldExtractor<>(),
-                BATCH_SIZE);
+                batchSize);
 
         return new RowDataFormat(
             hadoopConfig,
             projectedRowType,
             producedRowType,
             factory,
-            BATCH_SIZE,
+            batchSize,
             PARQUET_UTC_TIMESTAMP,
             PARQUET_CASE_SENSITIVE);
     }
