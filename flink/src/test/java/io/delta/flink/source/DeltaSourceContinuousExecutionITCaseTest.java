@@ -12,7 +12,6 @@ import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
@@ -74,11 +73,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(
-                nonPartitionedTablePath,
-                SMALL_TABLE_COLUMN_NAMES,
-                SMALL_TABLE_COLUMN_TYPES
-            );
+            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES);
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
@@ -110,11 +105,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(
-                nonPartitionedLargeTablePath,
-                LARGE_TABLE_COLUMN_NAMES,
-                LARGE_TABLE_COLUMN_TYPES
-            );
+            initContinuousSource(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -143,37 +134,42 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     public void shouldReadDeltaTableFromSnapshotAndUpdates() throws Exception {
 
         // GIVEN
-        DeltaSource<RowData> deltaSource =
-            initContinuousSource(
-                nonPartitionedTablePath,
-                SMALL_TABLE_COLUMN_NAMES,
-                SMALL_TABLE_COLUMN_TYPES
-            );
+        List<DeltaSource<RowData>> deltaSources = Arrays.asList(
+            initContinuousSource(nonPartitionedTablePath),
+            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES)
+        );
 
-        ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
+        for (DeltaSource<RowData> deltaSource : deltaSources) {
+            System.out.println("Starting test");
+            ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
 
-        // WHEN
-        List<List<RowData>> resultData =
-            testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
-                (FailCheck) readRows -> readRows
-                    == (INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE)
-                    / 2);
+            // WHEN
+            List<List<RowData>> resultData =
+                testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
+                    (FailCheck) readRows -> readRows
+                        ==
+                        (INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE)
+                            / 2);
 
-        int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
+            int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
 
-        // Each row has a unique column across all Delta table data. We are converting List or
-        // read rows to set of values for that unique column.
-        // If there were eny duplicates or missing values we will catch them here by comparing
-        // size of that Set to expected number of rows.
-        Set<String> uniqueValues =
-            resultData.stream().flatMap(Collection::stream).map(row -> row.getString(1).toString())
-                .collect(Collectors.toSet());
+            // Each row has a unique column across all Delta table data. We are converting List or
+            // read rows to set of values for that unique column.
+            // If there were eny duplicates or missing values we will catch them here by comparing
+            // size of that Set to expected number of rows.
+            Set<String> uniqueValues =
+                resultData.stream().flatMap(Collection::stream)
+                    .map(row -> row.getString(1).toString())
+                    .collect(Collectors.toSet());
 
-        // THEN
-        assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
-            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
-        assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues.size(),
-            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
+            // THEN
+            assertThat("Source read different number of rows that Delta Table have.",
+                totalNumberOfRows,
+                equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
+            assertThat("Source Produced Different Rows that were in Delta Table",
+                uniqueValues.size(),
+                equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
+        }
     }
 
     /**
@@ -196,16 +192,34 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     // TODO PR 8 Add tests for Partitions
 
-    private DeltaSource<RowData> initContinuousSource(
-        String tablePath, String[] columnNames, LogicalType[] columnTypes) {
+    /**
+     * Initialize a Delta source in continuous mode that should take entire Delta table schema
+     * from Delta's metadata.
+     */
+    private DeltaSource<RowData> initContinuousSource(String tablePath) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
         return DeltaSource.forContinuousRowData(
-            Path.fromLocalFile(new File(tablePath)),
-            columnNames,
-            columnTypes,
-            hadoopConf
-        ).build();
+                Path.fromLocalFile(new File(tablePath)),
+                hadoopConf
+            )
+            .build();
+    }
+
+    /**
+     * Initialize a Delta source in continuous mode that should take only user defined columns
+     * from Delta's metadata.
+     */
+    private DeltaSource<RowData> initContinuousSource(String tablePath, String[] columnNames) {
+
+        Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
+
+        return DeltaSource.forContinuousRowData(
+                Path.fromLocalFile(new File(tablePath)),
+                hadoopConf
+            )
+            .columnNames(Arrays.asList(columnNames))
+            .build();
     }
 }

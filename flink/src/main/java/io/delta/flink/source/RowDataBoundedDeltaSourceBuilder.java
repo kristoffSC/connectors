@@ -1,13 +1,18 @@
 package io.delta.flink.source;
 
-import java.util.List;
-
 import io.delta.flink.source.internal.builder.BoundedDeltaSourceBuilder;
-import io.delta.flink.source.internal.builder.DeltaBulkFormat;
-import io.delta.flink.source.internal.builder.FormatBuilder;
+import io.delta.flink.source.internal.builder.RowDataFormat;
+import io.delta.flink.source.internal.builder.RowDataFormatBuilder;
+import io.delta.flink.source.internal.enumerator.supplier.BoundedSnapshotSupplierFactory;
+import io.delta.flink.source.internal.enumerator.supplier.SnapshotSupplier;
+import io.delta.flink.source.internal.utils.SourceSchema;
+import io.delta.flink.source.internal.utils.SourceUtils;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
+
+import io.delta.standalone.DeltaLog;
 
 /**
  * A builder class for {@link DeltaSource} for a stream of {@link RowData}. Created source instance
@@ -22,10 +27,10 @@ public class RowDataBoundedDeltaSourceBuilder
     extends BoundedDeltaSourceBuilder<RowData, RowDataBoundedDeltaSourceBuilder> {
 
     RowDataBoundedDeltaSourceBuilder(
-        Path tablePath,
-        FormatBuilder<RowData> formatBuilder,
-        Configuration hadoopConfiguration) {
-        super(tablePath, formatBuilder, hadoopConfiguration);
+            Path tablePath,
+            Configuration hadoopConfiguration,
+            BoundedSnapshotSupplierFactory snapshotSupplierFactory) {
+        super(tablePath, hadoopConfiguration, snapshotSupplierFactory);
     }
 
     //////////////////////////////////////////////////////////
@@ -70,13 +75,6 @@ public class RowDataBoundedDeltaSourceBuilder
     @Override
     public RowDataBoundedDeltaSourceBuilder timestampAsOf(String snapshotTimestamp) {
         return super.timestampAsOf(snapshotTimestamp);
-    }
-
-    /**
-     * Sets a list of Delta's partition columns.
-     */
-    public RowDataBoundedDeltaSourceBuilder partitionColumns(List<String> partitions) {
-        return super.partitionColumns(partitions);
     }
 
     /**
@@ -138,11 +136,21 @@ public class RowDataBoundedDeltaSourceBuilder
     @SuppressWarnings("unchecked")
     public DeltaSource<RowData> build() {
 
-        DeltaBulkFormat<RowData> format = validateSourceAndFormat();
+        validate();
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(hadoopConfiguration, SourceUtils.pathToString(tablePath));
+        SnapshotSupplier snapshotSupplier = snapshotSupplierFactory.create(deltaLog);
+
+        SourceSchema sourceSchema = getSourceSchema(snapshotSupplier);
+
+        RowDataFormatBuilder formatBuilder = RowDataFormat.builder(
+            RowType.of(sourceSchema.getColumnTypes(), sourceSchema.getColumnNames()),
+            hadoopConfiguration);
 
         return new DeltaSource<>(
             tablePath,
-            format,
+            formatBuilder.build(),
             DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER,
             hadoopConfiguration,
             sourceConfiguration);

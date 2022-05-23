@@ -37,26 +37,26 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
      *                               methods.
      */
     public BoundedSplitEnumeratorProvider(
-        FileSplitAssigner.Provider splitAssignerProvider,
-        AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider) {
+            FileSplitAssigner.Provider splitAssignerProvider,
+            AddFileEnumerator.Provider<DeltaSourceSplit> fileEnumeratorProvider) {
         this.splitAssignerProvider = splitAssignerProvider;
         this.fileEnumeratorProvider = fileEnumeratorProvider;
     }
 
     @Override
     public BoundedDeltaSourceSplitEnumerator createInitialStateEnumerator(
-        Path deltaTablePath, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaSourceConfiguration sourceConfiguration) {
+            Path deltaTablePath, Configuration configuration,
+            SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+            DeltaSourceConfiguration sourceConfiguration) {
 
         DeltaLog deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
         BoundedSourceSnapshotSupplier snapshotSupplier =
-            new BoundedSourceSnapshotSupplier(deltaLog, sourceConfiguration);
+            new BoundedSourceSnapshotSupplier(deltaLog);
 
         SnapshotProcessor snapshotProcessor =
-            new SnapshotProcessor(deltaTablePath, snapshotSupplier.getSnapshot(),
+            new SnapshotProcessor(deltaTablePath, snapshotSupplier.getSnapshot(sourceConfiguration),
                 fileEnumeratorProvider.create(), Collections.emptySet());
 
         return new BoundedDeltaSourceSplitEnumerator(
@@ -66,9 +66,10 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
 
     @Override
     public BoundedDeltaSourceSplitEnumerator createEnumeratorForCheckpoint(
-        DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint, Configuration configuration,
-        SplitEnumeratorContext<DeltaSourceSplit> enumContext,
-        DeltaSourceConfiguration sourceConfiguration) {
+            DeltaEnumeratorStateCheckpoint<DeltaSourceSplit> checkpoint,
+            Configuration configuration,
+            SplitEnumeratorContext<DeltaSourceSplit> enumContext,
+            DeltaSourceConfiguration sourceConfiguration) {
 
         DeltaLog deltaLog = DeltaLog.forTable(configuration,
             SourceUtils.pathToString(checkpoint.getDeltaTablePath()));
