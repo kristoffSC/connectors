@@ -147,7 +147,7 @@ public class DeltaSourceOptions {
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
 
-    // TODO PR 9.1 test all allowed options
+    // TODO PR 12 test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         VALID_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);

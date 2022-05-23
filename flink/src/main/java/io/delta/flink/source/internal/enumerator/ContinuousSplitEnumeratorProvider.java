@@ -64,7 +64,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
         Snapshot snapshot =
-            new ContinuousSourceSnapshotSupplier(deltaLog, sourceConfiguration).getSnapshot();
+            new ContinuousSourceSnapshotSupplier(deltaLog).getSnapshot(sourceConfiguration);
 
         ContinuousTableProcessor tableProcessor =
             createTableProcessor(

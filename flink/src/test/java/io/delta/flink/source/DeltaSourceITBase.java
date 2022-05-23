@@ -29,7 +29,6 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
-import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -55,9 +54,6 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final int SMALL_TABLE_COUNT = 2;
 
     protected static final String[] LARGE_TABLE_COLUMN_NAMES = {"col1", "col2", "col3"};
-
-    protected static final LogicalType[] LARGE_TABLE_COLUMN_TYPES =
-        {new BigIntType(), new BigIntType(), new CharType()};
 
     protected static final int LARGE_TABLE_RECORD_COUNT = 1100;
 
@@ -109,7 +105,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
 
             // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
-            // TODO PR 8 Add Partitioned table
+            // TODO PR 11 Add Partitioned table
             DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
             DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
                 nonPartitionedLargeTablePath);
