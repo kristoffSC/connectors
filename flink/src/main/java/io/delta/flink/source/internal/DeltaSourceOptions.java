@@ -147,6 +147,15 @@ public class DeltaSourceOptions {
         ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
             .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
 
+    /**
+     * An option to set Delta table {@link io.delta.standalone.Snapshot} version that should be
+     * initialized during
+     * {@link io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerator} first
+     * initialization.
+     */
+    public static final ConfigOption<Long> INITIAL_SNAPSHOT_VERSION =
+        ConfigOptions.key("initialSnapshotVersion").longType().noDefaultValue();
+
     // TODO PR 12 test all allowed options
     static {
         VALID_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
@@ -158,5 +167,7 @@ public class DeltaSourceOptions {
         VALID_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         VALID_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
         VALID_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
+
+        VALID_SOURCE_OPTIONS.put(INITIAL_SNAPSHOT_VERSION.key(), INITIAL_SNAPSHOT_VERSION);
     }
 }

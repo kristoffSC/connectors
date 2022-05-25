@@ -17,9 +17,16 @@ public class SourceSchema {
      */
     private final LogicalType[] columnTypes;
 
-    public SourceSchema(String[] columnNames, LogicalType[] columnTypes) {
+    /**
+     * Delta table {@link io.delta.standalone.Snapshot} version from which this schema (column
+     * names and types) was acquired.
+     */
+    private final long snapshotVersion;
+
+    public SourceSchema(String[] columnNames, LogicalType[] columnTypes, long snapshotVersion) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
+        this.snapshotVersion = snapshotVersion;
     }
 
     /**
@@ -35,5 +42,12 @@ public class SourceSchema {
      */
     public LogicalType[] getColumnTypes() {
         return columnTypes;
+    }
+
+    /**
+     * @return a {@link io.delta.standalone.Snapshot} version for which this schema is valid.
+     */
+    public long getSnapshotVersion() {
+        return snapshotVersion;
     }
 }

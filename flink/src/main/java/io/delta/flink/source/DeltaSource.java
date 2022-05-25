@@ -51,7 +51,6 @@ import io.delta.standalone.actions.AddFile;
  * To create a new instance of Delta source for a non-partitioned Delta table that will produce
  * {@link RowData} records with user selected columns:
  * <pre>
- <pre>
  *     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
  *     ...
  *     // {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.

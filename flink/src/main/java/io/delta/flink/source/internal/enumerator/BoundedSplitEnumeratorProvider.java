@@ -5,7 +5,6 @@ import static java.util.Collections.emptyList;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.enumerator.processor.SnapshotProcessor;
-import io.delta.flink.source.internal.enumerator.supplier.BoundedSourceSnapshotSupplier;
 import io.delta.flink.source.internal.file.AddFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaEnumeratorStateCheckpoint;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
@@ -15,8 +14,10 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.Snapshot;
 
 /**
  * An implementation of {@link SplitEnumeratorProvider} that creates a {@code
@@ -52,11 +53,11 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         DeltaLog deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
-        BoundedSourceSnapshotSupplier snapshotSupplier =
-            new BoundedSourceSnapshotSupplier(deltaLog);
+        Snapshot initSnapshot = deltaLog.getSnapshotForVersionAsOf(
+            sourceConfiguration.getValue(INITIAL_SNAPSHOT_VERSION));
 
         SnapshotProcessor snapshotProcessor =
-            new SnapshotProcessor(deltaTablePath, snapshotSupplier.getSnapshot(sourceConfiguration),
+            new SnapshotProcessor(deltaTablePath, initSnapshot,
                 fileEnumeratorProvider.create(), Collections.emptySet());
 
         return new BoundedDeltaSourceSplitEnumerator(

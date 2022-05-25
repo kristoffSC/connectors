@@ -131,45 +131,55 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     @Test
     // This test updates Delta Table 5 times, so it will take some time to finish. About 1 minute.
-    public void shouldReadDeltaTableFromSnapshotAndUpdates() throws Exception {
+    public void shouldReadDeltaTableFromSnapshotAndUpdatesUsingUserSchema() throws Exception {
 
         // GIVEN
-        List<DeltaSource<RowData>> deltaSources = Arrays.asList(
-            initContinuousSource(nonPartitionedTablePath),
-            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES)
-        );
+        DeltaSource<RowData> deltaSource =
+            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES);
 
-        for (DeltaSource<RowData> deltaSource : deltaSources) {
-            System.out.println("Starting test");
-            ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
+        shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource);
+    }
 
-            // WHEN
-            List<List<RowData>> resultData =
-                testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
-                    (FailCheck) readRows -> readRows
-                        ==
-                        (INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE)
-                            / 2);
+    @Test
+    // This test updates Delta Table 5 times, so it will take some time to finish. About 1 minute.
+    public void shouldReadDeltaTableFromSnapshotAndUpdatesUsingDeltaLogSchema() throws Exception {
 
-            int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
+        // GIVEN
+        DeltaSource<RowData> deltaSource = initContinuousSource(nonPartitionedTablePath);
 
-            // Each row has a unique column across all Delta table data. We are converting List or
-            // read rows to set of values for that unique column.
-            // If there were eny duplicates or missing values we will catch them here by comparing
-            // size of that Set to expected number of rows.
-            Set<String> uniqueValues =
-                resultData.stream().flatMap(Collection::stream)
-                    .map(row -> row.getString(1).toString())
-                    .collect(Collectors.toSet());
+        shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource);
+    }
 
-            // THEN
-            assertThat("Source read different number of rows that Delta Table have.",
-                totalNumberOfRows,
-                equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
-            assertThat("Source Produced Different Rows that were in Delta Table",
-                uniqueValues.size(),
-                equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
-        }
+    private void shouldReadDeltaTableFromSnapshotAndUpdates(DeltaSource<RowData> deltaSource)
+        throws Exception {
+        ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
+
+        // WHEN
+        List<List<RowData>> resultData =
+            testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
+                (FailCheck) readRows -> readRows
+                    ==
+                    (INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE)
+                        / 2);
+
+        int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
+
+        // Each row has a unique column across all Delta table data. We are converting List or
+        // read rows to set of values for that unique column.
+        // If there were eny duplicates or missing values we will catch them here by comparing
+        // size of that Set to expected number of rows.
+        Set<String> uniqueValues =
+            resultData.stream().flatMap(Collection::stream)
+                .map(row -> row.getString(1).toString())
+                .collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.",
+            totalNumberOfRows,
+            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
+        assertThat("Source Produced Different Rows that were in Delta Table",
+            uniqueValues.size(),
+            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
     }
 
     /**

@@ -12,6 +12,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
+import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
 
 /**
  * A builder class for {@link DeltaSource} for a stream of {@link RowData}. Created source instance
@@ -240,6 +241,8 @@ public class RowDataContinuousDeltaSourceBuilder
         validate();
 
         SourceSchema sourceSchema = getSourceSchema();
+        sourceConfiguration.addOption(INITIAL_SNAPSHOT_VERSION.key(),
+            sourceSchema.getSnapshotVersion());
 
         DeltaBulkFormat<RowData> format = RowDataFormat.builder(
                 RowType.of(sourceSchema.getColumnTypes(), sourceSchema.getColumnNames()),

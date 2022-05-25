@@ -48,35 +48,42 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     }
 
     @Test
+    public void shouldReadDeltaTableUsingDeltaLogSchema() throws Exception {
+        DeltaSource<RowData> deltaSource = initBoundedSource(nonPartitionedLargeTablePath);
+
+        shouldReadDeltaTable(deltaSource);
+    }
+
+    @Test
     // NOTE that this test can take some time to finish since we are restarting JM here.
     // It can be around 30 seconds or so.
     // Test if SplitEnumerator::addSplitsBack works well,
     // meaning if splits were added back to the Enumerator's state and reassigned to new TM.
-    public void shouldReadDeltaTable() throws Exception {
+    public void shouldReadDeltaTableUsingUserSchema() throws Exception {
 
-        List<DeltaSource<RowData>> deltaSources = Arrays.asList(
-            initBoundedSource(nonPartitionedLargeTablePath),
-            initBoundedSource(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES)
-        );
+        DeltaSource<RowData> deltaSource =
+            initBoundedSource(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
 
-        for (DeltaSource<RowData> deltaSource : deltaSources) {
-            System.out.println("Starting test");
-            // WHEN
-            // Fail TaskManager or JobManager after half of the records or do not fail anything if
-            // FailoverType.NONE.
-            List<RowData> resultData = testBoundDeltaSource(failoverType, deltaSource,
-                (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
+        shouldReadDeltaTable(deltaSource);
+    }
 
-            Set<Long> actualValues =
-                resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
+    private void shouldReadDeltaTable(
+        DeltaSource<RowData> deltaSource) throws Exception {
+        // WHEN
+        // Fail TaskManager or JobManager after half of the records or do not fail anything if
+        // FailoverType.NONE.
+        List<RowData> resultData = testBoundDeltaSource(failoverType, deltaSource,
+            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
-            // THEN
-            assertThat("Source read different number of rows that Delta table have.",
-                resultData.size(),
-                equalTo(LARGE_TABLE_RECORD_COUNT));
-            assertThat("Source Must Have produced some duplicates.", actualValues.size(),
-                equalTo(LARGE_TABLE_RECORD_COUNT));
-        }
+        Set<Long> actualValues =
+            resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta table have.",
+            resultData.size(),
+            equalTo(LARGE_TABLE_RECORD_COUNT));
+        assertThat("Source Must Have produced some duplicates.", actualValues.size(),
+            equalTo(LARGE_TABLE_RECORD_COUNT));
     }
 
     // TODO PR 11 ADD Partition tests in later PRs
