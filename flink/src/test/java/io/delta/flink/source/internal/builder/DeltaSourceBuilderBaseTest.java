@@ -1,7 +1,6 @@
 package io.delta.flink.source.internal.builder;
 
 import java.util.Collections;
-import java.util.function.Supplier;
 
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.DeltaSource;
@@ -82,17 +81,15 @@ class DeltaSourceBuilderBaseTest {
     }
 
     @Test
-    public void shouldThrowIfNullDeltaSchema() throws Throwable {
+    public void shouldThrowIfNullDeltaSchema() {
         DeltaSourceException exception =
             assertThrows(DeltaSourceException.class, () -> builder.getSourceSchema());
 
         assertThat(
-            exception.getSnapshotVersion().orElseThrow(
-                (Supplier<Throwable>) () -> new AssertionError(
-                    "Exception is missing snapshot version")),
-            equalTo(SNAPSHOT_VERSION));
+            exception.getSnapshotVersion().orElse(null), equalTo(SNAPSHOT_VERSION));
         assertThat(exception.getTablePath(), equalTo(TABLE_PATH));
-        assertThat(exception.getMessage(),
+        assertThat(
+            exception.getMessage(),
             equalTo(
                 "Unable to find Schema information in Delta log for table [s3://some/path] and "
                     + "version [10]")

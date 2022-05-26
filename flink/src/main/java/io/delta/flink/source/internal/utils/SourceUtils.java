@@ -7,6 +7,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.types.logical.LogicalType;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
+import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.StructField;
 import io.delta.standalone.types.StructType;
 
@@ -42,31 +43,40 @@ public final class SourceUtils {
      *
      * @param userColumnNames user defined columns that if defined, should be read from Delta
      *                        table.
-     * @param logSchema       original Delta table schema
+     * @param metadata        a {@link Metadata} object from Delta table.
      * @param snapshotVersion a {@link io.delta.standalone.Snapshot} version that this schema is
      *                        valid.
      * @return A {@link SourceSchema} with column names and their {@link LogicalType}.
      */
     public static SourceSchema buildSourceSchema(
             Collection<String> userColumnNames,
-            StructType logSchema,
+            Metadata metadata,
             long snapshotVersion) {
 
         String[] columnNames;
         LogicalType[] columnTypes;
 
+        StructType tableSchema = metadata.getSchema();
+
+        if (tableSchema == null) {
+            // TODO PR 11 FIX IT
+            // throw DeltaSourceExceptions.tableSchemaMissingException(
+            // SourceUtils.pathToString(tablePath), snapshot.getVersion());
+            throw new RuntimeException("uh");
+        }
+
         if (userColumnNames != null && !userColumnNames.isEmpty()) {
             columnTypes = new LogicalType[userColumnNames.size()];
             int i = 0;
             for (String columnName : userColumnNames) {
-                StructField field = logSchema.get(columnName);
+                StructField field = tableSchema.get(columnName);
                 columnTypes[i++] = SchemaConverter.toFlinkDataType(
                     field.getDataType(),
                     field.isNullable());
             }
             columnNames = userColumnNames.toArray(new String[0]);
         } else {
-            StructField[] fields = logSchema.getFields();
+            StructField[] fields = tableSchema.getFields();
             columnNames = new String[fields.length];
             columnTypes = new LogicalType[fields.length];
             int i = 0;
@@ -78,7 +88,8 @@ public final class SourceUtils {
             }
         }
 
-        return new SourceSchema(columnNames, columnTypes, snapshotVersion);
+        return new SourceSchema(columnNames, columnTypes, snapshotVersion)
+            .addPartitionColumns(metadata.getPartitionColumns());
     }
 
 }

@@ -1,6 +1,7 @@
 package io.delta.flink.source.internal.exceptions;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 
 import io.delta.flink.source.internal.file.AddFileEnumeratorContext;
@@ -161,5 +162,21 @@ public final class DeltaSourceExceptions {
             String.format(
                 "Unable to find Schema information in Delta log for table [%s] and version [%d]",
                 tablePath, snapshotVersion));
+    }
+
+    public static DeltaSourceException notPartitionedTableException(String columnName) {
+        return new DeltaSourceException(
+            String.format(
+                "Attempt to get a value for partition column from unpartitioned Delta Table. "
+                    + "Column name %s", columnName));
+    }
+
+    public static DeltaSourceException missingPartitionValueException(
+        String partitionName,
+        Collection<String> expectedPartitionColumnNames) {
+        return new DeltaSourceException(
+            String.format("Cannot find the partition value in Delta MetaData for column %s. "
+                    + "Expected partition column names from MetaData are %s",
+                partitionName, expectedPartitionColumnNames));
     }
 }

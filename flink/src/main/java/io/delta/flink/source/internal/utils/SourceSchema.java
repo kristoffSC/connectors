@@ -1,5 +1,9 @@
 package io.delta.flink.source.internal.utils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.flink.table.types.logical.LogicalType;
 
 /**
@@ -23,10 +27,26 @@ public class SourceSchema {
      */
     private final long snapshotVersion;
 
+    /**
+     * {@link List} with names of partition columns. If empty, then no partition columns were found
+     * for given schema version.
+     */
+    private final List<String> partitionColumns;
+
     public SourceSchema(String[] columnNames, LogicalType[] columnTypes, long snapshotVersion) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.snapshotVersion = snapshotVersion;
+        this.partitionColumns = new ArrayList<>();
+    }
+
+    public SourceSchema addPartitionColumns(List<String> partitionColumns) {
+        this.partitionColumns.addAll(partitionColumns);
+        return this;
+    }
+
+    public List<String> getPartitionColumns() {
+        return Collections.unmodifiableList(partitionColumns);
     }
 
     /**
