@@ -106,8 +106,5 @@ public class SchemaConverter {
                 throw new UnsupportedOperationException(
                     "Type not supported: " + deltaDataType);
         }
-
-
     }
-
 }
