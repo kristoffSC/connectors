@@ -12,7 +12,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
-import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION;
 
 /**
  * A builder class for {@link DeltaSource} for a stream of {@link RowData}. Created source instance
@@ -170,7 +170,7 @@ public class RowDataBoundedDeltaSourceBuilder
         // We are using this snapshot to extract the metadata and discover table's column names
         // and data types.
         SourceSchema sourceSchema = getSourceSchema();
-        sourceConfiguration.addOption(INITIAL_SNAPSHOT_VERSION.key(),
+        sourceConfiguration.addOption(LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             sourceSchema.getSnapshotVersion());
 
         DeltaBulkFormat<RowData> format = RowDataFormat.builder(

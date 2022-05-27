@@ -49,7 +49,8 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
     @Test
     public void shouldReadDeltaTableUsingDeltaLogSchema() throws Exception {
-        DeltaSource<RowData> deltaSource = initBoundedSource(nonPartitionedLargeTablePath);
+        DeltaSource<RowData> deltaSource =
+            initBoundedSourceAllColumns(nonPartitionedLargeTablePath);
 
         shouldReadDeltaTable(deltaSource);
     }
@@ -62,7 +63,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     public void shouldReadDeltaTableUsingUserSchema() throws Exception {
 
         DeltaSource<RowData> deltaSource =
-            initBoundedSource(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
+            initBoundedSourceForColumns(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
 
         shouldReadDeltaTable(deltaSource);
     }
@@ -92,7 +93,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
      * Initialize a Delta source in bounded mode that should take entire Delta table schema
      * from Delta's metadata.
      */
-    private DeltaSource<RowData> initBoundedSource(String tablePath) {
+    private DeltaSource<RowData> initBoundedSourceAllColumns(String tablePath) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
@@ -107,7 +108,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
      * Initialize a Delta source in bounded mode that should take only user defined columns
      * from Delta's metadata.
      */
-    private DeltaSource<RowData> initBoundedSource(String tablePath, String[] columnNames) {
+    private DeltaSource<RowData> initBoundedSourceForColumns(
+            String tablePath,
+            String[] columnNames) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 

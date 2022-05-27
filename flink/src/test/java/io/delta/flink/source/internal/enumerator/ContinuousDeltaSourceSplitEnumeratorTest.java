@@ -164,7 +164,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         sourceConfiguration.addOption(
             DeltaSourceOptions.STARTING_VERSION.key(), String.valueOf(startingVersion));
         sourceConfiguration.addOption(
-            DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+            DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             startingVersionSnapshot.getVersion());
 
         enumerator = setUpEnumerator();
@@ -234,7 +234,7 @@ public class ContinuousDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEn
         sourceConfiguration.addOption(
             DeltaSourceOptions.STARTING_TIMESTAMP.key(), startingTimestampString);
         sourceConfiguration.addOption(
-            DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+            DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             startingVersionSnapshot.getVersion());
 
         enumerator = setUpEnumerator();
