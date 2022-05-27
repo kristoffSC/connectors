@@ -43,7 +43,7 @@ public class DeltaSourceOptions {
      */
     public static final Map<String, ConfigOption<?>> INNER_SOURCE_OPTIONS = new HashMap<>();
 
-    // ----- PUBLIC AND NONE PUBLIC OPTIONS ----- //
+    // ----- PUBLIC AND NONE-PUBLIC OPTIONS ----- //
     // This options can be set/used by end user while configuring Flink Delta source.
 
     /**
@@ -168,9 +168,27 @@ public class DeltaSourceOptions {
      * initialized during
      * {@link io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerator} first
      * initialization.
+     *
+     * @implNote
+     * The {@link org.apache.flink.api.connector.source.SplitEnumerator} implementations for
+     * Delta source has to use the same Delta Snapshot that was used for schema discovery by
+     * source builder.
+     * This is needed to avoid anny issues caused by schema changes that might have happened between
+     * source initialization and enumerator initialization. The version of the snapshot used for
+     * schema discovery in Source builder is passed to the SplitEnumerator via
+     * {@link DeltaSourceConfiguration} using LOADED_SCHEMA_SNAPSHOT_VERSION option.
+     * <p>
+     * When the job is submitted to the Flink cluster, the entire job graph including operators,
+     * source and sink classes is serialized on a "client side" and deserialized back on a Job
+     * Manager node. Because both {@link io.delta.standalone.Snapshot} and
+     * {@link io.delta.standalone.DeltaLog} are not serializable, we cannot simply pass reference
+     * value to Delta Source instance, since this will throw an exception during job
+     * initialization, failing on the deserialization.
      */
     public static final ConfigOption<Long> LOADED_SCHEMA_SNAPSHOT_VERSION =
         ConfigOptions.key("loadedSchemaSnapshotVersion").longType().noDefaultValue();
+
+    // ----------------------------- //
 
     // TODO PR 12 test all allowed options
     static {

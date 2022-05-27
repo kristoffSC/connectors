@@ -49,10 +49,14 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected static final Set<String> SMALL_TABLE_EXPECTED_VALUES =
         Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
 
+    // TODO PR 11 -> make this not to have all columns from Delta table. Needed to change the
+    //  test setup.
     protected static final String[] SMALL_TABLE_COLUMN_NAMES = {"name", "surname", "age"};
 
     protected static final int SMALL_TABLE_COUNT = 2;
 
+    // TODO PR 11 -> make this not to have all columns from Delta table. Needed to change the
+    //  test setup.
     protected static final String[] LARGE_TABLE_COLUMN_NAMES = {"col1", "col2", "col3"};
 
     protected static final int LARGE_TABLE_RECORD_COUNT = 1100;

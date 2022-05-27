@@ -53,6 +53,9 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
         DeltaLog deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
+        // Getting the same snapshot that was used for schema discovery in Source Builder.
+        // With this we are making sure that what we read from Delta will have the same schema
+        // that was discovered in Source builder.
         Snapshot initSnapshot = deltaLog.getSnapshotForVersionAsOf(
             sourceConfiguration.getValue(LOADED_SCHEMA_SNAPSHOT_VERSION));
 

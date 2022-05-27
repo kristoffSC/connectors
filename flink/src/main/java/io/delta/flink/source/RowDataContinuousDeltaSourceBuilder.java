@@ -241,7 +241,8 @@ public class RowDataContinuousDeltaSourceBuilder
         validate();
 
         // In this step, the Delta table schema discovery is made.
-        // We load the snapshot corresponding to the latest/versionAsOf/timestampAsOf commit.
+        // We load the snapshot corresponding to the latest/startingVersion/startingTimestamp
+        // commit.
         // We are using this snapshot to extract the metadata and discover table's column names
         // and data types.
         SourceSchema sourceSchema = getSourceSchema();

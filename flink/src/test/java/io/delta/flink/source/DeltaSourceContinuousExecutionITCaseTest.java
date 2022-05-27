@@ -73,7 +73,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES);
+            initContinuousSourceForColumns(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES);
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
@@ -105,7 +105,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
+            initContinuousSourceForColumns(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
@@ -135,7 +135,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initContinuousSource(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES);
+            initContinuousSourceForColumns(nonPartitionedTablePath, SMALL_TABLE_COLUMN_NAMES);
 
         shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource);
     }
@@ -145,7 +145,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     public void shouldReadDeltaTableFromSnapshotAndUpdatesUsingDeltaLogSchema() throws Exception {
 
         // GIVEN
-        DeltaSource<RowData> deltaSource = initContinuousSource(nonPartitionedTablePath);
+        DeltaSource<RowData> deltaSource = initContinuousSourceAllColumns(nonPartitionedTablePath);
 
         shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource);
     }
@@ -206,7 +206,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      * Initialize a Delta source in continuous mode that should take entire Delta table schema
      * from Delta's metadata.
      */
-    private DeltaSource<RowData> initContinuousSource(String tablePath) {
+    private DeltaSource<RowData> initContinuousSourceAllColumns(String tablePath) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
@@ -221,7 +221,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      * Initialize a Delta source in continuous mode that should take only user defined columns
      * from Delta's metadata.
      */
-    private DeltaSource<RowData> initContinuousSource(String tablePath, String[] columnNames) {
+    private DeltaSource<RowData> initContinuousSourceForColumns(
+            String tablePath,
+            String[] columnNames) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
