@@ -14,7 +14,7 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -54,7 +54,7 @@ public class BoundedSplitEnumeratorProvider implements SplitEnumeratorProvider {
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
         Snapshot initSnapshot = deltaLog.getSnapshotForVersionAsOf(
-            sourceConfiguration.getValue(INITIAL_SNAPSHOT_VERSION));
+            sourceConfiguration.getValue(LOADED_SCHEMA_SNAPSHOT_VERSION));
 
         SnapshotProcessor snapshotProcessor =
             new SnapshotProcessor(deltaTablePath, initSnapshot,

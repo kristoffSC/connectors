@@ -62,7 +62,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
 
         sourceConfiguration.addOption(DeltaSourceOptions.VERSION_AS_OF.key(), versionAsOf);
         sourceConfiguration.addOption(
-            DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+            DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             versionAsOfSnapshot.getVersion()
         );
 
@@ -98,7 +98,7 @@ public class BoundedDeltaSourceSplitEnumeratorTest extends DeltaSourceSplitEnume
         sourceConfiguration.addOption(DeltaSourceOptions.TIMESTAMP_AS_OF.key(),
             timestampAsOfString);
         sourceConfiguration.addOption(
-            DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+            DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             timestampAsOfSnapshot.getVersion());
 
         enumerator = setUpEnumerator();

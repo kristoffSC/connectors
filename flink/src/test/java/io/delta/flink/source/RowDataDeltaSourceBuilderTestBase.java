@@ -3,8 +3,10 @@ package io.delta.flink.source;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
+import org.apache.flink.configuration.ConfigOption;
 import org.apache.hadoop.conf.Configuration;
 import org.codehaus.janino.util.Producer;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -158,6 +161,23 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         assertThat(exception.getValidationMessages().size(), equalTo(2));
     }
 
+    @Test
+    public void shouldThrowWhenSettingInternalOption() {
+        DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key();
+
+        DeltaSourceValidationException exception =
+            assertThrows(DeltaSourceValidationException.class,
+                () -> getBuilderWithOption(
+                    DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION, 10L));
+
+        assertThat(exception.getMessage().contains("Invalid option"), equalTo(true));
+    }
+
+    protected abstract <T> DeltaSourceBuilderBase<?, ?> getBuilderWithOption(
+        ConfigOption<T> option,
+        T value
+    );
+
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithNulls();
 
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderForColumns(String[] columnNames);
@@ -197,6 +217,30 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
             .thenReturn(
                 new StructType(fields)
             );
+    }
+
+    protected  <T> DeltaSourceBuilderBase<?, ?> setOptionOnBuilder(
+            ConfigOption<T> option,
+            T value,
+            DeltaSourceBuilderBase<?, ?> builder) {
+        if (value instanceof String) {
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (String) value);
+        }
+
+        if (value instanceof Integer) {
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (Integer) value);
+        }
+
+        if (value instanceof Long) {
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (Long) value);
+        }
+
+        if (value instanceof Boolean) {
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (Boolean) value);
+        }
+
+        throw new IllegalArgumentException(
+            "Used unsupported value type for Builder option - " + value.getClass());
     }
 
 }

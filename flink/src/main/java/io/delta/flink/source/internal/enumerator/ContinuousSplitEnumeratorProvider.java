@@ -22,7 +22,7 @@ import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
 
@@ -64,7 +64,7 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
         Snapshot initSnapshot = deltaLog.getSnapshotForVersionAsOf(
-            sourceConfiguration.getValue(INITIAL_SNAPSHOT_VERSION));
+            sourceConfiguration.getValue(LOADED_SCHEMA_SNAPSHOT_VERSION));
 
         ContinuousTableProcessor tableProcessor =
             createTableProcessor(
