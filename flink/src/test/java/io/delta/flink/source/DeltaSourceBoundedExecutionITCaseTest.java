@@ -3,14 +3,18 @@ package io.delta.flink.source;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import io.delta.flink.DeltaTestUtils;
+import io.delta.flink.source.ContinuousTestDescriptor.Descriptor;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Before;
@@ -49,7 +53,8 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
     @Test
     public void shouldReadDeltaTableUsingDeltaLogSchema() throws Exception {
-        DeltaSource<RowData> deltaSource = initBoundedSource(nonPartitionedLargeTablePath);
+        DeltaSource<RowData> deltaSource =
+            initBoundedSourceAllColumns(nonPartitionedLargeTablePath);
 
         shouldReadDeltaTable(deltaSource);
     }
@@ -62,9 +67,30 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     public void shouldReadDeltaTableUsingUserSchema() throws Exception {
 
         DeltaSource<RowData> deltaSource =
-            initBoundedSource(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
+            initBoundedSourceForColumns(nonPartitionedLargeTablePath, LARGE_TABLE_COLUMN_NAMES);
 
         shouldReadDeltaTable(deltaSource);
+    }
+
+    @Test
+    // TODO PR 11 - no need to test this in all Failover scenarios will be fixed after migrating
+    //  this class to Junit5 in PR 11.
+    public void shouldReadLoadedSchemaVersion() throws Exception {
+
+        DeltaSource<RowData> source = initBoundedSourceAllColumns(nonPartitionedTablePath);
+
+        Descriptor update = new Descriptor(
+            RowType.of(true, SMALL_TABLE_COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES),
+            Collections.singletonList(Row.of("John-K", "Wick-P", 1410))
+        );
+
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTablePath);
+        tableUpdater.writeToTable(update);
+
+        List<RowData> rowData = testBoundDeltaSource(source);
+
+        assertThat(rowData.size(), equalTo(SMALL_TABLE_COUNT));
+
     }
 
     private void shouldReadDeltaTable(
@@ -92,7 +118,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
      * Initialize a Delta source in bounded mode that should take entire Delta table schema
      * from Delta's metadata.
      */
-    private DeltaSource<RowData> initBoundedSource(String tablePath) {
+    private DeltaSource<RowData> initBoundedSourceAllColumns(String tablePath) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 
@@ -107,7 +133,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
      * Initialize a Delta source in bounded mode that should take only user defined columns
      * from Delta's metadata.
      */
-    private DeltaSource<RowData> initBoundedSource(String tablePath, String[] columnNames) {
+    private DeltaSource<RowData> initBoundedSourceForColumns(
+            String tablePath,
+            String[] columnNames) {
 
         Configuration hadoopConf = DeltaTestUtils.getHadoopConf();
 

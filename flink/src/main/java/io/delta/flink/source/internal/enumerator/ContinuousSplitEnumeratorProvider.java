@@ -22,7 +22,7 @@ import org.apache.flink.connector.file.src.FileSourceSplit;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
-import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
 
@@ -63,8 +63,13 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         DeltaLog deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
+        // TODO ISSUE WITH HANDLING Protocol and Metadata Action - consult with Scott/TD
+
+        // Getting the same snapshot that was used for schema discovery in Source Builder.
+        // With this we are making sure that what we read from Delta will have the same schema
+        // that was discovered in Source builder.
         Snapshot initSnapshot = deltaLog.getSnapshotForVersionAsOf(
-            sourceConfiguration.getValue(INITIAL_SNAPSHOT_VERSION));
+            sourceConfiguration.getValue(LOADED_SCHEMA_SNAPSHOT_VERSION));
 
         ContinuousTableProcessor tableProcessor =
             createTableProcessor(

@@ -215,7 +215,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
 
     // TODO Refactor Option name validation in PR 12
     protected ConfigOption<?> validateOptionName(String optionName) {
-        ConfigOption<?> option = DeltaSourceOptions.VALID_SOURCE_OPTIONS.get(optionName);
+        ConfigOption<?> option = DeltaSourceOptions.USER_FACING_SOURCE_OPTIONS.get(optionName);
         if (option == null) {
             throw DeltaSourceExceptions.invalidOptionNameException(
                 SourceUtils.pathToString(tablePath), optionName);

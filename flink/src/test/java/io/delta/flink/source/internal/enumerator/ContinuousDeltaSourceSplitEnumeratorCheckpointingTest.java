@@ -2,6 +2,7 @@ package io.delta.flink.source.internal.enumerator;
 
 import java.net.URI;
 import java.util.Collections;
+import static java.util.Collections.singletonMap;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
@@ -138,7 +139,7 @@ public class ContinuousDeltaSourceSplitEnumeratorCheckpointingTest {
             new TestingSplitEnumeratorContext<>(1);
 
         DeltaSourceConfiguration sourceConfiguration = new DeltaSourceConfiguration(
-            Collections.singletonMap(DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+            singletonMap(DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
                 headSnapshot.getVersion()));
 
         ContinuousDeltaSourceSplitEnumerator enumerator =
@@ -199,7 +200,7 @@ public class ContinuousDeltaSourceSplitEnumeratorCheckpointingTest {
 
         DeltaSourceConfiguration sourceConfiguration = new DeltaSourceConfiguration();
         sourceConfiguration.addOption(DeltaSourceOptions.STARTING_VERSION.key(), "latest");
-        sourceConfiguration.addOption(DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+        sourceConfiguration.addOption(DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             headSnapshot.getVersion());
 
         ContinuousDeltaSourceSplitEnumerator enumerator =
@@ -255,7 +256,7 @@ public class ContinuousDeltaSourceSplitEnumeratorCheckpointingTest {
                 DeltaSinkTestUtils.getHadoopConf(),
                 new TestingSplitEnumeratorContext<>(1),
                 new DeltaSourceConfiguration(
-                    Collections.singletonMap(DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+                    singletonMap(DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
                         headSnapshot.getVersion()))
             );
 
@@ -275,7 +276,7 @@ public class ContinuousDeltaSourceSplitEnumeratorCheckpointingTest {
                 DeltaSinkTestUtils.getHadoopConf(),
                 enumContext,
                 new DeltaSourceConfiguration(
-                    Collections.singletonMap(DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(),
+                    singletonMap(DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
                     headSnapshot.getVersion()))
             );
         recoveredEnumerator.start();

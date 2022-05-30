@@ -31,7 +31,7 @@ public class SchemaConverter {
     /**
      * Converts Delta's {@link StructType} to Flink's {@link RowType}
      */
-    public static RowType toRowType(StructType deltaRow, boolean nullable) {
+    private static RowType toRowType(StructType deltaRow, boolean nullable) {
 
         StructField[] deltaFields = deltaRow.getFields();
         String[] fieldNames = new String[deltaFields.length];
@@ -106,8 +106,5 @@ public class SchemaConverter {
                 throw new UnsupportedOperationException(
                     "Type not supported: " + deltaDataType);
         }
-
-
     }
-
 }

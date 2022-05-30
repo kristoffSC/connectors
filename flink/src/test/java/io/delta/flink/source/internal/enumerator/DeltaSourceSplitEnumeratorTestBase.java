@@ -212,7 +212,7 @@ public abstract class DeltaSourceSplitEnumeratorTestBase {
         when(deltaLog.getSnapshotForVersionAsOf(
             headSnapshot.getVersion())).thenReturn(headSnapshot);
         sourceConfiguration.addOption(
-            DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION.key(), headSnapshot.getVersion());
+            DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key(), headSnapshot.getVersion());
         return (T) spy(createEnumerator());
     }
 

@@ -22,6 +22,12 @@ import io.delta.standalone.types.StringType;
 import io.delta.standalone.types.StructType;
 import io.delta.standalone.types.TimestampType;
 
+/**
+ * An Enum representing Delta's {@link DataType} class types.
+ *
+ * <p>
+ * This Enum can be used for example to build switch statement based on Delta's DataType type.
+ */
 public enum DeltaDataType {
     ARRAY(ArrayType.class),
     BIGINT(LongType.class),
@@ -58,7 +64,13 @@ public enum DeltaDataType {
         this.deltaDataTypeClass = deltaDataTypeClass;
     }
 
-    public static DeltaDataType instanceFrom(Class<? extends DataType> deltaActionName) {
-        return LOOKUP_MAP.getOrDefault(deltaActionName, OTHER);
+    /**
+     * @param deltaDataType A concrete implementation of {@link DataType} class that we would
+     *                        like to map to
+     *                        {@link org.apache.flink.table.types.logical.LogicalType} instance.
+     * @return mapped instance of {@link DeltaDataType} Enum.
+     */
+    public static DeltaDataType instanceFrom(Class<? extends DataType> deltaDataType) {
+        return LOOKUP_MAP.getOrDefault(deltaDataType, OTHER);
     }
 }

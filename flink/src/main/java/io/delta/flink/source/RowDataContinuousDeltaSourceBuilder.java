@@ -12,7 +12,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
-import static io.delta.flink.source.internal.DeltaSourceOptions.INITIAL_SNAPSHOT_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION;
 
 /**
  * A builder class for {@link DeltaSource} for a stream of {@link RowData}. Created source instance
@@ -41,7 +41,7 @@ public class RowDataContinuousDeltaSourceBuilder
 
     /**
      * Specifies a {@link List} of column names that should be read from Delta table. If this method
-     * is not used, Source will read all calumnious from Delta table.
+     * is not used, Source will read all columns from Delta table.
      * <p>
      * Is provided List is null or contains null, empty or blank elements it will cause to throw a
      * {@code DeltaSourceValidationException} by builder after calling {@code build()} method.
@@ -55,7 +55,7 @@ public class RowDataContinuousDeltaSourceBuilder
 
     /**
      * Specifies an array of column names that should be read from Delta table. If this method
-     * is not used, Source will read all calumnious from Delta table.
+     * is not used, Source will read all columns from Delta table.
      * <p>
      * Is provided List is null or contains null, empty or blank elements it will cause to throw a
      * {@code DeltaSourceValidationException} by builder after calling {@code build()} method.
@@ -240,8 +240,13 @@ public class RowDataContinuousDeltaSourceBuilder
 
         validate();
 
+        // In this step, the Delta table schema discovery is made.
+        // We load the snapshot corresponding to the latest/startingVersion/startingTimestamp
+        // commit.
+        // We are using this snapshot to extract the metadata and discover table's column names
+        // and data types.
         SourceSchema sourceSchema = getSourceSchema();
-        sourceConfiguration.addOption(INITIAL_SNAPSHOT_VERSION.key(),
+        sourceConfiguration.addOption(LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             sourceSchema.getSnapshotVersion());
 
         DeltaBulkFormat<RowData> format = RowDataFormat.builder(
