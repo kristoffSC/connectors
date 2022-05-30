@@ -241,11 +241,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         Snapshot snapshot = snapshotSupplier.getSnapshot(sourceConfiguration);
 
         try {
-            return SourceUtils.buildSourceSchema(
-                userColumnNames,
-                snapshot.getMetadata(),
-                snapshot.getVersion()
-            );
+            return SourceSchema.fromSnapshot(userColumnNames, snapshot);
         } catch (IllegalArgumentException e) {
             throw DeltaSourceExceptions.generalSourceException(
                 SourceUtils.pathToString(tablePath),
