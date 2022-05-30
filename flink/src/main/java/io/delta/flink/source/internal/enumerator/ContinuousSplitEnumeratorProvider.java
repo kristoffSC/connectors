@@ -63,6 +63,9 @@ public class ContinuousSplitEnumeratorProvider implements SplitEnumeratorProvide
         DeltaLog deltaLog =
             DeltaLog.forTable(configuration, SourceUtils.pathToString(deltaTablePath));
 
+        // TODO PR 10.1 add test that would mimic case where schema could have changed between
+        //  source and enumerator initialization.
+
         // Getting the same snapshot that was used for schema discovery in Source Builder.
         // With this we are making sure that what we read from Delta will have the same schema
         // that was discovered in Source builder.
