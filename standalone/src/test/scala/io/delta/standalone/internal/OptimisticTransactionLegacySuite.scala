@@ -63,7 +63,7 @@ class OptimisticTransactionLegacySuite extends FunSuite {
       partitionCols: Seq[String] = "part" :: Nil)(
       test: DeltaLog => Unit): Unit = {
     val schemaFields = partitionCols.map { p => new StructField(p, new StringType()) }.toArray
-    val schema = new StructType(schemaFields)
+    val schema = new StructType(schemaFields).add("non_part_col", new StringType())
     val metadata = Metadata(partitionColumns = partitionCols, schemaString = schema.toJson)
     withTempDir { dir =>
       val log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
