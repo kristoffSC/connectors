@@ -32,6 +32,7 @@ import org.scalatest.FunSuite
 import io.delta.standalone.{DeltaLog, Operation, Snapshot}
 import io.delta.standalone.actions.{AddFile => AddFileJ, JobInfo => JobInfoJ, Metadata => MetadataJ, NotebookInfo => NotebookInfoJ, RemoveFile => RemoveFileJ}
 import io.delta.standalone.exceptions.DeltaStandaloneException
+import io.delta.standalone.types.{BooleanType, IntegerType, LongType, StringType, StructType}
 
 import io.delta.standalone.internal.actions.{Action, AddFile, Metadata, Protocol, RemoveFile}
 import io.delta.standalone.internal.exception.DeltaErrors
@@ -459,6 +460,58 @@ abstract class DeltaLogSuiteBase extends FunSuite {
       assert(log.tableExists())
     }
   }
+
+  test("schema contains all partition columns") {
+    withTempDir { dir =>
+      val log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      val schema = new StructType()
+        .add("part_1", new StringType())
+        .add("part_2", new LongType())
+        .add("foo", new IntegerType())
+        .add("bar", new BooleanType())
+
+      // case 1: valid metadata
+      val metadata1 = MetadataJ.builder()
+        .schema(schema)
+        .partitionColumns(Seq("part_1", "part_2").asJava)
+        .build()
+      val txn1 = log.startTransaction()
+      txn1.updateMetadata(metadata1)
+      txn1.commit(Nil.asJava, manualUpdate, engineInfo)
+
+      // case 2: invalid metadata
+      val metadata2 = MetadataJ.builder()
+        .schema(schema)
+        .partitionColumns(Seq("part_1", "part_2", "part_3").asJava)
+        .build()
+      // we can use updateMetadata or include metadata as part of commit actions. both are valid.
+      val e = intercept[DeltaStandaloneException] {
+        log.startTransaction().commit(Seq(metadata2).asJava, manualUpdate, engineInfo)
+      }.getMessage
+      assert(e.contains("Partition column part_3 not found in schema"))
+    }
+  }
+
+  test("schema contains no data columns and only partition columns") {
+    withTempDir { dir =>
+      val log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      val schema = new StructType()
+        .add("part_1", new StringType())
+        .add("part_2", new LongType())
+
+      val metadata1 = MetadataJ.builder()
+        .schema(schema)
+        .partitionColumns(Seq("part_1", "part_2").asJava)
+        .build()
+
+      val txn = log.startTransaction()
+      val e = intercept[DeltaStandaloneException] {
+        txn.updateMetadata(metadata1)
+      }.getMessage
+      assert(e == "Data written into Delta needs to contain at least one non-partitioned column")
+    }
+  }
+
 }
 
 ///////////////////////////////////////////////////////////////////////////
