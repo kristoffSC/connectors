@@ -4,9 +4,9 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
 import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
-import org.apache.flink.configuration.ConfigOption;
 import org.apache.hadoop.conf.Configuration;
 import org.codehaus.janino.util.Producer;
 import org.junit.jupiter.api.Test;
@@ -174,7 +174,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     }
 
     protected abstract <T> DeltaSourceBuilderBase<?, ?> getBuilderWithOption(
-        ConfigOption<T> option,
+        DeltaConfigOption<T> option,
         T value
     );
 
@@ -220,7 +220,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     }
 
     protected  <T> DeltaSourceBuilderBase<?, ?> setOptionOnBuilder(
-            ConfigOption<T> option,
+            DeltaConfigOption<T> option,
             T value,
             DeltaSourceBuilderBase<?, ?> builder) {
         if (value instanceof String) {

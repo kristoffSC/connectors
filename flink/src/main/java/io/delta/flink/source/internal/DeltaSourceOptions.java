@@ -3,7 +3,7 @@ package io.delta.flink.source.internal;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.flink.configuration.ConfigOption;
+import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 
 /**
@@ -31,7 +31,8 @@ public class DeltaSourceOptions {
      * @implNote All {@code ConfigOption} defined in {@code DeltaSourceOptions} class must be added
      * to {@code VALID_SOURCE_OPTIONS} map.
      */
-    public static final Map<String, ConfigOption<?>> USER_FACING_SOURCE_OPTIONS = new HashMap<>();
+    public static final Map<String, DeltaConfigOption<?>> USER_FACING_SOURCE_OPTIONS =
+        new HashMap<>();
 
     /**
      * A map of all {@code DeltaSourceOptions} that are internal only, meaning that they must not be
@@ -41,7 +42,7 @@ public class DeltaSourceOptions {
      * @implNote All options categorized for "internal use only" defined in {@code
      * DeltaSourceOptions} class must be added to {@code INNER_SOURCE_OPTIONS} map.
      */
-    public static final Map<String, ConfigOption<?>> INNER_SOURCE_OPTIONS = new HashMap<>();
+    public static final Map<String, DeltaConfigOption<?>> INNER_SOURCE_OPTIONS = new HashMap<>();
 
     // ----- PUBLIC AND NONE-PUBLIC OPTIONS ----- //
     // This options can be set/used by end user while configuring Flink Delta source.
@@ -54,8 +55,10 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>versionAsOf</b>.
      */
-    public static final ConfigOption<Long> VERSION_AS_OF =
-        ConfigOptions.key("versionAsOf").longType().noDefaultValue();
+    public static final DeltaConfigOption<Long> VERSION_AS_OF =
+        DeltaConfigOption.of(
+            ConfigOptions.key("versionAsOf").longType().noDefaultValue(),
+            Long.class);
 
     /**
      * An option that allow time travel to the latest {@link io.delta.standalone.Snapshot} that was
@@ -66,8 +69,10 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>timestampAsOf</b>.
      */
-    public static final ConfigOption<String> TIMESTAMP_AS_OF =
-        ConfigOptions.key("timestampAsOf").stringType().noDefaultValue();
+    public static final DeltaConfigOption<String> TIMESTAMP_AS_OF =
+        DeltaConfigOption.of(
+        ConfigOptions.key("timestampAsOf").stringType().noDefaultValue(),
+            String.class);
 
     /**
      * An option to specify a {@link io.delta.standalone.Snapshot} version to only read changes
@@ -78,8 +83,10 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>startingVersion</b>.
      */
-    public static final ConfigOption<String> STARTING_VERSION =
-        ConfigOptions.key("startingVersion").stringType().noDefaultValue();
+    public static final DeltaConfigOption<String> STARTING_VERSION =
+        DeltaConfigOption.of(
+        ConfigOptions.key("startingVersion").stringType().noDefaultValue(),
+            String.class);
 
     /**
      * An option used to read only changes from {@link io.delta.standalone.Snapshot} that was
@@ -90,8 +97,10 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>startingTimestamp</b>.
      */
-    public static final ConfigOption<String> STARTING_TIMESTAMP =
-        ConfigOptions.key("startingTimestamp").stringType().noDefaultValue();
+    public static final DeltaConfigOption<String> STARTING_TIMESTAMP =
+        DeltaConfigOption.of(
+        ConfigOptions.key("startingTimestamp").stringType().noDefaultValue(),
+            String.class);
 
     /**
      * An option to specify check interval (in milliseconds) for monitoring Delta table changes.
@@ -102,8 +111,10 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>updateCheckIntervalMillis</b> and its default
      * value is 5000.
      */
-    public static final ConfigOption<Integer> UPDATE_CHECK_INTERVAL =
-        ConfigOptions.key("updateCheckIntervalMillis").intType().defaultValue(5000);
+    public static final DeltaConfigOption<Long> UPDATE_CHECK_INTERVAL =
+        DeltaConfigOption.of(
+        ConfigOptions.key("updateCheckIntervalMillis").longType().defaultValue(5000L),
+            Long.class);
 
     /**
      * An option to specify initial delay (in milliseconds) for starting periodical Delta table
@@ -115,8 +126,10 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>updateCheckDelayMillis</b> and its default
      * value is 1000.
      */
-    public static final ConfigOption<Integer> UPDATE_CHECK_INITIAL_DELAY =
-        ConfigOptions.key("updateCheckDelayMillis").intType().defaultValue(1000);
+    public static final DeltaConfigOption<Long> UPDATE_CHECK_INITIAL_DELAY =
+        DeltaConfigOption.of(
+        ConfigOptions.key("updateCheckDelayMillis").longType().defaultValue(1000L),
+            Long.class);
 
     /**
      * An option used to allow processing Delta table versions containing only {@link
@@ -130,8 +143,10 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>ignoreDeletes</b> and its default value is
      * false.
      */
-    public static final ConfigOption<Boolean> IGNORE_DELETES =
-        ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false);
+    public static final DeltaConfigOption<Boolean> IGNORE_DELETES =
+        DeltaConfigOption.of(
+        ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false),
+            Boolean.class);
 
     /**
      * An option used to allow processing Delta table versions containing both {@link
@@ -148,17 +163,20 @@ public class DeltaSourceOptions {
      * The String representation for this option is <b>ignoreChanges</b> and its default value is
      * false.
      */
-    public static final ConfigOption<Boolean> IGNORE_CHANGES =
-        ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false);
+    public static final DeltaConfigOption<Boolean> IGNORE_CHANGES =
+        DeltaConfigOption.of(
+        ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false),
+            Boolean.class);
 
     /**
      * An option to set the number of rows read per Parquet Reader per batch from underlying Parquet
      * file. This can improve read performance reducing IO cals to Parquet file at cost of memory
      * consumption on Task Manager nodes.
      */
-    public static final ConfigOption<Integer> PARQUET_BATCH_SIZE =
-        ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048)
-            .withDescription("Number of rows read per batch by Parquet Reader from Parquet file.");
+    public static final DeltaConfigOption<Integer> PARQUET_BATCH_SIZE =
+        DeltaConfigOption.of(
+        ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048),
+            Integer.class);
 
     // ----- INNER ONLY OPTIONS ----- //
     // Inner options should not be set by user, and they are used internally by Flin connector.
@@ -185,8 +203,10 @@ public class DeltaSourceOptions {
      * value to Delta Source instance, since this will throw an exception during job
      * initialization, failing on the deserialization.
      */
-    public static final ConfigOption<Long> LOADED_SCHEMA_SNAPSHOT_VERSION =
-        ConfigOptions.key("loadedSchemaSnapshotVersion").longType().noDefaultValue();
+    public static final DeltaConfigOption<Long> LOADED_SCHEMA_SNAPSHOT_VERSION =
+        DeltaConfigOption.of(
+        ConfigOptions.key("loadedSchemaSnapshotVersion").longType().noDefaultValue(),
+            Long.class);
 
     // ----------------------------- //
 

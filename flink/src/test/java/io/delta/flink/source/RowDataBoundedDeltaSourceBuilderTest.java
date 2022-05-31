@@ -4,8 +4,8 @@ import java.util.Arrays;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import org.apache.flink.api.connector.source.Boundedness;
-import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.junit.jupiter.api.AfterEach;
@@ -74,7 +74,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
     @Override
     protected <T> RowDataBoundedDeltaSourceBuilder getBuilderWithOption(
-            ConfigOption<T> option,
+            DeltaConfigOption<T> option,
             T value) {
         RowDataBoundedDeltaSourceBuilder builder =
             DeltaSource.forBoundedRowData(

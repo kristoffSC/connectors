@@ -16,7 +16,6 @@ import io.delta.flink.source.internal.file.DeltaFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.utils.SourceSchema;
 import io.delta.flink.source.internal.utils.SourceUtils;
-import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -114,8 +113,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      * Sets a configuration option.
      */
     public SELF option(String optionName, String optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
+        DeltaConfigOption<?> configOption = validateOptionName(optionName);
+        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
+
+        sourceConfiguration.addOption(configOption.key(), convertedValue);
         return self();
     }
 
@@ -123,8 +124,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      * Sets a configuration option.
      */
     public SELF option(String optionName, boolean optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
+        DeltaConfigOption<?> configOption = validateOptionName(optionName);
+        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
+
+        sourceConfiguration.addOption(configOption.key(), convertedValue);
         return self();
     }
 
@@ -132,8 +135,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      * Sets a configuration option.
      */
     public SELF option(String optionName, int optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
+        DeltaConfigOption<?> configOption = validateOptionName(optionName);
+        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
+
+        sourceConfiguration.addOption(configOption.key(), convertedValue);
         return self();
     }
 
@@ -141,8 +146,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      * Sets a configuration option.
      */
     public SELF option(String optionName, long optionValue) {
-        ConfigOption<?> configOption = validateOptionName(optionName);
-        sourceConfiguration.addOption(configOption.key(), optionValue);
+        DeltaConfigOption<?> configOption = validateOptionName(optionName);
+        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
+
+        sourceConfiguration.addOption(configOption.key(), convertedValue);
         return self();
     }
 
@@ -213,9 +220,8 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
             String.join(",", mutualExclusiveOptions));
     }
 
-    // TODO Refactor Option name validation in PR 12
-    protected ConfigOption<?> validateOptionName(String optionName) {
-        ConfigOption<?> option = DeltaSourceOptions.USER_FACING_SOURCE_OPTIONS.get(optionName);
+    protected DeltaConfigOption<?> validateOptionName(String optionName) {
+        DeltaConfigOption<?> option = DeltaSourceOptions.USER_FACING_SOURCE_OPTIONS.get(optionName);
         if (option == null) {
             throw DeltaSourceExceptions.invalidOptionNameException(
                 SourceUtils.pathToString(tablePath), optionName);

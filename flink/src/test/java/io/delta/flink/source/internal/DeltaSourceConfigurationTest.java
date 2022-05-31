@@ -2,7 +2,7 @@ package io.delta.flink.source.internal;
 
 import java.util.UUID;
 
-import org.apache.flink.configuration.ConfigOption;
+import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,21 +68,29 @@ public class DeltaSourceConfigurationTest {
 
     static class TestOptions {
 
-        static final ConfigOption<Long> LONG_OPTION =
-            ConfigOptions.key("longOption").longType().defaultValue(Long.MAX_VALUE);
+        static final DeltaConfigOption<Long> LONG_OPTION =
+            DeltaConfigOption.of(
+                ConfigOptions.key("longOption").longType().defaultValue(Long.MAX_VALUE),
+                Long.class);
 
-        static final ConfigOption<Integer> INT_OPTION =
-            ConfigOptions.key("intOption").intType().defaultValue(Integer.MAX_VALUE);
+        static final DeltaConfigOption<Integer> INT_OPTION =
+            DeltaConfigOption.of(
+                ConfigOptions.key("intOption").intType().defaultValue(Integer.MAX_VALUE),
+                Integer.class);
 
-        static final ConfigOption<String> STRING_OPTION =
-            ConfigOptions.key("stringOption").stringType()
-                .defaultValue(UUID.randomUUID().toString());
+        static final DeltaConfigOption<String> STRING_OPTION =
+            DeltaConfigOption.of(ConfigOptions.key("stringOption").stringType()
+                    .defaultValue(UUID.randomUUID().toString()),
+                String.class);
 
-        static final ConfigOption<Boolean> BOOLEAN_OPTION =
-            ConfigOptions.key("booleanOption").booleanType().defaultValue(false);
+        static final DeltaConfigOption<Boolean> BOOLEAN_OPTION =
+            DeltaConfigOption.of(
+                ConfigOptions.key("booleanOption").booleanType().defaultValue(false),
+                Boolean.class);
 
-        static final ConfigOption<Boolean> NO_DEFAULT_VALUE =
-            ConfigOptions.key("noDefault").booleanType().noDefaultValue();
+        static final DeltaConfigOption<Boolean> NO_DEFAULT_VALUE =
+            DeltaConfigOption.of(ConfigOptions.key("noDefault").booleanType().noDefaultValue(),
+                Boolean.class);
     }
 
 }
