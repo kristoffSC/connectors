@@ -1,6 +1,7 @@
 package io.delta.flink.source.internal.builder;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -74,11 +75,13 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      * instance.
      */
     protected final DeltaSourceConfiguration sourceConfiguration = new DeltaSourceConfiguration();
+
     /**
      * A {@link Path} to Delta table that should be read by created {@link
      * io.delta.flink.source.DeltaSource}.
      */
     protected final Path tablePath;
+
     /**
      * The Hadoop's {@link Configuration} for this Source.
      */
@@ -162,12 +165,15 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      */
     protected abstract Validator validateOptionExclusions();
 
+    protected abstract Collection<String> getApplicableOptions();
+
     /**
      * Validate definition of Delta source builder including mandatory and optional options.
      */
     protected void validate() {
         Validator mandatoryValidator = validateMandatoryOptions();
         Validator exclusionsValidator = validateOptionExclusions();
+        Validator inapplicableOptionValidator = validateInapplicableOptions();
         Validator optionalValidator = validateOptionalParameters();
 
         List<String> validationMessages = new LinkedList<>();
@@ -175,6 +181,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         validationMessages.addAll(mandatoryValidator.getValidationMessages());
         validationMessages.addAll(exclusionsValidator.getValidationMessages());
         validationMessages.addAll(optionalValidator.getValidationMessages());
+        validationMessages.addAll(inapplicableOptionValidator.getValidationMessages());
 
         if (!validationMessages.isEmpty()) {
             String tablePathString =
@@ -214,10 +221,35 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         return validator;
     }
 
+    protected Validator validateInapplicableOptions() {
+
+        List<String> usedOptions = new ArrayList<>();
+        Validator validator = new Validator();
+        sourceConfiguration.getUsedOptions()
+            .stream()
+            .filter(DeltaSourceOptions::isUserFacingOption)
+            .forEach(usedOption -> {
+                usedOptions.add(usedOption);
+                validator.checkArgument(getApplicableOptions().contains(usedOption),
+                    prepareInapplicableOptionMessage(usedOptions, getApplicableOptions()));
+            });
+
+        return validator;
+    }
+
     protected String prepareOptionExclusionMessage(String... mutualExclusiveOptions) {
         return String.format(
             "Used mutually exclusive options for Source definition. Invalid options [%s]",
             String.join(",", mutualExclusiveOptions));
+    }
+
+    protected String prepareInapplicableOptionMessage(
+            List<String> usedOptions,
+            Collection<String> applicableOptions) {
+        return String.format(
+            "Used inapplicable option for source configuration. Used options [%s], applicable "
+                + "options [%s]",
+            usedOptions, applicableOptions);
     }
 
     protected DeltaConfigOption<?> validateOptionName(String optionName) {

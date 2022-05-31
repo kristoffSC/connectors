@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import org.apache.flink.configuration.ConfigOption;
@@ -52,6 +53,10 @@ public class DeltaSourceConfiguration implements Serializable {
         return this.usedSourceOptions.containsKey(option.key());
     }
 
+    public Set<String> getUsedOptions() {
+        return this.usedSourceOptions.keySet();
+    }
+
     /**
      * This method returns a value for used {@code DeltaSourceOption}. The type of returned value
      * will be cast to the the same type that was used in {@link DeltaSourceOptions} definition.
@@ -71,5 +76,12 @@ public class DeltaSourceConfiguration implements Serializable {
     @SuppressWarnings("unchecked")
     private <T> Optional<T> getValue(String optionName) {
         return (Optional<T>) Optional.ofNullable(this.usedSourceOptions.get(optionName));
+    }
+
+    @Override
+    public String toString() {
+        return "DeltaSourceConfiguration{" +
+            "usedSourceOptions=" + usedSourceOptions +
+            '}';
     }
 }

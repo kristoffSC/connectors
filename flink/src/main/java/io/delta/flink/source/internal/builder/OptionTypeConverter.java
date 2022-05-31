@@ -1,10 +1,7 @@
 package io.delta.flink.source.internal.builder;
 
-
-// TODO PR 12 add Javadoc and tests
-
 /**
- * A utility class to convert {@link DeltaConfigOption} values to desired {@link Class} type.
+ * Utility class to convert {@link DeltaConfigOption} values to desired {@link Class} type.
  */
 public final class OptionTypeConverter {
 
@@ -12,38 +9,70 @@ public final class OptionTypeConverter {
     }
 
     /**
-     * Converts an integer value to desired type of {@link DeltaConfigOption#getDecoratedType()}.
+     * Converts an Integer valueToConvert to desired type of
+     * {@link DeltaConfigOption#getDecoratedType()}.
      *
-     * @param option A {@link DeltaConfigOption} for given value.
-     * @param value  A value that type should be converted.
-     * @param <T>    A type to which "value" parameter will be converted to.
-     * @return value with converted type to {@link DeltaConfigOption#getDecoratedType()}.
+     * @param desiredOption  A {@link DeltaConfigOption} to which type the valueToConvert parameter
+     *                       should be converted.
+     * @param valueToConvert A valueToConvert that type should be converted.
+     * @param <T>            A type to which "valueToConvert" parameter will be converted to.
+     * @return valueToConvert with converted type to {@link DeltaConfigOption#getDecoratedType()}.
      */
-    public static <T> T convertType(DeltaConfigOption<T> option, Integer value) {
-        return convertType(option, String.valueOf(value));
+    public static <T> T convertType(DeltaConfigOption<T> desiredOption, Integer valueToConvert) {
+        return convertType(desiredOption, String.valueOf(valueToConvert));
     }
 
-    public static <T> T convertType(DeltaConfigOption<T> option, Long value) {
-        return convertType(option, String.valueOf(value));
+    /**
+     * Converts a Long valueToConvert to desired type of
+     * {@link DeltaConfigOption#getDecoratedType()}.
+     *
+     * @param desiredOption  A {@link DeltaConfigOption} to which type the valueToConvert parameter
+     *                       should be converted.
+     * @param valueToConvert A valueToConvert that type should be converted.
+     * @param <T>            A type to which "valueToConvert" parameter will be converted to.
+     * @return valueToConvert with converted type to {@link DeltaConfigOption#getDecoratedType()}.
+     */
+    public static <T> T convertType(DeltaConfigOption<T> desiredOption, Long valueToConvert) {
+        return convertType(desiredOption, String.valueOf(valueToConvert));
     }
 
-    public static <T> T convertType(DeltaConfigOption<T> option, Boolean value) {
-        return convertType(option, String.valueOf(value));
+    /**
+     * Converts a Boolean valueToConvert to desired type of
+     * {@link DeltaConfigOption#getDecoratedType()}.
+     *
+     * @param desiredOption  A {@link DeltaConfigOption} to which type the valueToConvert parameter
+     *                       should be converted.
+     * @param valueToConvert A valueToConvert that type should be converted.
+     * @param <T>            A type to which "valueToConvert" parameter will be converted to.
+     * @return valueToConvert with converted type to {@link DeltaConfigOption#getDecoratedType()}.
+     */
+    public static <T> T convertType(DeltaConfigOption<T> desiredOption, Boolean valueToConvert) {
+        return convertType(desiredOption, String.valueOf(valueToConvert));
     }
 
+    /**
+     * Converts a String valueToConvert to desired type of
+     * {@link DeltaConfigOption#getDecoratedType()}.
+     *
+     * @param desiredOption  A {@link DeltaConfigOption} to which type the valueToConvert parameter
+     *                       should be converted.
+     * @param valueToConvert A valueToConvert that type should be converted.
+     * @param <T>            A type to which "valueToConvert" parameter will be converted to.
+     * @return valueToConvert with converted type to {@link DeltaConfigOption#getDecoratedType()}.
+     */
     @SuppressWarnings("unchecked")
-    public static <T> T convertType(DeltaConfigOption<T> option, String value) {
-        Class<T> decoratedType = option.getDecoratedType();
+    public static <T> T convertType(DeltaConfigOption<T> desiredOption, String valueToConvert) {
+        Class<T> decoratedType = desiredOption.getDecoratedType();
         OptionType type = OptionType.instanceFrom(decoratedType);
         switch (type) {
             case STRING:
-                return (T) value;
+                return (T) valueToConvert;
             case BOOLEAN:
-                return (T) Boolean.valueOf(value);
+                return (T) Boolean.valueOf(valueToConvert);
             case INTEGER:
-                return (T) Integer.valueOf(value);
+                return (T) Integer.valueOf(valueToConvert);
             case LONG:
-                return (T) Long.valueOf(value);
+                return (T) Long.valueOf(valueToConvert);
             default:
                 throw new RuntimeException("Ehh...");
         }

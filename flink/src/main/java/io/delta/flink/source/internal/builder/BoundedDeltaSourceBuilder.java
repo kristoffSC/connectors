@@ -1,9 +1,15 @@
 package io.delta.flink.source.internal.builder;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
 import io.delta.flink.source.internal.enumerator.BoundedSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.supplier.BoundedSnapshotSupplierFactory;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import static io.delta.flink.source.internal.DeltaSourceOptions.PARQUET_BATCH_SIZE;
 import static io.delta.flink.source.internal.DeltaSourceOptions.TIMESTAMP_AS_OF;
 import static io.delta.flink.source.internal.DeltaSourceOptions.VERSION_AS_OF;
 
@@ -27,6 +33,14 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
         DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER =
         new BoundedSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
             DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
+
+    protected static final List<String> APPLICABLE_OPTIONS = Collections.unmodifiableList(
+        Arrays.asList(
+            VERSION_AS_OF.key(),
+            TIMESTAMP_AS_OF.key(),
+            PARQUET_BATCH_SIZE.key()
+        )
+    );
 
     public BoundedDeltaSourceBuilder(
             Path tablePath,
@@ -56,5 +70,10 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
                 !sourceConfiguration.hasOption(VERSION_AS_OF)
                     || !sourceConfiguration.hasOption(TIMESTAMP_AS_OF),
                 prepareOptionExclusionMessage(VERSION_AS_OF.key(), TIMESTAMP_AS_OF.key()));
+    }
+
+    @Override
+    protected Collection<String> getApplicableOptions() {
+        return APPLICABLE_OPTIONS;
     }
 }

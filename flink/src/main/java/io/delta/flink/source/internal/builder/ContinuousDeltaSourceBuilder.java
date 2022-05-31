@@ -1,13 +1,20 @@
 package io.delta.flink.source.internal.builder;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.supplier.ContinuousSnapshotSupplierFactory;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_DELETES;
+import static io.delta.flink.source.internal.DeltaSourceOptions.PARQUET_BATCH_SIZE;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_TIMESTAMP;
 import static io.delta.flink.source.internal.DeltaSourceOptions.STARTING_VERSION;
+import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY;
 import static io.delta.flink.source.internal.DeltaSourceOptions.UPDATE_CHECK_INTERVAL;
 
 /**
@@ -31,6 +38,18 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
         DEFAULT_CONTINUOUS_SPLIT_ENUMERATOR_PROVIDER =
         new ContinuousSplitEnumeratorProvider(DEFAULT_SPLIT_ASSIGNER,
             DEFAULT_SPLITTABLE_FILE_ENUMERATOR);
+
+    protected static final List<String> APPLICABLE_OPTIONS = Collections.unmodifiableList(
+        Arrays.asList(
+            STARTING_VERSION.key(),
+            STARTING_TIMESTAMP.key(),
+            IGNORE_CHANGES.key(),
+            IGNORE_DELETES.key(),
+            UPDATE_CHECK_INTERVAL.key(),
+            UPDATE_CHECK_INITIAL_DELAY.key(),
+            PARQUET_BATCH_SIZE.key()
+        )
+    );
 
     public ContinuousDeltaSourceBuilder(
             Path tablePath,
@@ -79,5 +98,10 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
                 !sourceConfiguration.hasOption(STARTING_TIMESTAMP)
                     || !sourceConfiguration.hasOption(STARTING_VERSION),
                 prepareOptionExclusionMessage(STARTING_VERSION.key(), STARTING_TIMESTAMP.key()));
+    }
+
+    @Override
+    protected Collection<String> getApplicableOptions() {
+        return APPLICABLE_OPTIONS;
     }
 }

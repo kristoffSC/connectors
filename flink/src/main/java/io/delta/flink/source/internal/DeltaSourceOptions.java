@@ -25,8 +25,8 @@ public class DeltaSourceOptions {
     public static final String STARTING_VERSION_LATEST = "latest";
 
     /**
-     * A map of all valid {@code DeltaSourceOptions}. This map can be used for example by
-     * {@code BaseDeltaSourceStepBuilder} to do configuration sanity check.
+     * A map of all valid {@code DeltaSourceOptions}. This map can be used for example by {@code
+     * BaseDeltaSourceStepBuilder} to do configuration sanity check.
      *
      * @implNote All {@code ConfigOption} defined in {@code DeltaSourceOptions} class must be added
      * to {@code VALID_SOURCE_OPTIONS} map.
@@ -71,7 +71,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<String> TIMESTAMP_AS_OF =
         DeltaConfigOption.of(
-        ConfigOptions.key("timestampAsOf").stringType().noDefaultValue(),
+            ConfigOptions.key("timestampAsOf").stringType().noDefaultValue(),
             String.class);
 
     /**
@@ -85,7 +85,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<String> STARTING_VERSION =
         DeltaConfigOption.of(
-        ConfigOptions.key("startingVersion").stringType().noDefaultValue(),
+            ConfigOptions.key("startingVersion").stringType().noDefaultValue(),
             String.class);
 
     /**
@@ -99,7 +99,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<String> STARTING_TIMESTAMP =
         DeltaConfigOption.of(
-        ConfigOptions.key("startingTimestamp").stringType().noDefaultValue(),
+            ConfigOptions.key("startingTimestamp").stringType().noDefaultValue(),
             String.class);
 
     /**
@@ -113,7 +113,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<Long> UPDATE_CHECK_INTERVAL =
         DeltaConfigOption.of(
-        ConfigOptions.key("updateCheckIntervalMillis").longType().defaultValue(5000L),
+            ConfigOptions.key("updateCheckIntervalMillis").longType().defaultValue(5000L),
             Long.class);
 
     /**
@@ -128,7 +128,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<Long> UPDATE_CHECK_INITIAL_DELAY =
         DeltaConfigOption.of(
-        ConfigOptions.key("updateCheckDelayMillis").longType().defaultValue(1000L),
+            ConfigOptions.key("updateCheckDelayMillis").longType().defaultValue(1000L),
             Long.class);
 
     /**
@@ -145,7 +145,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<Boolean> IGNORE_DELETES =
         DeltaConfigOption.of(
-        ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false),
+            ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false),
             Boolean.class);
 
     /**
@@ -165,7 +165,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<Boolean> IGNORE_CHANGES =
         DeltaConfigOption.of(
-        ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false),
+            ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false),
             Boolean.class);
 
     /**
@@ -175,7 +175,7 @@ public class DeltaSourceOptions {
      */
     public static final DeltaConfigOption<Integer> PARQUET_BATCH_SIZE =
         DeltaConfigOption.of(
-        ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048),
+            ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048),
             Integer.class);
 
     // ----- INNER ONLY OPTIONS ----- //
@@ -184,28 +184,26 @@ public class DeltaSourceOptions {
     /**
      * An option to set Delta table {@link io.delta.standalone.Snapshot} version that should be
      * initialized during
-     * {@link io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerator} first
-     * initialization.
+     * {@link io.delta.flink.source.internal.enumerator.DeltaSourceSplitEnumerator}
+     * first initialization.
      *
-     * @implNote
-     * The {@link org.apache.flink.api.connector.source.SplitEnumerator} implementations for
-     * Delta source has to use the same Delta Snapshot that was used for schema discovery by
-     * source builder.
-     * This is needed to avoid anny issues caused by schema changes that might have happened between
-     * source initialization and enumerator initialization. The version of the snapshot used for
-     * schema discovery in Source builder is passed to the SplitEnumerator via
+     * @implNote The {@link org.apache.flink.api.connector.source.SplitEnumerator} implementations
+     * for Delta source has to use the same Delta Snapshot that was used for schema discovery by
+     * source builder. This is needed to avoid anny issues caused by schema changes that might have
+     * happened between source initialization and enumerator initialization. The version of the
+     * snapshot used for schema discovery in Source builder is passed to the SplitEnumerator via
      * {@link DeltaSourceConfiguration} using LOADED_SCHEMA_SNAPSHOT_VERSION option.
      * <p>
      * When the job is submitted to the Flink cluster, the entire job graph including operators,
      * source and sink classes is serialized on a "client side" and deserialized back on a Job
-     * Manager node. Because both {@link io.delta.standalone.Snapshot} and
-     * {@link io.delta.standalone.DeltaLog} are not serializable, we cannot simply pass reference
-     * value to Delta Source instance, since this will throw an exception during job
-     * initialization, failing on the deserialization.
+     * Manager node. Because both {@link io.delta.standalone.Snapshot} and {@link
+     * io.delta.standalone.DeltaLog} are not serializable, we cannot simply pass reference value to
+     * Delta Source instance, since this will throw an exception during job initialization, failing
+     * on the deserialization.
      */
     public static final DeltaConfigOption<Long> LOADED_SCHEMA_SNAPSHOT_VERSION =
         DeltaConfigOption.of(
-        ConfigOptions.key("loadedSchemaSnapshotVersion").longType().noDefaultValue(),
+            ConfigOptions.key("loadedSchemaSnapshotVersion").longType().noDefaultValue(),
             Long.class);
 
     // ----------------------------- //
@@ -229,5 +227,9 @@ public class DeltaSourceOptions {
     static {
         INNER_SOURCE_OPTIONS.put(LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             LOADED_SCHEMA_SNAPSHOT_VERSION);
+    }
+
+    public static boolean isUserFacingOption(String optionName) {
+        return USER_FACING_SOURCE_OPTIONS.containsKey(optionName);
     }
 }
