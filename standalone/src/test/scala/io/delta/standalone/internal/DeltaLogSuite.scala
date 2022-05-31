@@ -34,7 +34,7 @@ import io.delta.standalone.actions.{AddFile => AddFileJ, JobInfo => JobInfoJ, Me
 import io.delta.standalone.exceptions.DeltaStandaloneException
 import io.delta.standalone.types.{BooleanType, IntegerType, LongType, StringType, StructType}
 
-import io.delta.standalone.internal.actions.{Action, AddFile, Metadata, Protocol, RemoveFile}
+import io.delta.standalone.internal.actions.{Action, AddFile, Protocol, RemoveFile}
 import io.delta.standalone.internal.exception.DeltaErrors
 import io.delta.standalone.internal.util.{ConversionUtils, FileNames}
 import io.delta.standalone.internal.util.GoldenTableUtils._
@@ -51,6 +51,10 @@ import io.delta.standalone.internal.util.TestUtils._
  */
 abstract class DeltaLogSuiteBase extends FunSuite {
 
+  val metadata = MetadataJ
+    .builder()
+    .schema(new StructType().add("x", new IntegerType()))
+    .build()
   val engineInfo = "test-engine-info"
   val manualUpdate = new Operation(Operation.Name.MANUAL_UPDATE)
 
@@ -168,7 +172,6 @@ abstract class DeltaLogSuiteBase extends FunSuite {
 
       (1 to 5).foreach { i =>
         val txn = log1.startTransaction()
-        val metadata = if (i == 1) Metadata() :: Nil else Nil
         val file = AddFile(i.toString, Map.empty, 1, 1, true) :: Nil
         val delete: Seq[Action] = if (i > 1) {
           RemoveFile((i - 1).toString, Some(System.currentTimeMillis()), true) :: Nil
@@ -176,8 +179,11 @@ abstract class DeltaLogSuiteBase extends FunSuite {
           Nil
         }
 
-        val filesToCommit = (metadata ++ delete ++ file).map(ConversionUtils.convertAction)
+        val filesToCommit = (delete ++ file).map(ConversionUtils.convertAction)
 
+        if (i == 1) {
+          txn.updateMetadata(metadata)
+        }
         txn.commit(filesToCommit.asJava, manualUpdate, engineInfo)
       }
 
@@ -267,7 +273,6 @@ abstract class DeltaLogSuiteBase extends FunSuite {
         null // null
       )
 
-      val metadata = MetadataJ.builder().build()
       val actions = java.util.Arrays.asList(removeFile, metadata)
 
       log.startTransaction().commit(actions, manualUpdate, engineInfo)
@@ -453,7 +458,7 @@ abstract class DeltaLogSuiteBase extends FunSuite {
       assert(!log.tableExists())
 
       log.startTransaction().commit(
-        Seq(MetadataJ.builder().build()).asJava,
+        Seq(metadata).asJava,
         new Operation(Operation.Name.CREATE_TABLE),
         "test"
       )
