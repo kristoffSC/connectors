@@ -105,7 +105,33 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // Create a Delta source instance. In this step, builder discovered Delta table schema
         // and create Table format based on this schema acquired from snapshot.
-        DeltaSource<RowData> source = initSourceAllColumns(nonPartitionedTablePath);
+        DeltaSource<RowData> source = initBoundedSourceAllColumns(nonPartitionedTablePath);
+
+        // Updating table with new data, changing head  Snapshot version.
+        Descriptor update = new Descriptor(
+            RowType.of(true, SMALL_TABLE_COLUMN_TYPES, SMALL_TABLE_COLUMN_NAMES),
+            Collections.singletonList(Row.of("John-K", "Wick-P", 1410))
+        );
+
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTablePath);
+        tableUpdater.writeToTable(update);
+
+        // Starting pipeline and reading the data. Source should read Snapshot version used for
+        // schema discovery in buildr, so before table update.
+        List<RowData> rowData = testBoundDeltaSource(source);
+
+        // We are expecting to read version 0, before table update.
+        assertThat(rowData.size(), equalTo(SMALL_TABLE_COUNT));
+
+    }
+
+    private void shouldReadDeltaTable(
+        DeltaSource<RowData> deltaSource) throws Exception {
+        // WHEN
+        // Fail TaskManager or JobManager after half of the records or do not fail anything if
+        // FailoverType.NONE.
+        List<RowData> resultData = testBoundDeltaSource(failoverType, deltaSource,
+            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         // Updating table with new data, changing head  Snapshot version.
         Descriptor update = new Descriptor(
