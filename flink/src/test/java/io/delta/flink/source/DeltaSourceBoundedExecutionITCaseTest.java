@@ -73,18 +73,18 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     }
 
     /**
-     * This test verifies that Delta source is reading same snapshot that was used by Source
+     * This test verifies that Delta source is reading the same snapshot that was used by Source
      * builder for schema discovery.
      * <p>
-     * The Snapshot is created two times, one in builder for schema discovery and second time,
-     * during source enumerator object initialization, which happens when job is deployed on a
+     * The Snapshot is created two times, first time in builder for schema discovery and second
+     * time during source enumerator object initialization, which happens when job is deployed on a
      * Flink cluster. We need to make sure that the same snapshot will be used in both cases.
      * <p>
      * Test scenario:
      * <ul>
      *     <li>
-     *         Create source object. In this step, source will read Delta table head snapshot
-     *         (version 0) and build schema for this version.
+     *         Create source object. In this step, source will get Delta table head snapshot
+     *         (version 0) and build schema from its metadata.
      *     </li>
      *     <li>
      *         Update Delta table by adding one extra row. This will change head Snapshot to
