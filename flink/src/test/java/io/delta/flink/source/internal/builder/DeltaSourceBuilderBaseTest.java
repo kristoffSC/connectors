@@ -80,6 +80,11 @@ class DeltaSourceBuilderBaseTest {
         deltaLogStatic.close();
     }
 
+    /**
+     * Delta.io API for {@link Metadata#getSchema()} is annotated as {@code @Nullable}.
+     * This test verifies that in case of missing Schema information, source connector will throw
+     * appropriate exception when trying to extract table's schema from Delta log.
+     */
     @Test
     public void shouldThrowIfNullDeltaSchema() {
         DeltaSourceException exception =
