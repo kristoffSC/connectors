@@ -24,7 +24,7 @@ public class RowDataFormat extends ParquetColumnarRowInputFormat<DeltaSourceSpli
         super(hadoopConfig, projectedType, batchSize, isUtcTimestamp, isCaseSensitive);
     }
 
-    public RowDataFormat(
+    RowDataFormat(
         Configuration hadoopConfig,
         RowType projectedRowType,
         RowType producedRowType,
@@ -39,4 +39,5 @@ public class RowDataFormat extends ParquetColumnarRowInputFormat<DeltaSourceSpli
     public static RowDataFormatBuilder builder(RowType rowType, Configuration hadoopConfiguration) {
         return new RowDataFormatBuilder(rowType, hadoopConfiguration);
     }
+
 }
