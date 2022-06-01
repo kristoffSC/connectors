@@ -28,16 +28,16 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
 
@@ -276,7 +276,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         try {
             List<RowData> unexpectedData = unexpectedFuture.get(testTimeout, TimeUnit.MILLISECONDS);
-            Assert.fail(String.format("Got unexpected [%d] extra rows.", unexpectedData.size()));
+            fail(
+                String.format("Got unexpected [%d] extra rows.", unexpectedData.size()));
         } catch (TimeoutException e) {
             // expected because we should not have any additional records coming from the pipeline
             // since there should be no updates.
