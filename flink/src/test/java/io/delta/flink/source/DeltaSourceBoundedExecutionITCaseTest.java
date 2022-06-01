@@ -72,11 +72,42 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         shouldReadDeltaTable(deltaSource, failoverType);
     }
 
+    /**
+     * This test verifies that Delta source is reading the same snapshot that was used by Source
+     * builder for schema discovery.
+     * <p>
+     * The Snapshot is created two times, first time in builder for schema discovery and second
+     * time during source enumerator object initialization, which happens when job is deployed on a
+     * Flink cluster. We need to make sure that the same snapshot will be used in both cases.
+     * <p>
+     * Test scenario:
+     * <ul>
+     *     <li>
+     *         Create source object. In this step, source will get Delta table head snapshot
+     *         (version 0) and build schema from its metadata.
+     *     </li>
+     *     <li>
+     *         Update Delta table by adding one extra row. This will change head Snapshot to
+     *         version 1.
+     *     </li>
+     *     <li>
+     *         Start the pipeline, Delta source will start reading Delta table.
+     *     </li>
+     *     <li>
+     *         Expectation is that Source should read the version 0, the one that was used for
+     *         creating format schema. Version 0 has 2 records in it.
+     *     </li>
+     * </ul>
+     *
+     */
     @Test
     public void shouldReadLoadedSchemaVersion() throws Exception {
 
+        // Create a Delta source instance. In this step, builder discovered Delta table schema
+        // and create Table format based on this schema acquired from snapshot.
         DeltaSource<RowData> source = initSourceAllColumns(nonPartitionedTablePath);
 
+        // Updating table with new data, changing head  Snapshot version.
         Descriptor update = new Descriptor(
             RowType.of(true, SMALL_TABLE_ALL_COLUMN_TYPES, SMALL_TABLE_ALL_COLUMN_NAMES),
             Collections.singletonList(Row.of("John-K", "Wick-P", 1410))
@@ -85,8 +116,11 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTablePath);
         tableUpdater.writeToTable(update);
 
+        // Starting pipeline and reading the data. Source should read Snapshot version used for
+        // schema discovery in buildr, so before table update.
         List<RowData> rowData = testBoundedDeltaSource(source);
 
+        // We are expecting to read version 0, before table update.
         assertThat(rowData.size(), equalTo(SMALL_TABLE_COUNT));
 
     }

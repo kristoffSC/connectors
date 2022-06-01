@@ -438,6 +438,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
     }
 
     protected <T> StreamExecutionEnvironment prepareStreamingEnvironment(DeltaSource<T> source) {
+        return prepareStreamingEnvironment(source, PARALLELISM);
+    }
+
+    protected <T> StreamExecutionEnvironment prepareStreamingEnvironment(
+            DeltaSource<T> source,
+            int parallelismLevel) {
         if (source.getBoundedness() != Boundedness.CONTINUOUS_UNBOUNDED) {
             throw new RuntimeException(
                 "Not using using Continuous source in Continuous test setup. This will not work "
@@ -445,7 +451,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         }
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(PARALLELISM);
+        env.setParallelism(parallelismLevel);
         env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
         env.enableCheckpointing(200L);
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));

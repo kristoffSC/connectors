@@ -2,6 +2,7 @@ package io.delta.flink.source.internal.builder;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.function.Supplier;
 
 import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.DeltaSource;
@@ -81,16 +82,23 @@ class DeltaSourceBuilderBaseTest {
         deltaLogStatic.close();
     }
 
+    /**
+     * Delta.io API for {@link Metadata#getSchema()} is annotated as {@code @Nullable}.
+     * This test verifies that in case of missing Schema information, source connector will throw
+     * appropriate exception when trying to extract table's schema from Delta log.
+     */
     @Test
-    public void shouldThrowIfNullDeltaSchema() {
+    public void shouldThrowIfNullDeltaSchema() throws Throwable {
         DeltaSourceException exception =
             assertThrows(DeltaSourceException.class, () -> builder.getSourceSchema());
 
         assertThat(
-            exception.getSnapshotVersion().orElse(null), equalTo(SNAPSHOT_VERSION));
+            exception.getSnapshotVersion().orElseThrow(
+                (Supplier<Throwable>) () -> new AssertionError(
+                    "Exception is missing snapshot version")),
+            equalTo(SNAPSHOT_VERSION));
         assertThat(exception.getTablePath().orElse(null), equalTo(TABLE_PATH));
-        assertThat(
-            exception.getCause().getMessage(),
+        assertThat(exception.getCause().getMessage(),
             equalTo(
                 "Unable to find Schema information in Delta log for Snapshot version [10]")
         );

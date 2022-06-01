@@ -95,8 +95,6 @@ public class SourceSchema {
             }
             columnNames = userColumnNames.toArray(new String[0]);
         } else {
-            // TODO PR 11 discuss with Scott and TD should we include partitions with to result
-            //  schema if no user columns defined since partitions are not part of the Table Schema.
             StructField[] fields = tableSchema.getFields();
             columnNames = new String[fields.length];
             columnTypes = new LogicalType[fields.length];

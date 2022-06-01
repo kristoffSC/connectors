@@ -70,7 +70,7 @@ class ContinuousSourceSnapshotSupplierTest {
     @Test
     public void shouldGetSnapshotFromLatestStartingVersionOption() {
 
-        String version = "Latest";
+        String version = "LaTeSt"; // option processing is case-insensitive.
 
         DeltaSourceConfiguration sourceConfig = new DeltaSourceConfiguration(
             Collections.singletonMap(DeltaSourceOptions.STARTING_VERSION.key(), version)
