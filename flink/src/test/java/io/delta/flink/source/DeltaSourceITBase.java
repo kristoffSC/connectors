@@ -138,7 +138,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     @Test
     public void testReadPartitionedTableSkippingPartitionColumns() throws Exception {
 
-        // GIVEN, col2 is a partition column
+        // GIVEN, col1 and col2 are partition columns and name, surname, age ara data columns.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
             partitionedTablePath,
             new String[]{"name", "surname", "age"}
@@ -169,7 +169,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     @Test
     public void testReadOnlyPartitionColumns() throws Exception {
 
-        // GIVEN, col2 is a partition column
+        // GIVEN, col1 and col2 are partition columns.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
             partitionedTablePath,
             new String[]{"col1", "col2"}
@@ -201,7 +201,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     @Test
     public void testWithOnePartition() throws Exception {
 
-        // GIVEN, col2 is a partition column
+        // GIVEN, only col2 is a partition column.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
             partitionedTablePath,
             new String[]{"name", "surname", "age", "col2"}
