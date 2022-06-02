@@ -3,13 +3,11 @@ package io.delta.flink.source;
 import java.util.Arrays;
 import java.util.List;
 
-import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.builder.BoundedDeltaSourceBuilder;
 import io.delta.flink.source.internal.builder.DeltaBulkFormat;
 import io.delta.flink.source.internal.builder.RowDataFormat;
 import io.delta.flink.source.internal.enumerator.supplier.BoundedSnapshotSupplierFactory;
 import io.delta.flink.source.internal.utils.SourceSchema;
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
@@ -187,10 +185,5 @@ public class RowDataBoundedDeltaSourceBuilder
             DEFAULT_BOUNDED_SPLIT_ENUMERATOR_PROVIDER,
             hadoopConfiguration,
             sourceConfiguration);
-    }
-
-    @VisibleForTesting
-    DeltaSourceConfiguration getSourceConfiguration() {
-        return sourceConfiguration;
     }
 }

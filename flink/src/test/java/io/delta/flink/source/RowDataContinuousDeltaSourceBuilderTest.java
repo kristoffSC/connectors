@@ -1,10 +1,12 @@
 package io.delta.flink.source;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
+import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
@@ -71,6 +73,14 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
     //////////////////////////////////////////////////////////////
     // Overridden parent methods for tests in base parent class //
     //////////////////////////////////////////////////////////////
+
+    @Override
+    public Collection<? extends DeltaSourceBuilderBase<?,?>> initBuildersWithInapplicableOptions() {
+        return Arrays.asList(
+            getBuilderWithOption(DeltaSourceOptions.VERSION_AS_OF, 10L),
+            getBuilderWithOption(DeltaSourceOptions.TIMESTAMP_AS_OF, "2022-02-24 04:55:00")
+        );
+    }
 
     @Override
     protected <T> RowDataContinuousDeltaSourceBuilder getBuilderWithOption(

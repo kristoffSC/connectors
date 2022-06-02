@@ -1,5 +1,6 @@
 package io.delta.flink.source;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -20,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -172,6 +174,20 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
 
         assertThat(exception.getMessage().contains("Invalid option"), equalTo(true));
     }
+
+    @Test
+    public void shouldThrowWhenInapplicableOptionUsed() {
+        assertAll(() -> {
+            for (DeltaSourceBuilderBase<?, ?> builder : initBuildersWithInapplicableOptions()) {
+                assertThrows(DeltaSourceValidationException.class, builder::build,
+                    "Builder should throw when inapplicable option was used. Config: "
+                        + builder.getSourceConfiguration());
+            }
+        });
+    }
+
+    protected abstract Collection<? extends DeltaSourceBuilderBase<?,?>>
+        initBuildersWithInapplicableOptions();
 
     protected abstract <T> DeltaSourceBuilderBase<?, ?> getBuilderWithOption(
         DeltaConfigOption<T> option,

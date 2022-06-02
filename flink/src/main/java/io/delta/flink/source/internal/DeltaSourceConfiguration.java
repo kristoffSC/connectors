@@ -37,6 +37,14 @@ public class DeltaSourceConfiguration implements Serializable {
     }
 
     /**
+     * Creates a copy of DeltaSourceConfiguration. Changes to the copy object do not influence
+     * the state of the original object.
+     */
+    public DeltaSourceConfiguration copy() {
+        return new DeltaSourceConfiguration(this.usedSourceOptions);
+    }
+
+    /**
      * Creates an instance of {@link DeltaSourceConfiguration} using provided options.
      * @param options options that should be added to {@link DeltaSourceConfiguration}.
      */

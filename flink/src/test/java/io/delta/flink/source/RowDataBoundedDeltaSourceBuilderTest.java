@@ -1,13 +1,12 @@
 package io.delta.flink.source;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
-import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
+import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
@@ -18,8 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import io.delta.standalone.types.StringType;
@@ -73,55 +70,21 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(10L));
     }
 
-    @Test
-    // TODO PR 12 move this to Base so both implementations will use it.
-    public void shouldThrowWhenInapplicableOptionUsed() {
-
-        List<RowDataBoundedDeltaSourceBuilder> builders = new ArrayList<>();
-
-        builders.add(DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.IGNORE_CHANGES.key(), true));
-
-        builders.add(DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.IGNORE_DELETES.key(), true));
-
-        builders.add(DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.UPDATE_CHECK_INTERVAL.key(), 1000));
-
-        builders.add(DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY.key(), 1000));
-
-        builders.add(DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.STARTING_TIMESTAMP.key(), "2022-02-24 04:55:00"));
-
-        builders.add(DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.STARTING_VERSION.key(), "Latest"));
-
-        assertAll(() -> {
-            for (RowDataBoundedDeltaSourceBuilder builder : builders) {
-                assertThrows(DeltaSourceValidationException.class, builder::build,
-                    "Builder should throw when inapplicable option was used. Config: "
-                        + builder.getSourceConfiguration());
-            }
-        });
-
-    }
-
     //////////////////////////////////////////////////////////////
     // Overridden parent methods for tests in base parent class //
     //////////////////////////////////////////////////////////////
+
+    @Override
+    public Collection<? extends DeltaSourceBuilderBase<?,?>> initBuildersWithInapplicableOptions() {
+        return Arrays.asList(
+            getBuilderWithOption(DeltaSourceOptions.IGNORE_CHANGES, true),
+            getBuilderWithOption(DeltaSourceOptions.IGNORE_DELETES, true),
+            getBuilderWithOption(DeltaSourceOptions.UPDATE_CHECK_INTERVAL, 1000L),
+            getBuilderWithOption(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY, 1000L),
+            getBuilderWithOption(DeltaSourceOptions.STARTING_TIMESTAMP, "2022-02-24 04:55:00"),
+            getBuilderWithOption(DeltaSourceOptions.STARTING_VERSION, "Latest")
+        );
+    }
 
     @Override
     protected <T> RowDataBoundedDeltaSourceBuilder getBuilderWithOption(

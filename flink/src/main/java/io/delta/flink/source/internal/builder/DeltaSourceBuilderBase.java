@@ -156,6 +156,15 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         return self();
     }
 
+    // TODO PR 12 test immutability
+    /**
+     * @return A copy of {@link DeltaSourceConfiguration} used by builder. The changes made on
+     * returned copy do not change the state of builder's configuration.
+     */
+    public DeltaSourceConfiguration getSourceConfiguration() {
+        return sourceConfiguration.copy();
+    }
+
     public abstract <V extends DeltaSource<T>> V build();
 
     /**
