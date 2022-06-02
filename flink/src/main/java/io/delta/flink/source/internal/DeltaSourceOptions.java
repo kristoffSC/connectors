@@ -69,10 +69,10 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>timestampAsOf</b>.
      */
-    public static final DeltaConfigOption<String> TIMESTAMP_AS_OF =
+    public static final DeltaConfigOption<Long> TIMESTAMP_AS_OF =
         DeltaConfigOption.of(
-            ConfigOptions.key("timestampAsOf").stringType().noDefaultValue(),
-            String.class);
+            ConfigOptions.key("timestampAsOf").longType().noDefaultValue(),
+            Long.class);
 
     /**
      * An option to specify a {@link io.delta.standalone.Snapshot} version to only read changes
@@ -97,10 +97,10 @@ public class DeltaSourceOptions {
      * <p>
      * The String representation for this option is <b>startingTimestamp</b>.
      */
-    public static final DeltaConfigOption<String> STARTING_TIMESTAMP =
+    public static final DeltaConfigOption<Long> STARTING_TIMESTAMP =
         DeltaConfigOption.of(
-            ConfigOptions.key("startingTimestamp").stringType().noDefaultValue(),
-            String.class);
+            ConfigOptions.key("startingTimestamp").longType().noDefaultValue(),
+            Long.class);
 
     /**
      * An option to specify check interval (in milliseconds) for monitoring Delta table changes.

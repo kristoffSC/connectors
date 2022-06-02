@@ -1,5 +1,6 @@
 package io.delta.flink.source.internal.builder;
 
+import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import org.apache.flink.configuration.ConfigOption;
 
 /**
@@ -51,4 +52,26 @@ public class DeltaConfigOption<T> {
     public T defaultValue() {
         return decoratedOption.defaultValue();
     }
+
+    //-------Keeping type safety with implementation of a Visitor pattern -------//
+    public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, boolean value) {
+        T convertedValue = OptionTypeConverter.convertType(this, value);
+        sourceConfiguration.addOption(this, convertedValue);
+    }
+
+    public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, int value) {
+        T convertedValue = OptionTypeConverter.convertType(this, value);
+        sourceConfiguration.addOption(this, convertedValue);
+    }
+
+    public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, long value) {
+        T convertedValue = OptionTypeConverter.convertType(this, value);
+        sourceConfiguration.addOption(this, convertedValue);
+    }
+
+    public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, String value) {
+        T convertedValue = OptionTypeConverter.convertType(this, value);
+        sourceConfiguration.addOption(this, convertedValue);
+    }
+    //---------------------------------------------------------------------------//
 }

@@ -52,8 +52,8 @@ public class DeltaSourceConfiguration implements Serializable {
         this.usedSourceOptions.putAll(options);
     }
 
-    public DeltaSourceConfiguration addOption(String name, Object value) {
-        this.usedSourceOptions.put(name, value);
+    public <T> DeltaSourceConfiguration addOption(DeltaConfigOption<T> name, T value) {
+        this.usedSourceOptions.put(name.key(), value);
         return this;
     }
 

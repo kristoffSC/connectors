@@ -7,6 +7,7 @@ import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
+import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
@@ -81,7 +82,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             getBuilderWithOption(DeltaSourceOptions.IGNORE_DELETES, true),
             getBuilderWithOption(DeltaSourceOptions.UPDATE_CHECK_INTERVAL, 1000L),
             getBuilderWithOption(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY, 1000L),
-            getBuilderWithOption(DeltaSourceOptions.STARTING_TIMESTAMP, "2022-02-24 04:55:00"),
+            getBuilderWithOption(DeltaSourceOptions.STARTING_TIMESTAMP, System.currentTimeMillis()),
             getBuilderWithOption(DeltaSourceOptions.STARTING_VERSION, "Latest")
         );
     }
@@ -133,7 +134,10 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                 DeltaSinkTestUtils.getHadoopConf()
             )
             .option(DeltaSourceOptions.VERSION_AS_OF.key(), 10)
-            .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), "2022-02-24T04:55:00.001");
+            .option(
+                DeltaSourceOptions.TIMESTAMP_AS_OF.key(),
+                TimestampFormatConverter.convertToTimestamp("2022-02-24T04:55:00.001")
+            );
     }
 
     @Override

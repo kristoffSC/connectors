@@ -117,9 +117,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      */
     public SELF option(String optionName, String optionValue) {
         DeltaConfigOption<?> configOption = validateOptionName(optionName);
-        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
-
-        sourceConfiguration.addOption(configOption.key(), convertedValue);
+        configOption.setOnConfig(sourceConfiguration, optionValue);
         return self();
     }
 
@@ -128,9 +126,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      */
     public SELF option(String optionName, boolean optionValue) {
         DeltaConfigOption<?> configOption = validateOptionName(optionName);
-        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
-
-        sourceConfiguration.addOption(configOption.key(), convertedValue);
+        configOption.setOnConfig(sourceConfiguration, optionValue);
         return self();
     }
 
@@ -139,9 +135,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      */
     public SELF option(String optionName, int optionValue) {
         DeltaConfigOption<?> configOption = validateOptionName(optionName);
-        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
-
-        sourceConfiguration.addOption(configOption.key(), convertedValue);
+        configOption.setOnConfig(sourceConfiguration, optionValue);
         return self();
     }
 
@@ -150,9 +144,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
      */
     public SELF option(String optionName, long optionValue) {
         DeltaConfigOption<?> configOption = validateOptionName(optionName);
-        Object convertedValue = OptionTypeConverter.convertType(configOption, optionValue);
-
-        sourceConfiguration.addOption(configOption.key(), convertedValue);
+        configOption.setOnConfig(sourceConfiguration, optionValue);
         return self();
     }
 
@@ -261,8 +253,10 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
             usedOptions, applicableOptions);
     }
 
-    protected DeltaConfigOption<?> validateOptionName(String optionName) {
-        DeltaConfigOption<?> option = DeltaSourceOptions.USER_FACING_SOURCE_OPTIONS.get(optionName);
+    @SuppressWarnings("unchecked")
+    protected <TYPE> DeltaConfigOption<TYPE> validateOptionName(String optionName) {
+        DeltaConfigOption<TYPE> option =
+            (DeltaConfigOption<TYPE>) DeltaSourceOptions.USER_FACING_SOURCE_OPTIONS.get(optionName);
         if (option == null) {
             throw DeltaSourceExceptions.invalidOptionNameException(
                 SourceUtils.pathToString(tablePath), optionName);

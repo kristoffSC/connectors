@@ -23,10 +23,10 @@ public class DeltaSourceConfigurationTest {
         int intValue = Integer.MIN_VALUE;
         boolean booleanValue = true;
 
-        configuration.addOption(LONG_OPTION.key(), longValue);
-        configuration.addOption(INT_OPTION.key(), intValue);
-        configuration.addOption(STRING_OPTION.key(), stringValue);
-        configuration.addOption(BOOLEAN_OPTION.key(), booleanValue);
+        configuration.addOption(LONG_OPTION, longValue);
+        configuration.addOption(INT_OPTION, intValue);
+        configuration.addOption(STRING_OPTION, stringValue);
+        configuration.addOption(BOOLEAN_OPTION, booleanValue);
 
         assertThat(configuration.hasOption(LONG_OPTION), equalTo(true));
         assertThat(configuration.hasOption(INT_OPTION), equalTo(true));

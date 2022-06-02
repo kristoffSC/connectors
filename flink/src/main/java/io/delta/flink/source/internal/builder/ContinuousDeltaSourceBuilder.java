@@ -7,6 +7,7 @@ import java.util.List;
 
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.supplier.ContinuousSnapshotSupplierFactory;
+import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
@@ -59,7 +60,7 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
     }
     // TODO PR 12 add tests for options.
     public SELF startingVersion(String startingVersion) {
-        sourceConfiguration.addOption(STARTING_VERSION.key(), startingVersion);
+        sourceConfiguration.addOption(STARTING_VERSION, startingVersion);
         return self();
     }
 
@@ -69,22 +70,23 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
     }
 
     public SELF startingTimestamp(String startingTimestamp) {
-        sourceConfiguration.addOption(STARTING_TIMESTAMP.key(), startingTimestamp);
+        long toTimestamp = TimestampFormatConverter.convertToTimestamp(startingTimestamp);
+        sourceConfiguration.addOption(STARTING_TIMESTAMP, toTimestamp);
         return self();
     }
 
     public SELF updateCheckIntervalMillis(long updateCheckInterval) {
-        sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL.key(), updateCheckInterval);
+        sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL, updateCheckInterval);
         return self();
     }
 
     public SELF ignoreDeletes(boolean ignoreDeletes) {
-        sourceConfiguration.addOption(IGNORE_DELETES.key(), ignoreDeletes);
+        sourceConfiguration.addOption(IGNORE_DELETES, ignoreDeletes);
         return self();
     }
 
     public SELF ignoreChanges(boolean ignoreChanges) {
-        sourceConfiguration.addOption(IGNORE_CHANGES.key(), ignoreChanges);
+        sourceConfiguration.addOption(IGNORE_CHANGES, ignoreChanges);
         return self();
     }
 
