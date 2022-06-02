@@ -12,6 +12,9 @@ import org.apache.flink.table.filesystem.PartitionFieldExtractor;
 import org.apache.flink.table.types.logical.RowType;
 import static org.apache.flink.formats.parquet.vector.ParquetSplitReaderUtil.createVectorFromConstant;
 
+/**
+ * A utility class for Row format builder.
+ */
 public final class RowBuilderUtils {
 
     private RowBuilderUtils() {
@@ -45,12 +48,11 @@ public final class RowBuilderUtils {
                 RowType.RowField field = producedRowType.getFields().get(i);
 
                 vectors[i] =
-                    partitionKeys.contains(field.getName())
+                        partitionKeys.contains(field.getName())
                         ? createVectorFromConstant(
-                        field.getType(),
-                        extractor.extract(
-                            split, field.getName(), field.getType()),
-                        batchSize)
+                                field.getType(),
+                                extractor.extract(split, field.getName(), field.getType()),
+                                batchSize)
                         : parquetVectors[projectedNames.indexOf(field.getName())];
             }
             return new VectorizedColumnBatch(vectors);

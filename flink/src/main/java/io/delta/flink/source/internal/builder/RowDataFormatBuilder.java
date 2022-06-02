@@ -70,7 +70,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     public RowDataFormat build() {
 
         if (partitionColumns.isEmpty()) {
-            LOG.info("Building format data for none partitioned Delta table.");
+            LOG.info("Building format data for non-partitioned Delta table.");
             return buildFormatWithoutPartitions();
         } else {
             LOG.info("Building format data for partitioned Delta table.");

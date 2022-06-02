@@ -115,7 +115,7 @@ class DeltaPartitionFieldExtractorTest {
     }
 
     @Test()
-    public void shouldThrowOnNonePartitionColumn() {
+    public void shouldThrowOnNonPartitionColumn() {
 
         DeltaSourceSplit split =
             new DeltaSourceSplit(singletonMap("col1", "val1"), "1", ADD_FILE_PATH, 0, 0);
