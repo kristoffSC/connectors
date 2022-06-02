@@ -41,13 +41,14 @@ public class SourceSchema {
     private final List<String> partitionColumns;
 
     private SourceSchema(
-            String[] columnNames,
-            LogicalType[] columnTypes,
-            long snapshotVersion) {
+        String[] columnNames,
+        LogicalType[] columnTypes,
+        long snapshotVersion,
+        Collection<String> partitionColumns) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.snapshotVersion = snapshotVersion;
-        this.partitionColumns = new ArrayList<>();
+        this.partitionColumns = new ArrayList<>(partitionColumns);
     }
 
     /**
@@ -107,13 +108,12 @@ public class SourceSchema {
             }
         }
 
-        return new SourceSchema(columnNames, columnTypes, snapshot.getVersion())
-            .addPartitionColumns(metadata.getPartitionColumns());
-    }
-
-    private SourceSchema addPartitionColumns(List<String> partitionColumns) {
-        this.partitionColumns.addAll(partitionColumns);
-        return this;
+        return new SourceSchema(
+            columnNames,
+            columnTypes,
+            snapshot.getVersion(),
+            metadata.getPartitionColumns()
+        );
     }
 
     public List<String> getPartitionColumns() {
