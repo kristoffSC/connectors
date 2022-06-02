@@ -39,6 +39,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public abstract class DeltaSourceITBase extends TestLogger {
 
@@ -134,6 +136,69 @@ public abstract class DeltaSourceITBase extends TestLogger {
     }
 
     @Test
+    public void testReadPartitionedTableSkippingPartitionColumns() throws Exception {
+
+        // GIVEN, col2 is a partition column
+        DeltaSource<RowData> deltaSource = initSourceForColumns(
+            partitionedTablePath,
+            new String[]{"name", "surname", "age"}
+        );
+
+        // WHEN
+        List<RowData> resultData = testWithPartitions(deltaSource);
+
+        Set<String> actualNames =
+            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.",
+            resultData.size(),
+            equalTo(SMALL_TABLE_COUNT));
+        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
+            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+
+        resultData.forEach(rowData ->
+            assertThrows(
+                ArrayIndexOutOfBoundsException.class,
+                () -> rowData.getString(3),
+            "Found row with partition column."
+            )
+        );
+    }
+
+    @Test
+    public void testReadOnlyPartitionColumns() throws Exception {
+
+        // GIVEN, col2 is a partition column
+        DeltaSource<RowData> deltaSource = initSourceForColumns(
+            partitionedTablePath,
+            new String[]{"col1", "col2"}
+        );
+
+        // WHEN
+        List<RowData> resultData = testWithPartitions(deltaSource);
+
+        Set<String> actualNames =
+            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.",
+            resultData.size(),
+            equalTo(SMALL_TABLE_COUNT));
+
+        String col1_partitionValue = "val1";
+        String col2_partitionValue = "val2";
+
+        assertAll(() ->
+            resultData.forEach(rowData -> {
+                    assertPartitionValue(rowData, 0, col1_partitionValue);
+                    assertPartitionValue(rowData, 1, col2_partitionValue);
+                }
+            )
+        );
+    }
+
+    @Test
     public void testWithOnePartition() throws Exception {
 
         // GIVEN, col2 is a partition column
@@ -163,6 +228,8 @@ public abstract class DeltaSourceITBase extends TestLogger {
     public void testWithBothPartitions() throws Exception {
 
         // GIVEN both col1 and col2 partition columns should be read;
+        // The read table's schema contains 5 fields, name, surname, age, col1, col2.
+        // The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceAllColumns(partitionedTablePath);
 
         // WHEN
