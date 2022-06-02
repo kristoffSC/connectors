@@ -1,6 +1,7 @@
 package io.delta.flink.source;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -186,16 +187,37 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         });
     }
 
+    /**
+     * @return A collection of Delta source builders where each has inapplicable option set.
+     * <p>
+     * Inapplicable option is an option that is not suited for given
+     * {@link DeltaSourceBuilderBase} implementation. For example incompatible
+     * {@link org.apache.flink.api.connector.source.Boundedness} mode.
+     */
     protected abstract Collection<? extends DeltaSourceBuilderBase<?,?>>
         initBuildersWithInapplicableOptions();
 
+    /**
+     * Creates a Delta source builder with option set via DeltaSourceBuilderBase#option(key, value)
+     * method.
+     * @param option {@link DeltaConfigOption} to set.
+     * @param value value for option.
+     */
     protected abstract <T> DeltaSourceBuilderBase<?, ?> getBuilderWithOption(
         DeltaConfigOption<T> option,
         T value
     );
 
+    /**
+     * @return A Delta source builder implementation with null values for mandatory fields.
+     */
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithNulls();
 
+    /**
+     * Creates a Delta source builder for given array of columnNames that are passed to
+     * {@link DeltaSourceBuilderBase#columnNames(List)} method.
+     * @param columnNames Column names that should be read from Delta table by created source.
+     */
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderForColumns(String[] columnNames);
 
     /**
@@ -210,6 +232,9 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
      */
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithGenericMutuallyExcludedOptions();
 
+    /**
+     * @return Builder that has null values for mandatory fields and used mutually excluded options.
+     */
     protected abstract DeltaSourceBuilderBase<?, ?>
         getBuilderWithNullMandatoryFieldsAndExcludedOption();
 
