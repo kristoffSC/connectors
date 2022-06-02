@@ -50,13 +50,11 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
         super(tablePath, hadoopConfiguration, snapshotSupplierFactory);
     }
 
-    // TODO PR 12 add tests for options.
     public SELF versionAsOf(long snapshotVersion) {
         sourceConfiguration.addOption(VERSION_AS_OF, snapshotVersion);
         return self();
     }
 
-    // TODO PR 12 add tests for options.
     public SELF timestampAsOf(String snapshotTimestamp) {
         long toTimestamp = TimestampFormatConverter.convertToTimestamp(snapshotTimestamp);
         sourceConfiguration.addOption(TIMESTAMP_AS_OF, toTimestamp);

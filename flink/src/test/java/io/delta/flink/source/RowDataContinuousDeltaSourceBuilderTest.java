@@ -114,6 +114,14 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
     }
 
     @Override
+    protected RowDataContinuousDeltaSourceBuilder getBuilderAllColumns() {
+        return DeltaSource.forContinuousRowData(
+            new Path(TABLE_PATH),
+            DeltaSinkTestUtils.getHadoopConf()
+        );
+    }
+
+    @Override
     protected RowDataContinuousDeltaSourceBuilder getBuilderWithMutuallyExcludedOptions() {
         return DeltaSource.forContinuousRowData(
                 new Path(TABLE_PATH),

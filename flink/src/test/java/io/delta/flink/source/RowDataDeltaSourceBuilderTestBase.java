@@ -221,6 +221,11 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     protected abstract DeltaSourceBuilderBase<?, ?> getBuilderForColumns(String[] columnNames);
 
     /**
+     * @return most basic builder configuration, no options, no columns defined.
+     */
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderAllColumns();
+
+    /**
      * @return Delta source builder that uses invalid combination od mutually excluded options set
      * via builder's dedicated methods such as 'startVersion(...)' or 'startingTimeStamp(...).
      */
