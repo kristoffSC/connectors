@@ -109,7 +109,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // Updating table with new data, changing head  Snapshot version.
         Descriptor update = new Descriptor(
-            RowType.of(true, SMALL_TABLE_ALL_COLUMN_TYPES, SMALL_TABLE_ALL_COLUMN_NAMES),
+            RowType.of(true, DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
             Collections.singletonList(Row.of("John-K", "Wick-P", 1410))
         );
 

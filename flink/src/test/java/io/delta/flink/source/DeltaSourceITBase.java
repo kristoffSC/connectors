@@ -46,17 +46,27 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
-    protected static final LogicalType[] SMALL_TABLE_ALL_COLUMN_TYPES =
+    protected static final LogicalType[] DATA_COLUMN_TYPES =
         {new CharType(), new CharType(), new IntType()};
 
-    protected static final Set<String> SMALL_TABLE_EXPECTED_VALUES =
+    protected static final List<String> NAME_COLUMN_VALUES =
+        Stream.of("Jan", "Jan").collect(Collectors.toList());
+
+    protected static final Set<String> SURNAME_COLUMN_VALUES =
         Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
 
-    protected static final String[] SMALL_TABLE_ALL_COLUMN_NAMES = {"name", "surname", "age"};
+    protected static final Set<Integer> AGE_COLUMN_VALUES =
+        Stream.of(1, 2).collect(Collectors.toSet());
+
+    /**
+     * Columns that are not used as a partition columns.
+     */
+    protected static final String[] DATA_COLUMN_NAMES = {"name", "surname", "age"};
+
+    // Large table has no partitions.
+    protected static final String[] LARGE_TABLE_ALL_COLUMN_NAMES = {"col1", "col2", "col3"};
 
     protected static final int SMALL_TABLE_COUNT = 2;
-
-    protected static final String[] LARGE_TABLE_ALL_COLUMN_NAMES = {"col1", "col2", "col3"};
 
     protected static final int LARGE_TABLE_RECORD_COUNT = 1100;
 
@@ -67,11 +77,23 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
 
+    /**
+     * Schema for this table has only {@link #DATA_COLUMN_NAMES} of type {@link #DATA_COLUMN_TYPES}
+     * columns.
+     */
     protected String nonPartitionedTablePath;
 
-    protected String nonPartitionedLargeTablePath;
-
+    /**
+     * Schema for this table contains data columns {@link #DATA_COLUMN_NAMES} and col1, col2
+     * partition columns. Types of data columns are {@link #DATA_COLUMN_TYPES}
+     */
     protected String partitionedTablePath;
+
+    /**
+     * Schema for this table has only {@link #LARGE_TABLE_ALL_COLUMN_NAMES} of type {@link
+     * #LARGE_TABLE_ALL_COLUMN_NAMES} columns. Column types are long, long, String
+     */
+    protected String nonPartitionedLargeTablePath;
 
     private static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster) throws Exception {
@@ -138,38 +160,52 @@ public abstract class DeltaSourceITBase extends TestLogger {
     @Test
     public void testReadPartitionedTableSkippingPartitionColumns() throws Exception {
 
-        // GIVEN, col2 is a partition column
+        // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
+        // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
             partitionedTablePath,
-            new String[]{"name", "surname", "age"}
+            DATA_COLUMN_NAMES
         );
 
         // WHEN
         List<RowData> resultData = testWithPartitions(deltaSource);
 
-        Set<String> actualNames =
+        List<String> readNames =
+            resultData.stream()
+                .map(row -> row.getString(0).toString()).collect(Collectors.toList());
+
+        Set<String> readSurnames =
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+
+        Set<Integer> readAge =
+            resultData.stream().map(row -> row.getInt(2)).collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
             equalTo(SMALL_TABLE_COUNT));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
 
-        resultData.forEach(rowData ->
-            assertThrows(
-                ArrayIndexOutOfBoundsException.class,
-                () -> rowData.getString(3),
-            "Found row with partition column."
-            )
-        );
+        // check for column values
+        assertThat("Source produced different values for [name] column",
+            readNames,
+            equalTo(NAME_COLUMN_VALUES));
+
+        assertThat("Source produced different values for [surname] column",
+            readSurnames,
+            equalTo(SURNAME_COLUMN_VALUES));
+
+        assertThat("Source produced different values for [age] column", readAge,
+            equalTo(AGE_COLUMN_VALUES));
+
+        // Checking that we don't have more columns.
+        assertNoMoreColumns(resultData,3);
     }
 
     @Test
     public void testReadOnlyPartitionColumns() throws Exception {
 
-        // GIVEN, col2 is a partition column
+        // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
+        // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
             partitionedTablePath,
             new String[]{"col1", "col2"}
@@ -178,17 +214,14 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // WHEN
         List<RowData> resultData = testWithPartitions(deltaSource);
 
-        Set<String> actualNames =
-            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
-
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
             equalTo(SMALL_TABLE_COUNT));
 
+        // check partition column values
         String col1_partitionValue = "val1";
         String col2_partitionValue = "val2";
-
         assertAll(() ->
             resultData.forEach(rowData -> {
                     assertPartitionValue(rowData, 0, col1_partitionValue);
@@ -196,54 +229,89 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 }
             )
         );
+
+        // Checking that we don't have more columns.
+        assertNoMoreColumns(resultData,2);
     }
 
     @Test
     public void testWithOnePartition() throws Exception {
 
-        // GIVEN, col2 is a partition column
+        // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
+        // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
             partitionedTablePath,
-            new String[]{"name", "surname", "age", "col2"}
+            new String[]{"surname", "age", "col2"} // sipping [name] column
         );
 
         // WHEN
         List<RowData> resultData = testWithPartitions(deltaSource);
 
-        Set<String> actualNames =
-            resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
+        Set<String> readSurnames =
+            resultData.stream().map(row -> row.getString(0).toString()).collect(Collectors.toSet());
+
+        Set<Integer> readAge =
+            resultData.stream().map(row -> row.getInt(1)).collect(Collectors.toSet());
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
             equalTo(SMALL_TABLE_COUNT));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
 
+        // check for column values
+        assertThat("Source produced different values for [surname] column",
+            readSurnames,
+            equalTo(SURNAME_COLUMN_VALUES));
+
+        assertThat("Source produced different values for [age] column", readAge,
+            equalTo(AGE_COLUMN_VALUES));
+
+        // check partition column value
         String col2_partitionValue = "val2";
-        resultData.forEach(rowData -> assertPartitionValue(rowData, 3, col2_partitionValue));
+        resultData.forEach(rowData -> assertPartitionValue(rowData, 2, col2_partitionValue));
+
+        // Checking that we don't have more columns.
+        assertNoMoreColumns(resultData,3);
     }
 
     @Test
     public void testWithBothPartitions() throws Exception {
 
-        // GIVEN both col1 and col2 partition columns should be read;
-        // The read table's schema contains 5 fields, name, surname, age, col1, col2.
-        // The size of version 0 is two rows.
+        // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
+        // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceAllColumns(partitionedTablePath);
 
         // WHEN
         List<RowData> resultData = testWithPartitions(deltaSource);
 
-        Set<String> actualNames =
+        List<String> readNames =
+            resultData.stream()
+                .map(row -> row.getString(0).toString()).collect(Collectors.toList());
+
+        Set<String> readSurnames =
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
 
-        // THEN
-        assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
-            equalTo(SMALL_TABLE_COUNT));
-        assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+        Set<Integer> readAge =
+            resultData.stream().map(row -> row.getInt(2)).collect(Collectors.toSet());
 
+        // THEN
+        assertThat("Source read different number of rows that Delta Table have.",
+            resultData.size(),
+            equalTo(SMALL_TABLE_COUNT));
+
+        // check for column values
+        assertThat("Source produced different values for [name] column",
+            readNames,
+            equalTo(NAME_COLUMN_VALUES));
+
+        assertThat("Source produced different values for [surname] column",
+            readSurnames,
+            equalTo(SURNAME_COLUMN_VALUES));
+
+        assertThat("Source produced different values for [age] column", readAge,
+            equalTo(AGE_COLUMN_VALUES));
+
+        // check for partition column values
         String col1_partitionValue = "val1";
         String col2_partitionValue = "val2";
 
@@ -251,6 +319,9 @@ public abstract class DeltaSourceITBase extends TestLogger {
             assertPartitionValue(rowData, 3, col1_partitionValue);
             assertPartitionValue(rowData, 4, col2_partitionValue);
         });
+
+        // Checking that we don't have more columns.
+        assertNoMoreColumns(resultData,5);
     }
 
     protected abstract DeltaSource<RowData> initSourceAllColumns(String tablePath);
@@ -554,6 +625,16 @@ public abstract class DeltaSourceITBase extends TestLogger {
                 });
                 return results;
             });
+    }
+
+    private void assertNoMoreColumns(List<RowData> resultData, int columnIndex) {
+        resultData.forEach(rowData ->
+            assertThrows(
+                ArrayIndexOutOfBoundsException.class,
+                () -> rowData.getString(columnIndex),
+                "Found row with extra column."
+            )
+        );
     }
 
     public enum FailoverType {
