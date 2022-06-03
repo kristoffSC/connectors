@@ -20,6 +20,8 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.delta.standalone.types.StringType;
@@ -45,44 +47,22 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
         StructField[] schema = {new StructField("col1", new StringType())};
         mockDeltaTableForSchema(schema);
 
-        DeltaSource<RowData> boundedSource = DeltaSource.forBoundedRowData(
+        DeltaSource<RowData> source = DeltaSource.forBoundedRowData(
                 new Path(TABLE_PATH),
                 DeltaSinkTestUtils.getHadoopConf())
             .build();
 
-        assertThat(boundedSource, notNullValue());
-        assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
+        assertThat(source, notNullValue());
+        assertThat(source.getBoundedness(), equalTo(Boundedness.BOUNDED));
     }
 
     /**
-     * Test for versionAsOf passed via builder's versionAsOf(...) method.
-     */
-    @Test
-    public void shouldCreateSourceForVersionAsOfParameter() {
-        long versionAsOf = 10L;
-        when(deltaLog.getSnapshotForVersionAsOf(versionAsOf)).thenReturn(headSnapshot);
-
-        StructField[] schema = {new StructField("col1", new StringType())};
-        mockDeltaTableForSchema(schema);
-        DeltaSource<RowData> boundedSource = DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .versionAsOf(versionAsOf)
-            .build();
-
-        assertThat(boundedSource, notNullValue());
-        assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
-        assertThat(boundedSource.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(versionAsOf));
-    }
-
-    /**
-     * Test for versionAsOf passed via builder's generic option(...) method.
+     * Test for versionAsOf.
      * This tests also checks option's value type conversion.
      */
     @Test
-    public void shouldCreateSourceForVersionAsOfOption() {
-        long versionAsOf = 10L;
+    public void shouldCreateSourceForVersionAsOf() {
+        long versionAsOf = 10;
         when(deltaLog.getSnapshotForVersionAsOf(versionAsOf)).thenReturn(headSnapshot);
 
         StructField[] schema = {new StructField("col1", new StringType())};
@@ -90,6 +70,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
         String versionAsOfKey = DeltaSourceOptions.VERSION_AS_OF.key();
         List<RowDataBoundedDeltaSourceBuilder> builders = Arrays.asList(
+            getBuilderAllColumns().versionAsOf(versionAsOf), // int
             getBuilderAllColumns().option(versionAsOfKey, 10), // int
             getBuilderAllColumns().option(versionAsOfKey, 10L), // long
             getBuilderAllColumns().option(versionAsOfKey, "10") // string
@@ -97,57 +78,47 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
         assertAll(() -> {
             for (RowDataBoundedDeltaSourceBuilder builder : builders) {
-                DeltaSource<RowData> boundedSource = builder.build();
+                DeltaSource<RowData> source = builder.build();
 
-                assertThat(boundedSource, notNullValue());
-                assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
-                assertThat(boundedSource.getSourceConfiguration()
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.BOUNDED));
+                assertThat(source.getSourceConfiguration()
                     .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(versionAsOf));
             }
+            // four calls because we are testing four builders
+            verify(deltaLog, times(4)).getSnapshotForVersionAsOf(versionAsOf);
         });
     }
 
     /**
-     * Test for timestampAsOf passed via builder's timestampAsOf(...) method.
+     * Test for timestampAsOf
+     * This tests also checks option's value type conversion.
      */
     @Test
-    public void shouldCreateSourceForTimestampAsOfParameter() {
+    public void shouldCreateSourceForTimestampAsOf() {
         String timestamp = "2022-02-24T04:55:00.001";
         long timestampAsOf = TimestampFormatConverter.convertToTimestamp(timestamp);
         when(deltaLog.getSnapshotForTimestampAsOf(timestampAsOf)).thenReturn(headSnapshot);
 
         StructField[] schema = {new StructField("col1", new StringType())};
         mockDeltaTableForSchema(schema);
-        DeltaSource<RowData> boundedSource =DeltaSource.forBoundedRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .timestampAsOf(timestamp)
-            .build();
 
-        assertThat(boundedSource, notNullValue());
-        assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
-        assertThat(boundedSource.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.TIMESTAMP_AS_OF), equalTo(timestampAsOf));
-    }
+        List<RowDataBoundedDeltaSourceBuilder> builders = Arrays.asList(
+            getBuilderAllColumns().versionAsOf(timestampAsOf),
+            getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), timestamp)
+        );
 
-    /**
-     * Test for timestampAsOf passed via builder's generic option(...) method.
-     */
-    @Test
-    public void shouldCreateSourceForTimestampAsOfOption() {
-        long timestampAsOf = TimestampFormatConverter.convertToTimestamp("2022-02-24T04:55:00.001");
-        when(deltaLog.getSnapshotForTimestampAsOf(timestampAsOf)).thenReturn(headSnapshot);
-
-        StructField[] schema = {new StructField("col1", new StringType())};
-        mockDeltaTableForSchema(schema);
-        DeltaSource<RowData> boundedSource =
-            getBuilderWithOption(DeltaSourceOptions.TIMESTAMP_AS_OF, timestampAsOf)
-                .build();
-
-        assertThat(boundedSource, notNullValue());
-        assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.BOUNDED));
-        assertThat(boundedSource.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.TIMESTAMP_AS_OF), equalTo(timestampAsOf));
+        assertAll(() -> {
+            for (RowDataBoundedDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.BOUNDED));
+                assertThat(source.getSourceConfiguration()
+                    .getValue(DeltaSourceOptions.TIMESTAMP_AS_OF), equalTo(timestampAsOf));
+            }
+            // two calls because we are testing two builders
+            verify(deltaLog).getSnapshotForTimestampAsOf(timestampAsOf);
+        });
     }
 
     //////////////////////////////////////////////////////////////
