@@ -45,7 +45,7 @@ public class RowDataFormatBuilder implements FormatBuilder<RowData> {
     /**
      * An array with Delta table partition columns.
      */
-    private List<String> partitionColumns; // partitionColumn is validated in DeltaSourceBuilder.
+    private List<String> partitionColumns; // partitionColumns are validated in DeltaSourceBuilder.
 
     private int batchSize = DeltaSourceOptions.PARQUET_BATCH_SIZE.defaultValue();
 
