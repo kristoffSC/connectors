@@ -46,17 +46,21 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
-    protected static final LogicalType[] SMALL_TABLE_ALL_COLUMN_TYPES =
+    protected static final LogicalType[] DATA_COLUMN_TYPES =
         {new CharType(), new CharType(), new IntType()};
 
-    protected static final Set<String> SMALL_TABLE_EXPECTED_VALUES =
+    protected static final Set<String> SURNAME_COLUMN_VALUES =
         Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
 
-    protected static final String[] SMALL_TABLE_ALL_COLUMN_NAMES = {"name", "surname", "age"};
+    /**
+     * Columns that are not used as a partition columns.
+     */
+    protected static final String[] DATA_COLUMN_NAMES = {"name", "surname", "age"};
+
+    // Large table has no partitions.
+    protected static final String[] LARGE_TABLE_ALL_COLUMN_NAMES = {"col1", "col2", "col3"};
 
     protected static final int SMALL_TABLE_COUNT = 2;
-
-    protected static final String[] LARGE_TABLE_ALL_COLUMN_NAMES = {"col1", "col2", "col3"};
 
     protected static final int LARGE_TABLE_RECORD_COUNT = 1100;
 
@@ -67,11 +71,23 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public final MiniClusterWithClientResource miniClusterResource = buildCluster();
 
+    /**
+     * Schema for this table has only {@link #DATA_COLUMN_NAMES} of type {@link #DATA_COLUMN_TYPES}
+     * columns.
+     */
     protected String nonPartitionedTablePath;
 
-    protected String nonPartitionedLargeTablePath;
-
+    /**
+     * Schema for this table contains data columns {@link #DATA_COLUMN_NAMES} and col1, col2
+     * partition columns. Types of data columns are {@link #DATA_COLUMN_TYPES}
+     */
     protected String partitionedTablePath;
+
+    /**
+     * Schema for this table has only {@link #LARGE_TABLE_ALL_COLUMN_NAMES} of type {@link
+     * #LARGE_TABLE_ALL_COLUMN_NAMES} columns. Column types are long, long, String
+     */
+    protected String nonPartitionedLargeTablePath;
 
     private static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
         MiniCluster miniCluster) throws Exception {
@@ -155,7 +171,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             resultData.size(),
             equalTo(SMALL_TABLE_COUNT));
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+            equalTo(SURNAME_COLUMN_VALUES));
 
         resultData.forEach(rowData ->
             assertThrows(
@@ -218,7 +234,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             resultData.size(),
             equalTo(SMALL_TABLE_COUNT));
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+            equalTo(SURNAME_COLUMN_VALUES));
 
         String col2_partitionValue = "val2";
         resultData.forEach(rowData -> assertPartitionValue(rowData, 3, col2_partitionValue));
@@ -235,6 +251,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // WHEN
         List<RowData> resultData = testWithPartitions(deltaSource);
 
+        // get values from column that will have unique values.
         Set<String> actualNames =
             resultData.stream().map(row -> row.getString(1).toString()).collect(Collectors.toSet());
 
@@ -242,7 +259,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         assertThat("Source read different number of rows that Delta Table have.", resultData.size(),
             equalTo(SMALL_TABLE_COUNT));
         assertThat("Source Produced Different Rows that were in Delta Table", actualNames,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+            equalTo(SURNAME_COLUMN_VALUES));
 
         String col1_partitionValue = "val1";
         String col2_partitionValue = "val2";

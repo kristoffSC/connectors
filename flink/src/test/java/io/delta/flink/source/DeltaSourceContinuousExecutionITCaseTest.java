@@ -105,7 +105,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
             equalTo(SMALL_TABLE_COUNT));
         assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues,
-            equalTo(SMALL_TABLE_EXPECTED_VALUES));
+            equalTo(SURNAME_COLUMN_VALUES));
     }
 
     @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
@@ -209,7 +209,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTablePath);
 
         Descriptor versionOneUpdate = new Descriptor(
-            RowType.of(true, SMALL_TABLE_ALL_COLUMN_TYPES, SMALL_TABLE_ALL_COLUMN_NAMES),
+            RowType.of(true, DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
             Arrays.asList(
                 Row.of("John-K", "Wick-P", 1410),
                 Row.of("John-K", "Wick-P", 1411),
@@ -227,7 +227,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // Add another version with new rows.
         Descriptor versionTwoUpdate = new Descriptor(
-            RowType.of(true, SMALL_TABLE_ALL_COLUMN_TYPES, SMALL_TABLE_ALL_COLUMN_NAMES),
+            RowType.of(true, DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
             Arrays.asList(
                 Row.of("John-K", "Wick-P", 1510),
                 Row.of("John-K", "Wick-P", 1511),
@@ -387,7 +387,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                 newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
             }
             testDescriptor.add(
-                RowType.of(SMALL_TABLE_ALL_COLUMN_TYPES, SMALL_TABLE_ALL_COLUMN_NAMES), newRows);
+                RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES), newRows);
         }
         return testDescriptor;
     }
