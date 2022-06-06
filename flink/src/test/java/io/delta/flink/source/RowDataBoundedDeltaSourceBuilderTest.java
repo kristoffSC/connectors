@@ -108,10 +108,16 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             // set via generic option(String)
             () -> getBuilderAllColumns()
                 .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), "timestamp"),
+
+            // set via generic option(int)
             () -> getBuilderAllColumns()
                 .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), 10),
+
+            // set via generic option(long)
             () -> getBuilderAllColumns()
                 .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), 10L),
+
+            // set via generic option(boolean)
             () -> getBuilderAllColumns()
                 .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), true)
         );

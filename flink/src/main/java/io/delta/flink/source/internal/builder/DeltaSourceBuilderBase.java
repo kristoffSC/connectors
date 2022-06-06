@@ -307,6 +307,15 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         }
     }
 
+    /**
+     * Try to set option on Builder configuration. The option's value conversion, validation and
+     * logic for adding it to builder's configuration is wrapped with {@link Executable}. If {@link
+     * Executable#execute()} call throws eny exception, this exception will be wrapped in {@link
+     * DeltaSourceValidationException} and re-throw.
+     *
+     * @param argument the {@link Executable} wrapping any logic for converting and setting {@link
+     *                 DeltaConfigOption} value.
+     */
     protected void tryToSetOption(Executable argument) {
         try {
             argument.execute();
@@ -323,7 +332,9 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         return (SELF) this;
     }
 
-
+    /**
+     * A functional interface to execute logic that takes no argument nor returns any value.
+     */
     @FunctionalInterface
     protected interface Executable {
         void execute();
