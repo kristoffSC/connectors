@@ -130,7 +130,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         });
     }
 
-    // TODO PR 12 test negative path
+    // TODO PR 12.1 test negative path
     @Test
     public void shouldCreateSourceForUpdateCheckInterval() {
 
@@ -188,7 +188,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         });
     }
 
-    // TODO PR 12 test negative path
+    // TODO PR 12.1 test negative path
     @Test
     public void shouldCreateSourceForIgnoreChanges() {
 
@@ -216,7 +216,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         });
     }
 
-    // TODO PR 12 test negative path
+    // TODO PR 12.1 test negative path
     @Test
     public void shouldCreateSourceForUpdateCheckDelayOption() {
 
@@ -251,7 +251,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         });
     }
 
-    // TODO PR 12 test negative path
+    // TODO PR 12.1 test negative path
     @Test
     public void shouldCreateSourceForParquetBatchSizeOption() {
 

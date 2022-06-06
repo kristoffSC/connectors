@@ -90,7 +90,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
         });
     }
 
-    // TODO PR 12 test negative path
+    // TODO PR 12.1 test negative path
     /**
      * Test for timestampAsOf
      * This tests also checks option's value type conversion.

@@ -211,7 +211,7 @@ public class DeltaSourceOptions {
 
     // ----------------------------- //
 
-    // TODO PR 12 test all allowed options
+    // TODO PR 12.1 test all allowed options
     static {
         USER_FACING_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         USER_FACING_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
@@ -226,7 +226,7 @@ public class DeltaSourceOptions {
         USER_FACING_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
     }
 
-    // TODO PR 12 test all allowed options
+    // TODO PR 12.1 test all allowed options
     static {
         INNER_SOURCE_OPTIONS.put(LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             LOADED_SCHEMA_SNAPSHOT_VERSION);
