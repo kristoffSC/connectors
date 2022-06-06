@@ -98,6 +98,10 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
         });
     }
 
+    /**
+     * Test for versionAsOf.
+     * This tests also checks option's value type conversion.
+     */
     @Test
     public void shouldThrowOnSourceWithInvalidVersionAsOf() {
         List<Executable> builders = Arrays.asList(
