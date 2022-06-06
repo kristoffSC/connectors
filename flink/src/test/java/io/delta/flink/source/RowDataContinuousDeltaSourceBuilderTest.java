@@ -262,16 +262,16 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         StructField[] schema = {new StructField("col1", new StringType())};
         mockDeltaTableForSchema(schema);
 
-        String updateCheckDelayKey = DeltaSourceOptions.PARQUET_BATCH_SIZE.key();
+        String parquetBatchSize = DeltaSourceOptions.PARQUET_BATCH_SIZE.key();
         List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
             // set via generic option(int) method.
-            getBuilderAllColumns().option(updateCheckDelayKey, 100),
+            getBuilderAllColumns().option(parquetBatchSize, 100),
 
             // set via generic option(long) method.
-            getBuilderAllColumns().option(updateCheckDelayKey, 100L),
+            getBuilderAllColumns().option(parquetBatchSize, 100L),
 
             // set via generic option(string) method.
-            getBuilderAllColumns().option(updateCheckDelayKey, "100")
+            getBuilderAllColumns().option(parquetBatchSize, "100")
         );
 
         assertAll(() -> {

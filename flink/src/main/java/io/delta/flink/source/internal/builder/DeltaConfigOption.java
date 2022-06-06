@@ -23,6 +23,9 @@ public class DeltaConfigOption<T> {
      */
     private final Class<T> decoratedType;
 
+    /**
+     * Value type converter for this configuration option.
+     */
     private final OptionTypeConverter typeConverter;
 
     private DeltaConfigOption(
