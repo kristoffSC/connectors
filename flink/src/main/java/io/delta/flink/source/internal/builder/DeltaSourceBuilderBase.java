@@ -230,18 +230,25 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
         return validator;
     }
 
+    /**
+     * Validated builder options that were used but they might be not applicable for given builder
+     * type, for example using options from bounded mode like "versionAsOf" for continuous mode
+     * builder.
+     *
+     * @return The {@link Validator} object with all (if any) validation error messages.
+     */
     protected Validator validateInapplicableOptions() {
 
-        List<String> usedOptions = new ArrayList<>();
         Validator validator = new Validator();
         sourceConfiguration.getUsedOptions()
             .stream()
             .filter(DeltaSourceOptions::isUserFacingOption)
-            .forEach(usedOption -> {
-                usedOptions.add(usedOption);
+            .forEach(usedOption ->
                 validator.checkArgument(getApplicableOptions().contains(usedOption),
-                    prepareInapplicableOptionMessage(usedOptions, getApplicableOptions()));
-            });
+                prepareInapplicableOptionMessage(
+                    sourceConfiguration.getUsedOptions(),
+                    getApplicableOptions())
+            ));
 
         return validator;
     }
@@ -253,7 +260,7 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     }
 
     protected String prepareInapplicableOptionMessage(
-            List<String> usedOptions,
+            Collection<String> usedOptions,
             Collection<String> applicableOptions) {
         return String.format(
             "Used inapplicable option for source configuration. Used options [%s], applicable "
