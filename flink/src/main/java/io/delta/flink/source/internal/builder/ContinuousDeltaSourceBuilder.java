@@ -69,7 +69,6 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
         return self();
     }
 
-    // TODO PR 12 add tests for options.
     public SELF startingTimestamp(String startingTimestamp) {
         long toTimestamp = TimestampFormatConverter.convertToTimestamp(startingTimestamp);
         sourceConfiguration.addOption(STARTING_TIMESTAMP, toTimestamp);

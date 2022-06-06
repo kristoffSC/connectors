@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
+import io.delta.flink.source.internal.builder.TimestampOptionTypeConverter;
 import org.apache.flink.configuration.ConfigOptions;
 
 /**
@@ -72,7 +73,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Long> TIMESTAMP_AS_OF =
         DeltaConfigOption.of(
             ConfigOptions.key("timestampAsOf").longType().noDefaultValue(),
-            Long.class);
+            Long.class,
+            new TimestampOptionTypeConverter());
 
     /**
      * An option to specify a {@link io.delta.standalone.Snapshot} version to only read changes
@@ -100,7 +102,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Long> STARTING_TIMESTAMP =
         DeltaConfigOption.of(
             ConfigOptions.key("startingTimestamp").longType().noDefaultValue(),
-            Long.class);
+            Long.class,
+            new TimestampOptionTypeConverter());
 
     /**
      * An option to specify check interval (in milliseconds) for monitoring Delta table changes.

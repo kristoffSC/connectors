@@ -56,56 +56,9 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
     }
 
     @Test
-    public void shouldCreateSourceWithOptions() {
-
-        when(deltaLog.getSnapshotForVersionAsOf(10)).thenReturn(headSnapshot);
-
-        StructField[] schema = {new StructField("col1", new StringType())};
-        mockDeltaTableForSchema(schema);
-
-        DeltaSource<RowData> boundedSource = DeltaSource.forContinuousRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .option(DeltaSourceOptions.STARTING_VERSION.key(), "10")
-            .build();
-
-        assertThat(boundedSource, notNullValue());
-        assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
-        assertThat(boundedSource.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.STARTING_VERSION), equalTo("10"));
-    }
-
-    @Test
-    public void shouldCreateSourceForStartingVersionParameter() {
-        String startingVersion = "10";
-        long long_startingVersion = 10;
-
-        when(deltaLog.getSnapshotForVersionAsOf(long_startingVersion)).thenReturn(headSnapshot);
-
-        StructField[] schema = {new StructField("col1", new StringType())};
-        mockDeltaTableForSchema(schema);
-
-        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
-            getBuilderAllColumns().startingVersion(startingVersion),
-            getBuilderAllColumns().startingVersion(long_startingVersion)
-        );
-
-        assertAll(() -> {
-            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
-                DeltaSource<RowData> source = builder.build();
-                assertThat(source, notNullValue());
-                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
-                assertThat(source.getSourceConfiguration()
-                    .getValue(DeltaSourceOptions.STARTING_VERSION), equalTo(startingVersion));
-            }
-            // two calls because we are testing two builders
-            verify(deltaLog, times(2)).getSnapshotForVersionAsOf(long_startingVersion);
-        });
-    }
-
-    @Test
-    public void shouldCreateSourceForStartingVersionOption() {
+    public void shouldCreateSourceForStartingVersion() {
         long startingVersion = 10;
+        String string_startingVersion = "10";
 
         when(deltaLog.getSnapshotForVersionAsOf(startingVersion)).thenReturn(headSnapshot);
 
@@ -114,8 +67,19 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
 
         String startingVersionKey = DeltaSourceOptions.STARTING_VERSION.key();
         List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            // set via dedicated method long
+            getBuilderAllColumns().startingVersion(startingVersion),
+
+            // set via dedicated method String
+            getBuilderAllColumns().startingVersion(string_startingVersion),
+
+            // set via generic option(int) method
             getBuilderAllColumns().option(startingVersionKey, 10),
+
+            // set via generic option(long) method
             getBuilderAllColumns().option(startingVersionKey, 10L),
+
+            // set via generic option(int) String
             getBuilderAllColumns().option(startingVersionKey, "10")
         );
 
@@ -124,33 +88,202 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                 DeltaSource<RowData> source = builder.build();
                 assertThat(source, notNullValue());
                 assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
-                assertThat(source.getSourceConfiguration()
-                    .getValue(DeltaSourceOptions.STARTING_VERSION), equalTo(startingVersion));
+                assertThat(
+                    source.getSourceConfiguration().getValue(DeltaSourceOptions.STARTING_VERSION),
+                    equalTo(string_startingVersion)
+                );
             }
-            // three calls because we are testing three builders
-            verify(deltaLog, times(3)).getSnapshotForVersionAsOf(startingVersion);
+            // as many calls as we had builders
+            verify(deltaLog, times(builders.size())).getSnapshotForVersionAsOf(startingVersion);
         });
     }
 
     @Test
-    public void shouldCreateSourceForStartingTimestampParameter() {
-        String timestamp = "2022-02-24T04:55:00.001";
-        long timestampAsOf = TimestampFormatConverter.convertToTimestamp(timestamp);
-        when(deltaLog.getSnapshotForTimestampAsOf(timestampAsOf)).thenReturn(headSnapshot);
+    public void shouldCreateSourceForStartingTimestamp() {
+        String startingTimestamp = "2022-02-24T04:55:00.001";
+        long long_startingTimestamp =
+            TimestampFormatConverter.convertToTimestamp(startingTimestamp);
+
+        when(deltaLog.getSnapshotForTimestampAsOf(long_startingTimestamp)).thenReturn(headSnapshot);
 
         StructField[] schema = {new StructField("col1", new StringType())};
         mockDeltaTableForSchema(schema);
-        DeltaSource<RowData> source =DeltaSource.forContinuousRowData(
-                new Path(TABLE_PATH),
-                DeltaSinkTestUtils.getHadoopConf())
-            .startingTimestamp(timestamp)
-            .build();
 
-        assertThat(source, notNullValue());
-        assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
-        assertThat(source.getSourceConfiguration()
-            .getValue(DeltaSourceOptions.STARTING_TIMESTAMP), equalTo(timestampAsOf));
-        verify(deltaLog).getSnapshotForTimestampAsOf(timestampAsOf);
+        String startingTimestampKey = DeltaSourceOptions.STARTING_TIMESTAMP.key();
+        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            getBuilderAllColumns().startingTimestamp(startingTimestamp),
+            getBuilderAllColumns().option(startingTimestampKey, startingTimestamp)
+        );
+
+        assertAll(() -> {
+            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
+                assertThat(source.getSourceConfiguration()
+                        .getValue(DeltaSourceOptions.STARTING_TIMESTAMP),
+                    equalTo(long_startingTimestamp));
+            }
+            // as many calls as we had builders
+            verify(deltaLog, times(builders.size()))
+                .getSnapshotForTimestampAsOf(long_startingTimestamp);
+        });
+    }
+
+    // TODO PR 12 test negative path
+    @Test
+    public void shouldCreateSourceForUpdateCheckInterval() {
+
+        long updateInterval = 10;
+        String string_updateInterval = "10";
+
+        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+
+        StructField[] schema = {new StructField("col1", new StringType())};
+        mockDeltaTableForSchema(schema);
+
+        String updateCheckIntervalKey = DeltaSourceOptions.UPDATE_CHECK_INTERVAL.key();
+        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            getBuilderAllColumns().updateCheckIntervalMillis(updateInterval),
+            getBuilderAllColumns().option(updateCheckIntervalKey, updateInterval),
+            getBuilderAllColumns().option(updateCheckIntervalKey, string_updateInterval)
+        );
+
+        assertAll(() -> {
+            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
+                assertThat(source.getSourceConfiguration()
+                        .getValue(DeltaSourceOptions.UPDATE_CHECK_INTERVAL),
+                    equalTo(updateInterval));
+            }
+        });
+    }
+
+    @Test
+    public void shouldCreateSourceForIgnoreDeletes() {
+
+        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+
+        StructField[] schema = {new StructField("col1", new StringType())};
+        mockDeltaTableForSchema(schema);
+
+        String ignoreDeletesKey = DeltaSourceOptions.IGNORE_DELETES.key();
+        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            getBuilderAllColumns().ignoreDeletes(true),
+            getBuilderAllColumns().option(ignoreDeletesKey, true),
+            getBuilderAllColumns().option(ignoreDeletesKey, "true")
+        );
+
+        assertAll(() -> {
+            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
+                assertThat(source.getSourceConfiguration()
+                        .getValue(DeltaSourceOptions.IGNORE_DELETES),
+                    equalTo(true));
+            }
+        });
+    }
+
+    // TODO PR 12 test negative path
+    @Test
+    public void shouldCreateSourceForIgnoreChanges() {
+
+        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+
+        StructField[] schema = {new StructField("col1", new StringType())};
+        mockDeltaTableForSchema(schema);
+
+        String ignoreChangesKey = DeltaSourceOptions.IGNORE_CHANGES.key();
+        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            getBuilderAllColumns().ignoreChanges(true),
+            getBuilderAllColumns().option(ignoreChangesKey, true),
+            getBuilderAllColumns().option(ignoreChangesKey, "true")
+        );
+
+        assertAll(() -> {
+            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
+                assertThat(source.getSourceConfiguration()
+                        .getValue(DeltaSourceOptions.IGNORE_CHANGES),
+                    equalTo(true));
+            }
+        });
+    }
+
+    // TODO PR 12 test negative path
+    @Test
+    public void shouldCreateSourceForUpdateCheckDelayOption() {
+
+        long expectedUpdateCheckDelay = 10;
+
+        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+
+        StructField[] schema = {new StructField("col1", new StringType())};
+        mockDeltaTableForSchema(schema);
+
+        String updateCheckDelayKey = DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY.key();
+        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            // set via generic option(int) method.
+            getBuilderAllColumns().option(updateCheckDelayKey, 10),
+
+            // set via generic option(long) method.
+            getBuilderAllColumns().option(updateCheckDelayKey, 10L),
+
+            // set via generic option(String) method.
+            getBuilderAllColumns().option(updateCheckDelayKey, "10")
+        );
+
+        assertAll(() -> {
+            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
+                assertThat(source.getSourceConfiguration()
+                        .getValue(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY),
+                    equalTo(expectedUpdateCheckDelay));
+            }
+        });
+    }
+
+    // TODO PR 12 test negative path
+    @Test
+    public void shouldCreateSourceForParquetBatchSizeOption() {
+
+        int expectedParquetBatchSize = 100;
+
+        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+
+        StructField[] schema = {new StructField("col1", new StringType())};
+        mockDeltaTableForSchema(schema);
+
+        String updateCheckDelayKey = DeltaSourceOptions.PARQUET_BATCH_SIZE.key();
+        List<RowDataContinuousDeltaSourceBuilder> builders = Arrays.asList(
+            // set via generic option(int) method.
+            getBuilderAllColumns().option(updateCheckDelayKey, 100),
+
+            // set via generic option(long) method.
+            getBuilderAllColumns().option(updateCheckDelayKey, 100L),
+
+            // set via generic option(string) method.
+            getBuilderAllColumns().option(updateCheckDelayKey, "100")
+        );
+
+        assertAll(() -> {
+            for (RowDataContinuousDeltaSourceBuilder builder : builders) {
+                DeltaSource<RowData> source = builder.build();
+                assertThat(source, notNullValue());
+                assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
+                assertThat(source.getSourceConfiguration()
+                        .getValue(DeltaSourceOptions.PARQUET_BATCH_SIZE),
+                    equalTo(expectedParquetBatchSize));
+            }
+        });
     }
 
     //////////////////////////////////////////////////////////////
@@ -161,21 +294,22 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
     public Collection<? extends DeltaSourceBuilderBase<?,?>> initBuildersWithInapplicableOptions() {
         return Arrays.asList(
             getBuilderWithOption(DeltaSourceOptions.VERSION_AS_OF, 10L),
-            getBuilderWithOption(DeltaSourceOptions.TIMESTAMP_AS_OF, System.currentTimeMillis())
+            getBuilderWithOption(DeltaSourceOptions.TIMESTAMP_AS_OF, "2022-02-24T04:55:00.001")
         );
     }
 
     @Override
-    protected <T> RowDataContinuousDeltaSourceBuilder getBuilderWithOption(
-        DeltaConfigOption<T> option,
-        T value) {
+    protected RowDataContinuousDeltaSourceBuilder getBuilderWithOption(
+            DeltaConfigOption<?> option,
+            Object value) {
         RowDataContinuousDeltaSourceBuilder builder =
             DeltaSource.forContinuousRowData(
                 new Path(TABLE_PATH),
                 DeltaSinkTestUtils.getHadoopConf()
             );
 
-        return (RowDataContinuousDeltaSourceBuilder) setOptionOnBuilder(option, value, builder);
+        return (RowDataContinuousDeltaSourceBuilder)
+            setOptionOnBuilder(option.key(), value, builder);
     }
 
     @Override
@@ -221,8 +355,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
             )
             .option(DeltaSourceOptions.STARTING_VERSION.key(), 10)
             .option(
-                DeltaSourceOptions.STARTING_TIMESTAMP.key(),
-                TimestampFormatConverter.convertToTimestamp("2022-02-24T04:55:00.001")
+                DeltaSourceOptions.STARTING_TIMESTAMP.key(),"2022-02-24T04:55:00.001"
             );
     }
 

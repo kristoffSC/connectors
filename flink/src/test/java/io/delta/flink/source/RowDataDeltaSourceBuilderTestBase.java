@@ -166,7 +166,6 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
 
     @Test
     public void shouldThrowWhenSettingInternalOption() {
-        DeltaSourceOptions.LOADED_SCHEMA_SNAPSHOT_VERSION.key();
 
         DeltaSourceValidationException exception =
             assertThrows(DeltaSourceValidationException.class,
@@ -200,12 +199,12 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     /**
      * Creates a Delta source builder with option set via DeltaSourceBuilderBase#option(key, value)
      * method.
-     * @param option {@link DeltaConfigOption} to set.
+     * @param optionName {@link DeltaConfigOption} to set.
      * @param value value for option.
      */
-    protected abstract <T> DeltaSourceBuilderBase<?, ?> getBuilderWithOption(
-        DeltaConfigOption<T> option,
-        T value
+    protected abstract DeltaSourceBuilderBase<?, ?> getBuilderWithOption(
+        DeltaConfigOption<?> optionName,
+        Object value
     );
 
     /**
@@ -265,28 +264,26 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
             );
     }
 
-    protected  <T> DeltaSourceBuilderBase<?, ?> setOptionOnBuilder(
-            DeltaConfigOption<T> option,
-            T value,
+    protected  <T> DeltaSourceBuilderBase<?, ?> setOptionOnBuilder(String optionName, T value,
             DeltaSourceBuilderBase<?, ?> builder) {
         if (value instanceof String) {
-            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (String) value);
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(optionName, (String) value);
         }
 
         if (value instanceof Integer) {
-            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (Integer) value);
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(optionName, (Integer) value);
         }
 
         if (value instanceof Long) {
-            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (Long) value);
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(optionName, (Long) value);
         }
 
         if (value instanceof Boolean) {
-            return (DeltaSourceBuilderBase<?, ?>) builder.option(option.key(), (Boolean) value);
+            return (DeltaSourceBuilderBase<?, ?>) builder.option(optionName, (Boolean) value);
         }
 
         throw new IllegalArgumentException(
-            "Used unsupported value type for Builder option - " + value.getClass());
+            "Used unsupported value type for Builder optionName - " + value.getClass());
     }
 
 }

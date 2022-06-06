@@ -23,13 +23,26 @@ public class DeltaConfigOption<T> {
      */
     private final Class<T> decoratedType;
 
-    private DeltaConfigOption(ConfigOption<T> decoratedOption, Class<T> type) {
+    private final OptionTypeConverter typeConverter;
+
+    private DeltaConfigOption(
+            ConfigOption<T> decoratedOption,
+            Class<T> type,
+            OptionTypeConverter typeConverter) {
         this.decoratedOption = decoratedOption;
         this.decoratedType = type;
+        this.typeConverter = typeConverter;
     }
 
     public static <T> DeltaConfigOption<T> of(ConfigOption<T> configOption, Class<T> type) {
-        return new DeltaConfigOption<>(configOption, type);
+        return new DeltaConfigOption<>(configOption, type, new DefaultOptionTypeConverter());
+    }
+
+    public static <T> DeltaConfigOption<T> of(
+            ConfigOption<T> configOption,
+            Class<T> type,
+            OptionTypeConverter typeConverter) {
+        return new DeltaConfigOption<>(configOption, type, typeConverter);
     }
 
     /**
@@ -55,22 +68,22 @@ public class DeltaConfigOption<T> {
 
     //-------Keeping type safety with implementation of a Visitor pattern -------//
     public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, boolean value) {
-        T convertedValue = OptionTypeConverter.convertType(this, value);
+        T convertedValue = typeConverter.convertType(this, value);
         sourceConfiguration.addOption(this, convertedValue);
     }
 
     public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, int value) {
-        T convertedValue = OptionTypeConverter.convertType(this, value);
+        T convertedValue = typeConverter.convertType(this, value);
         sourceConfiguration.addOption(this, convertedValue);
     }
 
     public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, long value) {
-        T convertedValue = OptionTypeConverter.convertType(this, value);
+        T convertedValue = typeConverter.convertType(this, value);
         sourceConfiguration.addOption(this, convertedValue);
     }
 
     public void setOnConfig(DeltaSourceConfiguration sourceConfiguration, String value) {
-        T convertedValue = OptionTypeConverter.convertType(this, value);
+        T convertedValue = typeConverter.convertType(this, value);
         sourceConfiguration.addOption(this, convertedValue);
     }
     //---------------------------------------------------------------------------//

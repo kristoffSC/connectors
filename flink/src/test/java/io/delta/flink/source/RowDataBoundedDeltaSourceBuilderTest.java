@@ -70,10 +70,10 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
         String versionAsOfKey = DeltaSourceOptions.VERSION_AS_OF.key();
         List<RowDataBoundedDeltaSourceBuilder> builders = Arrays.asList(
-            getBuilderAllColumns().versionAsOf(versionAsOf), // int
-            getBuilderAllColumns().option(versionAsOfKey, 10), // int
-            getBuilderAllColumns().option(versionAsOfKey, 10L), // long
-            getBuilderAllColumns().option(versionAsOfKey, "10") // string
+            getBuilderAllColumns().versionAsOf(versionAsOf), // set via dedicated method
+            getBuilderAllColumns().option(versionAsOfKey, 10), // set via generic option(int)
+            getBuilderAllColumns().option(versionAsOfKey, 10L), // set via generic option(long)
+            getBuilderAllColumns().option(versionAsOfKey, "10") // set via generic option(String)
         );
 
         assertAll(() -> {
@@ -85,11 +85,12 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                 assertThat(source.getSourceConfiguration()
                     .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(versionAsOf));
             }
-            // four calls because we are testing four builders
-            verify(deltaLog, times(4)).getSnapshotForVersionAsOf(versionAsOf);
+            // as many calls as we had builders
+            verify(deltaLog, times(builders.size())).getSnapshotForVersionAsOf(versionAsOf);
         });
     }
 
+    // TODO PR 12 test negative path
     /**
      * Test for timestampAsOf
      * This tests also checks option's value type conversion.
@@ -104,7 +105,10 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
         mockDeltaTableForSchema(schema);
 
         List<RowDataBoundedDeltaSourceBuilder> builders = Arrays.asList(
-            getBuilderAllColumns().versionAsOf(timestampAsOf),
+            // set via dedicated method
+            getBuilderAllColumns().timestampAsOf(timestamp),
+
+            // set via generic option(String)
             getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), timestamp)
         );
 
@@ -116,8 +120,8 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                 assertThat(source.getSourceConfiguration()
                     .getValue(DeltaSourceOptions.TIMESTAMP_AS_OF), equalTo(timestampAsOf));
             }
-            // two calls because we are testing two builders
-            verify(deltaLog).getSnapshotForTimestampAsOf(timestampAsOf);
+            // as many calls as we had builders
+            verify(deltaLog, times(builders.size())).getSnapshotForTimestampAsOf(timestampAsOf);
         });
     }
 
@@ -132,22 +136,22 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             getBuilderWithOption(DeltaSourceOptions.IGNORE_DELETES, true),
             getBuilderWithOption(DeltaSourceOptions.UPDATE_CHECK_INTERVAL, 1000L),
             getBuilderWithOption(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY, 1000L),
-            getBuilderWithOption(DeltaSourceOptions.STARTING_TIMESTAMP, System.currentTimeMillis()),
+            getBuilderWithOption(DeltaSourceOptions.STARTING_TIMESTAMP, "2022-02-24T04:55:00.001"),
             getBuilderWithOption(DeltaSourceOptions.STARTING_VERSION, "Latest")
         );
     }
 
     @Override
-    protected <T> RowDataBoundedDeltaSourceBuilder getBuilderWithOption(
-            DeltaConfigOption<T> option,
-            T value) {
+    protected RowDataBoundedDeltaSourceBuilder getBuilderWithOption(
+            DeltaConfigOption<?> option,
+            Object value) {
         RowDataBoundedDeltaSourceBuilder builder =
             DeltaSource.forBoundedRowData(
                 new Path(TABLE_PATH),
                 DeltaSinkTestUtils.getHadoopConf()
             );
 
-        return (RowDataBoundedDeltaSourceBuilder) setOptionOnBuilder(option, value, builder);
+        return (RowDataBoundedDeltaSourceBuilder) setOptionOnBuilder(option.key(), value, builder);
     }
 
     @Override
@@ -194,7 +198,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             .option(DeltaSourceOptions.VERSION_AS_OF.key(), 10)
             .option(
                 DeltaSourceOptions.TIMESTAMP_AS_OF.key(),
-                TimestampFormatConverter.convertToTimestamp("2022-02-24T04:55:00.001")
+                "2022-02-24T04:55:00.001"
             );
     }
 
