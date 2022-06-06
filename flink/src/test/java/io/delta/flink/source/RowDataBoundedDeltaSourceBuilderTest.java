@@ -9,17 +9,22 @@ import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
 import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
+import io.delta.flink.source.internal.exceptions.DeltaSourceValidationException;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,6 +34,9 @@ import io.delta.standalone.types.StructField;
 
 @ExtendWith(MockitoExtension.class)
 class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTestBase {
+
+    private static final Logger LOG =
+        LoggerFactory.getLogger(RowDataBoundedDeltaSourceBuilderTest.class);
 
     @AfterEach
     public void afterEach() {
@@ -90,7 +98,38 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
         });
     }
 
-    // TODO PR 12.1 test negative path
+    @Test
+    public void shouldThrowOnSourceWithInvalidVersionAsOf() {
+        List<Executable> builders = Arrays.asList(
+            // set via generic option(String)
+            () -> getBuilderAllColumns()
+                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), "timestamp"),
+            () -> getBuilderAllColumns()
+                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), 10),
+            () -> getBuilderAllColumns()
+                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), 10L),
+            () -> getBuilderAllColumns()
+                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), true)
+        );
+
+        // execute "set" or "option" on builder with invalid value.
+        assertAll(() -> {
+            for (Executable builderExecutable : builders) {
+                DeltaSourceValidationException exception =
+                    assertThrows(DeltaSourceValidationException.class, builderExecutable);
+                LOG.info("Option Validation Exception: ", exception);
+                assertThat(
+                    exception
+                        .getValidationMessages()
+                        .stream()
+                        .allMatch(message -> message.contains(
+                            "could not be parsed, unparsed text found at index")),
+                    equalTo(true)
+                );
+            }
+        });
+    }
+
     /**
      * Test for timestampAsOf
      * This tests also checks option's value type conversion.
@@ -122,6 +161,36 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             }
             // as many calls as we had builders
             verify(deltaLog, times(builders.size())).getSnapshotForTimestampAsOf(timestampAsOf);
+        });
+    }
+
+    @Test
+    public void shouldThrowOnSourceWithInvalidTimestampAsOf() {
+        String timestamp = "not_a_date";
+
+        List<Executable> builders = Arrays.asList(
+            // set via dedicated method
+            () -> getBuilderAllColumns().timestampAsOf(timestamp),
+
+            // set via generic option(String)
+            () -> getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), timestamp)
+        );
+
+        // execute "set" or "option" on builder with invalid value.
+        assertAll(() -> {
+            for (Executable builderExecutable : builders) {
+                DeltaSourceValidationException exception =
+                    assertThrows(DeltaSourceValidationException.class, builderExecutable);
+                LOG.info("Option Validation Exception: ", exception);
+                assertThat(
+                    exception
+                        .getValidationMessages()
+                        .contains(
+                            "Text 'not_a_date' could not be parsed, unparsed text found at index 0"
+                        ),
+                    equalTo(true)
+                );
+            }
         });
     }
 

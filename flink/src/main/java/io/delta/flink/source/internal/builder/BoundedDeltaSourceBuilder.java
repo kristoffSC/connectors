@@ -51,13 +51,15 @@ public abstract class BoundedDeltaSourceBuilder<T, SELF> extends DeltaSourceBuil
     }
 
     public SELF versionAsOf(long snapshotVersion) {
-        sourceConfiguration.addOption(VERSION_AS_OF, snapshotVersion);
+        tryToSetOption(() -> sourceConfiguration.addOption(VERSION_AS_OF, snapshotVersion));
         return self();
     }
 
     public SELF timestampAsOf(String snapshotTimestamp) {
-        long toTimestamp = TimestampFormatConverter.convertToTimestamp(snapshotTimestamp);
-        sourceConfiguration.addOption(TIMESTAMP_AS_OF, toTimestamp);
+        tryToSetOption(() -> {
+            long toTimestamp = TimestampFormatConverter.convertToTimestamp(snapshotTimestamp);
+            sourceConfiguration.addOption(TIMESTAMP_AS_OF, toTimestamp);
+        });
         return self();
     }
 

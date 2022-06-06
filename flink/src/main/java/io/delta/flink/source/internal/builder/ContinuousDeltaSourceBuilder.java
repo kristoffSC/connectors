@@ -60,33 +60,37 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
     }
 
     public SELF startingVersion(String startingVersion) {
-        sourceConfiguration.addOption(STARTING_VERSION, startingVersion);
+        tryToSetOption(() -> sourceConfiguration.addOption(STARTING_VERSION, startingVersion));
         return self();
     }
 
     public SELF startingVersion(long startingVersion) {
-        startingVersion(String.valueOf(startingVersion));
+        tryToSetOption(() -> startingVersion(String.valueOf(startingVersion)));
         return self();
     }
 
     public SELF startingTimestamp(String startingTimestamp) {
-        long toTimestamp = TimestampFormatConverter.convertToTimestamp(startingTimestamp);
-        sourceConfiguration.addOption(STARTING_TIMESTAMP, toTimestamp);
+        tryToSetOption(() -> {
+            long toTimestamp = TimestampFormatConverter.convertToTimestamp(startingTimestamp);
+            sourceConfiguration.addOption(STARTING_TIMESTAMP, toTimestamp);
+        });
         return self();
     }
 
     public SELF updateCheckIntervalMillis(long updateCheckInterval) {
-        sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL, updateCheckInterval);
+        tryToSetOption(
+            () -> sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL, updateCheckInterval)
+        );
         return self();
     }
 
     public SELF ignoreDeletes(boolean ignoreDeletes) {
-        sourceConfiguration.addOption(IGNORE_DELETES, ignoreDeletes);
+        tryToSetOption(() -> sourceConfiguration.addOption(IGNORE_DELETES, ignoreDeletes));
         return self();
     }
 
     public SELF ignoreChanges(boolean ignoreChanges) {
-        sourceConfiguration.addOption(IGNORE_CHANGES, ignoreChanges);
+        tryToSetOption(() -> sourceConfiguration.addOption(IGNORE_CHANGES, ignoreChanges));
         return self();
     }
 
