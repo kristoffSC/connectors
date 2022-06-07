@@ -21,7 +21,6 @@ package io.delta.flink.sink.utils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 import org.apache.flink.core.fs.Path;
@@ -103,7 +102,7 @@ public class TestParquetReader {
         return recordsRead;
     }
 
-    public static ParquetColumnarRowSplitReader getTestParquetReader(
+    private static ParquetColumnarRowSplitReader getTestParquetReader(
         Path path, RowType rowType) throws IOException {
         return ParquetSplitReaderUtil.genPartColumnarRowReader(
             true, // utcTimestamp
@@ -120,10 +119,4 @@ public class TestParquetReader {
             0,
             Long.MAX_VALUE);
     }
-
-    private static ParquetColumnarRowSplitReader getTestParquetReader(
-        Path parquetFilePath, RowType rowtype, Map<String, Object> partitions) {
-        return null;
-    }
-
 }
