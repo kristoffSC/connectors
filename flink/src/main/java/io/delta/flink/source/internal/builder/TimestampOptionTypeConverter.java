@@ -12,11 +12,12 @@ public class TimestampOptionTypeConverter extends BaseOptionTypeConverter {
      * Converts String value of {@link DeltaConfigOption} that represents Date or Datetime to its
      * timestamp long representation.
      * The implementation uses {@link TimestampFormatConverter} for conversion.
-     * See {@link {@link TimestampFormatConverter#convertToTimestamp(String)}} for details about
+     * See {@link TimestampFormatConverter#convertToTimestamp(String)} for details about
      * allowed formats.
-     * @param desiredOption The {@link DeltaConfigOption} instance we want to do the conversion.
+     * @param desiredOption The {@link DeltaConfigOption} instance we want to do the conversion for.
      * @param valueToConvert String representing date or datetime.
      * @return A timestamp representation of valueToConvert returned as long value.
+     * @throws IllegalArgumentException in case of conversion failure.
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -32,7 +33,7 @@ public class TimestampOptionTypeConverter extends BaseOptionTypeConverter {
             String.format(
                 "TimestampOptionTypeConverter used with a incompatible DeltaConfigOption "
                     + "option type. This converter must be used only for "
-                    + "DeltaConfigOption::Long but it was used for '%s' with option '%s'",
+                    + "DeltaConfigOption::Long however it was used for '%s' with option '%s'",
                 desiredOption.getValueType(), desiredOption.key())
         );
     }

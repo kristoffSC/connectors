@@ -166,7 +166,7 @@ public final class DeltaSourceExceptions {
             Exception e) {
         return new DeltaSourceValidationException(
             tablePath,
-            Collections.singletonList(e.getMessage())
+            Collections.singletonList(e.getClass() + " - " + e.getMessage())
         );
     }
 }

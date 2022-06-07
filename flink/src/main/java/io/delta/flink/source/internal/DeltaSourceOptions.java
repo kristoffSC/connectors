@@ -3,7 +3,9 @@ package io.delta.flink.source.internal;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.delta.flink.source.internal.builder.BooleanOptionTypeConverter;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
+import io.delta.flink.source.internal.builder.StartingVersionOptionTypeConverter;
 import io.delta.flink.source.internal.builder.TimestampOptionTypeConverter;
 import org.apache.flink.configuration.ConfigOptions;
 
@@ -88,7 +90,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<String> STARTING_VERSION =
         DeltaConfigOption.of(
             ConfigOptions.key("startingVersion").stringType().noDefaultValue(),
-            String.class);
+            String.class,
+            new StartingVersionOptionTypeConverter());
 
     /**
      * An option used to read only changes from {@link io.delta.standalone.Snapshot} that was
@@ -149,7 +152,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Boolean> IGNORE_DELETES =
         DeltaConfigOption.of(
             ConfigOptions.key("ignoreDeletes").booleanType().defaultValue(false),
-            Boolean.class);
+            Boolean.class,
+            new BooleanOptionTypeConverter());
 
     /**
      * An option used to allow processing Delta table versions containing both {@link
@@ -169,7 +173,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Boolean> IGNORE_CHANGES =
         DeltaConfigOption.of(
             ConfigOptions.key("ignoreChanges").booleanType().defaultValue(false),
-            Boolean.class);
+            Boolean.class,
+            new BooleanOptionTypeConverter());
 
     /**
      * An option to set the number of rows read per Parquet Reader per batch from underlying Parquet
@@ -211,7 +216,6 @@ public class DeltaSourceOptions {
 
     // ----------------------------- //
 
-    // TODO PR 12.1 test all allowed options
     static {
         USER_FACING_SOURCE_OPTIONS.put(VERSION_AS_OF.key(), VERSION_AS_OF);
         USER_FACING_SOURCE_OPTIONS.put(TIMESTAMP_AS_OF.key(), TIMESTAMP_AS_OF);
@@ -226,7 +230,6 @@ public class DeltaSourceOptions {
         USER_FACING_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
     }
 
-    // TODO PR 12.1 test all allowed options
     static {
         INNER_SOURCE_OPTIONS.put(LOADED_SCHEMA_SNAPSHOT_VERSION.key(),
             LOADED_SCHEMA_SNAPSHOT_VERSION);

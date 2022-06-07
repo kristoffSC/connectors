@@ -7,7 +7,6 @@ import java.util.List;
 
 import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvider;
 import io.delta.flink.source.internal.enumerator.supplier.ContinuousSnapshotSupplierFactory;
-import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
@@ -60,37 +59,36 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
     }
 
     public SELF startingVersion(String startingVersion) {
-        tryToSetOption(() -> sourceConfiguration.addOption(STARTING_VERSION, startingVersion));
+        tryToSetOption(() -> STARTING_VERSION.setOnConfig(sourceConfiguration, startingVersion));
         return self();
     }
 
     public SELF startingVersion(long startingVersion) {
-        tryToSetOption(() -> startingVersion(String.valueOf(startingVersion)));
+        tryToSetOption(() -> STARTING_VERSION.setOnConfig(sourceConfiguration, startingVersion));
         return self();
     }
 
     public SELF startingTimestamp(String startingTimestamp) {
-        tryToSetOption(() -> {
-            long toTimestamp = TimestampFormatConverter.convertToTimestamp(startingTimestamp);
-            sourceConfiguration.addOption(STARTING_TIMESTAMP, toTimestamp);
-        });
+        tryToSetOption(
+            () -> STARTING_TIMESTAMP.setOnConfig(sourceConfiguration, startingTimestamp)
+        );
         return self();
     }
 
     public SELF updateCheckIntervalMillis(long updateCheckInterval) {
         tryToSetOption(
-            () -> sourceConfiguration.addOption(UPDATE_CHECK_INTERVAL, updateCheckInterval)
+            () -> UPDATE_CHECK_INTERVAL.setOnConfig(sourceConfiguration, updateCheckInterval)
         );
         return self();
     }
 
     public SELF ignoreDeletes(boolean ignoreDeletes) {
-        tryToSetOption(() -> sourceConfiguration.addOption(IGNORE_DELETES, ignoreDeletes));
+        tryToSetOption(() -> IGNORE_DELETES.setOnConfig(sourceConfiguration, ignoreDeletes));
         return self();
     }
 
     public SELF ignoreChanges(boolean ignoreChanges) {
-        tryToSetOption(() -> sourceConfiguration.addOption(IGNORE_CHANGES, ignoreChanges));
+        tryToSetOption(() -> IGNORE_CHANGES.setOnConfig(sourceConfiguration, ignoreChanges));
         return self();
     }
 

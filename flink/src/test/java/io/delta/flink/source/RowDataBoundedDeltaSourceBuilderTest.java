@@ -195,9 +195,10 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                 assertThat(
                     exception
                         .getValidationMessages()
-                        .contains(
-                            "Text 'not_a_date' could not be parsed, unparsed text found at index 0"
-                        ),
+                        .stream().allMatch(message -> message.contains(
+                            "class java.time.format.DateTimeParseException - Text 'not_a_date' "
+                                + "could not be parsed, unparsed text found at index 0"
+                        )),
                     equalTo(true)
                 );
             }
