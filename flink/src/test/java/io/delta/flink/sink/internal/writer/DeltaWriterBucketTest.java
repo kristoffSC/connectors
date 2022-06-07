@@ -32,6 +32,7 @@ import io.delta.flink.sink.internal.committer.DeltaCommitter;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.sink.utils.TestParquetReader;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.formats.parquet.vector.ParquetColumnarRowSplitReader;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.SimpleCounter;
@@ -56,7 +57,7 @@ public class DeltaWriterBucketTest {
     private static final String BUCKET_ID = "testing-bucket";
     private static final String APP_ID = "1";
 
-    private Map<String, Counter> testCounters = new HashMap<>();
+    private final Map<String, Counter> testCounters = new HashMap<>();
 
     @Test
     public void testOnCheckpointNoPendingRecoverable() throws IOException {

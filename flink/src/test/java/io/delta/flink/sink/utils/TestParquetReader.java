@@ -21,14 +21,18 @@ package io.delta.flink.sink.utils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.vector.ParquetColumnarRowSplitReader;
 import org.apache.flink.formats.parquet.vector.ParquetSplitReaderUtil;
+import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.data.util.DataFormatConverters;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.utils.TypeConversions;
+import org.apache.flink.types.Row;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
@@ -72,21 +76,34 @@ public class TestParquetReader {
      * @throws IOException Thrown if an error occurs while reading the file
      */
     public static int parseAndCountRecords(Path parquetFilepath,
-                                           RowType rowType) throws IOException {
+        RowType rowType) throws IOException {
+
         ParquetColumnarRowSplitReader reader = getTestParquetReader(
             parquetFilepath,
             rowType
         );
 
+        DataFormatConverters.DataFormatConverter<RowData, Row> converter;
+        if (DeltaSinkTestUtils.TEST_ROW_TYPE.equals(rowType)) {
+            converter =  DeltaSinkTestUtils.CONVERTER;
+        } else if (DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE.equals(rowType)) {
+            converter = DeltaSinkTestUtils.PARTITIONED_CONVERTER;
+        } else {
+            throw new RuntimeException(
+                "Unable to find DataFormatConverters for used RowType. Probably new "
+                    + "implementation is needed"
+            );
+        }
+
         int recordsRead = 0;
         while (!reader.reachedEnd()) {
-            DeltaSinkTestUtils.CONVERTER.toExternal(reader.nextRecord());
+            converter.toExternal(reader.nextRecord());
             recordsRead++;
         }
         return recordsRead;
     }
 
-    private static ParquetColumnarRowSplitReader getTestParquetReader(
+    public static ParquetColumnarRowSplitReader getTestParquetReader(
         Path path, RowType rowType) throws IOException {
         return ParquetSplitReaderUtil.genPartColumnarRowReader(
             true, // utcTimestamp
@@ -103,4 +120,10 @@ public class TestParquetReader {
             0,
             Long.MAX_VALUE);
     }
+
+    private static ParquetColumnarRowSplitReader getTestParquetReader(
+        Path parquetFilePath, RowType rowtype, Map<String, Object> partitions) {
+        return null;
+    }
+
 }
