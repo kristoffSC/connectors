@@ -1,12 +1,13 @@
 package io.delta.flink.source.internal.builder;
 
 import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
+import org.apache.flink.util.StringUtils;
 
 /**
  * Implementation of {@link OptionTypeConverter} that converts values for
  * {@link DeltaConfigOption} from String Date/Datetime to its timestamp representation in long.
  */
-public class TimestampOptionTypeConverter extends BaseOptionTypeConverter {
+public class TimestampOptionTypeConverter extends BaseOptionTypeConverter<Long> {
 
     /**
      * Converts String value of {@link DeltaConfigOption} that represents Date or Datetime to its
@@ -26,6 +27,10 @@ public class TimestampOptionTypeConverter extends BaseOptionTypeConverter {
         OptionType type = OptionType.instanceFrom(decoratedType);
 
         if (type == OptionType.LONG) {
+            if (StringUtils.isNullOrWhitespaceOnly(valueToConvert)) {
+                throw invalidValueException(desiredOption.key(), valueToConvert);
+            }
+
             return (T) (Long) TimestampFormatConverter.convertToTimestamp(valueToConvert);
         }
 
@@ -35,6 +40,17 @@ public class TimestampOptionTypeConverter extends BaseOptionTypeConverter {
                     + "option type. This converter must be used only for "
                     + "DeltaConfigOption::Long however it was used for '%s' with option '%s'",
                 desiredOption.getValueType(), desiredOption.key())
+        );
+    }
+
+    private IllegalArgumentException invalidValueException(
+            String optionName,
+            String valueToConvert) {
+        return new IllegalArgumentException(
+            String.format(
+                "Illegal value used for [%s] option. Expected values are date/datetime String"
+                    + " formats. Please see documentation for allowed formats. Used value was [%s]",
+                optionName, valueToConvert)
         );
     }
 }

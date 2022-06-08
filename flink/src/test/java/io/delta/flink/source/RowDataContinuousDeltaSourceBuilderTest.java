@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -58,10 +60,11 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         assertThat(boundedSource.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
     }
 
-    @Test
-    public void shouldCreateSourceForStartingVersion() {
-        long startingVersion = 10;
-        String string_startingVersion = "10";
+    @ParameterizedTest(name = "{index}: StartingVersion = {0}")
+    @ValueSource(ints = {0, 10})
+    public void shouldCreateSourceForStartingVersion(int startingVersion) {
+
+        String stringStartingVersion = String.valueOf(startingVersion);
 
         when(deltaLog.getSnapshotForVersionAsOf(startingVersion)).thenReturn(headSnapshot);
 
@@ -74,16 +77,16 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
             getBuilderAllColumns().startingVersion(startingVersion),
 
             // set via dedicated method String
-            getBuilderAllColumns().startingVersion(string_startingVersion),
+            getBuilderAllColumns().startingVersion(stringStartingVersion),
 
             // set via generic option(int) method
-            getBuilderAllColumns().option(startingVersionKey, 10),
+            getBuilderAllColumns().option(startingVersionKey, startingVersion),
 
             // set via generic option(long) method
-            getBuilderAllColumns().option(startingVersionKey, 10L),
+            getBuilderAllColumns().option(startingVersionKey, (long) startingVersion),
 
             // set via generic option(int) String
-            getBuilderAllColumns().option(startingVersionKey, "10")
+            getBuilderAllColumns().option(startingVersionKey, stringStartingVersion)
         );
 
         assertAll(() -> {
@@ -93,7 +96,7 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                 assertThat(source.getBoundedness(), equalTo(Boundedness.CONTINUOUS_UNBOUNDED));
                 assertThat(
                     source.getSourceConfiguration().getValue(DeltaSourceOptions.STARTING_VERSION),
-                    equalTo(string_startingVersion)
+                    equalTo(stringStartingVersion)
                 );
             }
             // as many calls as we had builders
@@ -108,7 +111,11 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         List<Executable> builders = Arrays.asList(
             () -> getBuilderAllColumns().startingVersion("not_a_version"),
             () -> getBuilderAllColumns().option(startingVersionKey, "not_a_version"),
-            () -> getBuilderAllColumns().option(startingVersionKey, true)
+            () -> getBuilderAllColumns().option(startingVersionKey, ""),
+            () -> getBuilderAllColumns().option(startingVersionKey, " "),
+            () -> getBuilderAllColumns().option(startingVersionKey, true),
+            () -> getBuilderAllColumns().option(startingVersionKey, -1),
+            () -> getBuilderAllColumns().option(startingVersionKey, null)
         );
 
         // execute "option" on builder with invalid value.
@@ -122,8 +129,8 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                         .getValidationMessages()
                         .stream().allMatch(
                             message -> message.contains(
-                                "Illegal value used for StartingVersionOptionTypeConverter. "
-                                    + "Expected values are positive integers or \"latest\" "
+                                "Illegal value used for [startingVersion] option. "
+                                    + "Expected values are non-negative integers or \"latest\" "
                                     + "keyword (case insensitive). Used value was"
                             )
                         ),
@@ -174,7 +181,14 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
             () -> getBuilderAllColumns().startingTimestamp(timestamp),
 
             // set via generic option(String)
-            () -> getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), timestamp)
+            () -> getBuilderAllColumns()
+                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), timestamp),
+
+            () -> getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), ""),
+
+            () -> getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), " "),
+
+            () -> getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), null)
         );
 
         // execute "set" or "option" on builder with invalid value.
@@ -186,9 +200,11 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                 assertThat(
                     exception
                         .getValidationMessages()
-                        .contains(
-                            "class java.time.format.DateTimeParseException - Text 'not_a_date' "
-                                + "could not be parsed, unparsed text found at index 0"
+                        .stream()
+                        .allMatch(
+                            message -> message
+                                .contains("class java.time.format.DateTimeParseException") ||
+                                message.contains("class java.lang.IllegalArgumentException")
                         ),
                     equalTo(true)
                 );
@@ -232,6 +248,9 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         String updateCheckIntervalKey = DeltaSourceOptions.UPDATE_CHECK_INTERVAL.key();
         List<Executable> builders = Arrays.asList(
             () -> getBuilderAllColumns().option(updateCheckIntervalKey, "not_a_number"),
+            () -> getBuilderAllColumns().option(updateCheckIntervalKey, ""),
+            () -> getBuilderAllColumns().option(updateCheckIntervalKey, " "),
+            () -> getBuilderAllColumns().option(updateCheckIntervalKey, null),
             () -> getBuilderAllColumns().option(updateCheckIntervalKey, true)
         );
 
@@ -246,7 +265,8 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                         .getValidationMessages()
                         .stream()
                         .allMatch(message ->
-                            message.contains("class java.lang.NumberFormatException - For input")
+                            message.contains("class java.lang.NumberFormatException") ||
+                                message.contains("class java.lang.IllegalArgumentException")
                         ),
                     equalTo(true)
                 );
@@ -287,6 +307,9 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         String ignoreDeletesKey = DeltaSourceOptions.IGNORE_DELETES.key();
         List<Executable> builders = Arrays.asList(
             () -> getBuilderAllColumns().option(ignoreDeletesKey, "not_a_boolean"),
+            () -> getBuilderAllColumns().option(ignoreDeletesKey, " "),
+            () -> getBuilderAllColumns().option(ignoreDeletesKey, ""),
+            () -> getBuilderAllColumns().option(ignoreDeletesKey, null),
             () -> getBuilderAllColumns().option(ignoreDeletesKey, 1410)
         );
 
@@ -301,10 +324,12 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                         .getValidationMessages()
                         .stream()
                         .allMatch(message ->
-                            message.contains("class java.lang.IllegalArgumentException - Illegal "
-                                + "value used for BooleanOptionTypeConverter. Expected values "
-                                + "\"true\" or \"false\" keywords (case insensitive) or boolean "
-                                + "true, false values. Used value was")
+                            message.contains(
+                                "class java.lang.IllegalArgumentException - Illegal value used "
+                                    + "for [ignoreDeletes] option. Expected values \"true\" or "
+                                    + "\"false\" keywords (case insensitive) or boolean true, "
+                                    + "false values. Used value was"
+                            )
                         ),
                     equalTo(true)
                 );
@@ -345,6 +370,9 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         String ignoreChangesKey = DeltaSourceOptions.IGNORE_CHANGES.key();
         List<Executable> builders = Arrays.asList(
             () -> getBuilderAllColumns().option(ignoreChangesKey, "not_a_boolean"),
+            () -> getBuilderAllColumns().option(ignoreChangesKey, ""),
+            () -> getBuilderAllColumns().option(ignoreChangesKey, " "),
+            () -> getBuilderAllColumns().option(ignoreChangesKey, null),
             () -> getBuilderAllColumns().option(ignoreChangesKey, 1410)
         );
 
@@ -359,10 +387,11 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                         .getValidationMessages()
                         .stream()
                         .allMatch(message ->
-                            message.contains("class java.lang.IllegalArgumentException - Illegal "
-                                + "value used for BooleanOptionTypeConverter. Expected values "
-                                + "\"true\" or \"false\" keywords (case insensitive) or boolean "
-                                + "true, false values. Used value was")
+                            message.contains(
+                                "class java.lang.IllegalArgumentException - Illegal value used "
+                                    + "for [ignoreChanges] option. Expected values \"true\" or "
+                                    + "\"false\" keywords (case insensitive) or boolean true, "
+                                    + "false values. Used value was")
                         ),
                     equalTo(true)
                 );
@@ -472,6 +501,9 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
         String parquetBatchSizeKey = DeltaSourceOptions.PARQUET_BATCH_SIZE.key();
         List<Executable> builders = Arrays.asList(
             () -> getBuilderAllColumns().option(parquetBatchSizeKey, "not_a_number"),
+            () -> getBuilderAllColumns().option(parquetBatchSizeKey, ""),
+            () -> getBuilderAllColumns().option(parquetBatchSizeKey, " "),
+            () -> getBuilderAllColumns().option(parquetBatchSizeKey, null),
             () -> getBuilderAllColumns().option(parquetBatchSizeKey, true)
         );
 
@@ -486,7 +518,8 @@ class RowDataContinuousDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderT
                         .getValidationMessages()
                         .stream()
                         .allMatch(message ->
-                            message.contains("class java.lang.NumberFormatException - For input")
+                            message.contains("class java.lang.NumberFormatException") ||
+                                message.contains("class java.lang.IllegalArgumentException")
                         ),
                     equalTo(true)
                 );

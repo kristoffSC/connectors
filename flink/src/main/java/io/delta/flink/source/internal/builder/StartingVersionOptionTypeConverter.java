@@ -3,6 +3,7 @@ package io.delta.flink.source.internal.builder;
 import java.util.regex.Pattern;
 
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import org.apache.flink.util.StringUtils;
 
 /**
  * Implementation of {@link OptionTypeConverter} that validates values for
@@ -10,19 +11,19 @@ import io.delta.flink.source.internal.DeltaSourceOptions;
  * representation of a positive integer or {@link DeltaSourceOptions#STARTING_VERSION_LATEST}
  * keyword.
  */
-public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter {
+public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter<String> {
 
     private final Pattern POSITIVE_INT_PATTERN = Pattern.compile("\\d+");
 
     /**
-     * Validates value of {@link DeltaConfigOption} which String value represents positive integers
-     * or {@link DeltaSourceOptions#STARTING_VERSION_LATEST} keyword.
+     * Validates value of {@link DeltaConfigOption} which String value represents non-negative
+     * integer value or {@link DeltaSourceOptions#STARTING_VERSION_LATEST} keyword.
      * <p>
      *
      * @param desiredOption  The {@link DeltaConfigOption} instance we want to do the conversion
      *                       for.
      * @param valueToConvert String value to validate.
-     * @return A String representing a positive integer or
+     * @return A String representing a non-negative integer or
      * {@link DeltaSourceOptions#STARTING_VERSION_LATEST} keyword.
      * @throws IllegalArgumentException in case of validation failure.
      */
@@ -33,6 +34,10 @@ public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter 
         OptionType type = OptionType.instanceFrom(decoratedType);
 
         if (type == OptionType.STRING) {
+            if (StringUtils.isNullOrWhitespaceOnly(valueToConvert)) {
+                throw invalidValueException(desiredOption.key(), valueToConvert);
+            }
+
             if (DeltaSourceOptions.STARTING_VERSION_LATEST.equalsIgnoreCase(valueToConvert)) {
                 return (T) valueToConvert;
             }
@@ -41,12 +46,7 @@ public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter 
                 return (T) valueToConvert;
             }
 
-            throw new IllegalArgumentException(
-                String.format(
-                    "Illegal value used for StartingVersionOptionTypeConverter. Expected values "
-                        + "are positive integers or \"latest\" keyword (case insensitive). Used "
-                        + "value was [%s]", valueToConvert)
-                );
+            throw invalidValueException(desiredOption.key(), valueToConvert);
         }
 
         throw new IllegalArgumentException(
@@ -56,5 +56,16 @@ public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter 
                     + "DeltaConfigOption::String however it was used for '%s' with option '%s'",
                 desiredOption.getValueType(), desiredOption.key())
         );
+    }
+
+    private IllegalArgumentException invalidValueException(
+                String optionName,
+                String valueToConvert) {
+        return new IllegalArgumentException(
+            String.format(
+                "Illegal value used for [%s] option. Expected values "
+                    + "are non-negative integers or \"latest\" keyword (case insensitive). "
+                    + "Used value was [%s]",optionName, valueToConvert)
+            );
     }
 }

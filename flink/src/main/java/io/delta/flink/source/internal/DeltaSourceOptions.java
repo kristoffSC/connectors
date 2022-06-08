@@ -5,6 +5,7 @@ import java.util.Map;
 
 import io.delta.flink.source.internal.builder.BooleanOptionTypeConverter;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
+import io.delta.flink.source.internal.builder.NonNegativeNumberTypeConverter;
 import io.delta.flink.source.internal.builder.StartingVersionOptionTypeConverter;
 import io.delta.flink.source.internal.builder.TimestampOptionTypeConverter;
 import org.apache.flink.configuration.ConfigOptions;
@@ -61,7 +62,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Long> VERSION_AS_OF =
         DeltaConfigOption.of(
             ConfigOptions.key("versionAsOf").longType().noDefaultValue(),
-            Long.class);
+            Long.class,
+            new NonNegativeNumberTypeConverter<>());
 
     /**
      * An option that allow time travel to the latest {@link io.delta.standalone.Snapshot} that was
@@ -120,7 +122,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Long> UPDATE_CHECK_INTERVAL =
         DeltaConfigOption.of(
             ConfigOptions.key("updateCheckIntervalMillis").longType().defaultValue(5000L),
-            Long.class);
+            Long.class,
+            new NonNegativeNumberTypeConverter<>());
 
     /**
      * An option to specify initial delay (in milliseconds) for starting periodical Delta table
@@ -135,7 +138,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Long> UPDATE_CHECK_INITIAL_DELAY =
         DeltaConfigOption.of(
             ConfigOptions.key("updateCheckDelayMillis").longType().defaultValue(1000L),
-            Long.class);
+            Long.class,
+            new NonNegativeNumberTypeConverter<>());
 
     /**
      * An option used to allow processing Delta table versions containing only {@link
@@ -184,7 +188,8 @@ public class DeltaSourceOptions {
     public static final DeltaConfigOption<Integer> PARQUET_BATCH_SIZE =
         DeltaConfigOption.of(
             ConfigOptions.key("parquetBatchSize").intType().defaultValue(2048),
-            Integer.class);
+            Integer.class,
+            new NonNegativeNumberTypeConverter<>());
 
     // ----- INNER ONLY OPTIONS ----- //
     // Inner options should not be set by user, and they are used internally by Flin connector.

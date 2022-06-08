@@ -4,7 +4,7 @@ package io.delta.flink.source.internal.builder;
  * Implementation of {@link OptionTypeConverter} that validates values for
  * {@link DeltaConfigOption} with type Boolean.
  */
-public class BooleanOptionTypeConverter extends BaseOptionTypeConverter {
+public class BooleanOptionTypeConverter extends BaseOptionTypeConverter<Boolean> {
 
     /**
      * Converts String values for {@link DeltaConfigOption} with Boolean value type.
@@ -24,18 +24,12 @@ public class BooleanOptionTypeConverter extends BaseOptionTypeConverter {
 
         if (type == OptionType.BOOLEAN) {
 
-            if (
-                "true".equalsIgnoreCase(valueToConvert)
-                    || "false".equalsIgnoreCase(valueToConvert)) {
+            if ("true".equalsIgnoreCase(valueToConvert) ||
+                "false".equalsIgnoreCase(valueToConvert)) {
                 return (T) Boolean.valueOf(valueToConvert);
             }
 
-            throw new IllegalArgumentException(
-                String.format(
-                    "Illegal value used for BooleanOptionTypeConverter. Expected values "
-                        + "\"true\" or \"false\" keywords (case insensitive) or boolean true,"
-                        + " false values. Used value was [%s]", valueToConvert)
-            );
+            throw invalidValueException(desiredOption.key(), valueToConvert);
         }
 
         throw new IllegalArgumentException(
@@ -44,6 +38,18 @@ public class BooleanOptionTypeConverter extends BaseOptionTypeConverter {
                     + "option type. This converter must be used only for "
                     + "DeltaConfigOption::Boolean however it was used for '%s' with option '%s'",
                 desiredOption.getValueType(), desiredOption.key())
+        );
+    }
+
+    private IllegalArgumentException invalidValueException(
+            String optionName,
+            String valueToConvert) {
+        return new IllegalArgumentException(
+            String.format(
+                "Illegal value used for [%s] option. Expected values "
+                    + "\"true\" or \"false\" keywords (case insensitive) or boolean true,"
+                    + " false values. Used value was [%s]",
+                optionName, valueToConvert)
         );
     }
 }

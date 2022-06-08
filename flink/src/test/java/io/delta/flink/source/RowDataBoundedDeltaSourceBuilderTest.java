@@ -17,6 +17,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,9 +70,9 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
      * Test for versionAsOf.
      * This tests also checks option's value type conversion.
      */
-    @Test
-    public void shouldCreateSourceForVersionAsOf() {
-        long versionAsOf = 10;
+    @ParameterizedTest(name = "{index}: VersionAsOf = {0}")
+    @ValueSource(ints = {0, 10})
+    public void shouldCreateSourceForVersionAsOf(int versionAsOf) {
         when(deltaLog.getSnapshotForVersionAsOf(versionAsOf)).thenReturn(headSnapshot);
 
         StructField[] schema = {new StructField("col1", new StringType())};
@@ -78,10 +80,17 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
         String versionAsOfKey = DeltaSourceOptions.VERSION_AS_OF.key();
         List<RowDataBoundedDeltaSourceBuilder> builders = Arrays.asList(
-            getBuilderAllColumns().versionAsOf(versionAsOf), // set via dedicated method
-            getBuilderAllColumns().option(versionAsOfKey, 10), // set via generic option(int)
-            getBuilderAllColumns().option(versionAsOfKey, 10L), // set via generic option(long)
-            getBuilderAllColumns().option(versionAsOfKey, "10") // set via generic option(String)
+            // set via dedicated method
+            getBuilderAllColumns().versionAsOf(versionAsOf),
+
+            // set via generic option(int)
+            getBuilderAllColumns().option(versionAsOfKey, versionAsOf),
+
+            // set via generic option(long)
+            getBuilderAllColumns().option(versionAsOfKey, (long) versionAsOf),
+
+            // set via generic option(String)
+            getBuilderAllColumns().option(versionAsOfKey, String.valueOf(versionAsOf))
         );
 
         assertAll(() -> {
@@ -91,7 +100,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                 assertThat(source, notNullValue());
                 assertThat(source.getBoundedness(), equalTo(Boundedness.BOUNDED));
                 assertThat(source.getSourceConfiguration()
-                    .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo(versionAsOf));
+                    .getValue(DeltaSourceOptions.VERSION_AS_OF), equalTo((long) versionAsOf));
             }
             // as many calls as we had builders
             verify(deltaLog, times(builders.size())).getSnapshotForVersionAsOf(versionAsOf);
@@ -104,22 +113,23 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
      */
     @Test
     public void shouldThrowOnSourceWithInvalidVersionAsOf() {
+
+        String versionAsOfKey = DeltaSourceOptions.VERSION_AS_OF.key();
         List<Executable> builders = Arrays.asList(
+            // set via dedicated builder method
+            () -> getBuilderAllColumns().versionAsOf(-1),
+
             // set via generic option(String)
             () -> getBuilderAllColumns()
-                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), "timestamp"),
+                .option(versionAsOfKey, "timestamp"),
 
             // set via generic option(int)
             () -> getBuilderAllColumns()
-                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), 10),
+                .option(versionAsOfKey, -1),
 
-            // set via generic option(long)
+            // set via generic option(object)
             () -> getBuilderAllColumns()
-                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), 10L),
-
-            // set via generic option(boolean)
-            () -> getBuilderAllColumns()
-                .option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), true)
+                .option(versionAsOfKey, null)
         );
 
         // execute "set" or "option" on builder with invalid value.
@@ -132,8 +142,10 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                     exception
                         .getValidationMessages()
                         .stream()
-                        .allMatch(message -> message.contains(
-                            "could not be parsed, unparsed text found at index")),
+                        .allMatch(message ->
+                            message.contains("class java.lang.NumberFormatException") ||
+                            message.contains("class java.lang.IllegalArgumentException")
+                        ),
                     equalTo(true)
                 );
             }
@@ -176,14 +188,26 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
     @Test
     public void shouldThrowOnSourceWithInvalidTimestampAsOf() {
-        String timestamp = "not_a_date";
 
+        String timestampAsOfKey = DeltaSourceOptions.TIMESTAMP_AS_OF.key();
         List<Executable> builders = Arrays.asList(
             // set via dedicated method
-            () -> getBuilderAllColumns().timestampAsOf(timestamp),
+            () -> getBuilderAllColumns().timestampAsOf("not_a_date"),
+
+            // set via generic option(int)
+            () -> getBuilderAllColumns()
+                .option(timestampAsOfKey, 10),
+
+            // set via generic option(long)
+            () -> getBuilderAllColumns()
+                .option(timestampAsOfKey, 10L),
+
+            // set via generic option(boolean)
+            () -> getBuilderAllColumns()
+                .option(timestampAsOfKey, true),
 
             // set via generic option(String)
-            () -> getBuilderAllColumns().option(DeltaSourceOptions.TIMESTAMP_AS_OF.key(), timestamp)
+            () -> getBuilderAllColumns().option(timestampAsOfKey, "not_a_date")
         );
 
         // execute "set" or "option" on builder with invalid value.
@@ -196,8 +220,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
                     exception
                         .getValidationMessages()
                         .stream().allMatch(message -> message.contains(
-                            "class java.time.format.DateTimeParseException - Text 'not_a_date' "
-                                + "could not be parsed, unparsed text found at index 0"
+                            "class java.time.format.DateTimeParseException"
                         )),
                     equalTo(true)
                 );
