@@ -121,7 +121,7 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
 
             // set via generic option(String)
             () -> getBuilderAllColumns()
-                .option(versionAsOfKey, "timestamp"),
+                .option(versionAsOfKey, "foo"),
 
             // set via generic option(int)
             () -> getBuilderAllColumns()

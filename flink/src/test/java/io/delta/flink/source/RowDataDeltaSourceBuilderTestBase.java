@@ -225,9 +225,9 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
                     originalConfiguration.hasOption(DeltaSourceOptions.UPDATE_CHECK_INTERVAL),
                     equalTo(false)
                 );
-            assertThat(
-                originalConfiguration.hasOption(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY),
-                equalTo(false));
+                assertThat(
+                    originalConfiguration.hasOption(DeltaSourceOptions.UPDATE_CHECK_INITIAL_DELAY),
+                    equalTo(false));
             }
         );
 

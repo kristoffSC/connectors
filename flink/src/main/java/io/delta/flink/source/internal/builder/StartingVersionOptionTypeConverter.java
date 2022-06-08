@@ -13,7 +13,7 @@ import org.apache.flink.util.StringUtils;
  */
 public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter<String> {
 
-    private final Pattern POSITIVE_INT_PATTERN = Pattern.compile("\\d+");
+    private final Pattern NON_NEGATIVE_INT_PATTERN = Pattern.compile("\\d+");
 
     /**
      * Validates value of {@link DeltaConfigOption} which String value represents non-negative
@@ -42,7 +42,7 @@ public class StartingVersionOptionTypeConverter extends BaseOptionTypeConverter<
                 return (T) valueToConvert;
             }
 
-            if (POSITIVE_INT_PATTERN.matcher(valueToConvert).matches()) {
+            if (NON_NEGATIVE_INT_PATTERN.matcher(valueToConvert).matches()) {
                 return (T) valueToConvert;
             }
 
