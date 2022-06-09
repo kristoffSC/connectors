@@ -17,6 +17,7 @@ import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.FailoverType;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -263,7 +265,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // Creating a new thread that will wait some time to check if there are any "extra"
         // unexpected records.
-        Future<List<RowData>> unexpectedFuture = SINGLE_THREAD_EXECUTOR.submit(
+        Future<List<RowData>> unexpectedFuture = singleThreadExecutor.submit(
             () -> DataStreamUtils.collectRecordsFromUnboundedStream(client, 1));
 
         DeltaSourceConfiguration sourceConfiguration = source.getSourceConfiguration();

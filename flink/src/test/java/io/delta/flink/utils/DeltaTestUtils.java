@@ -4,6 +4,14 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CoreOptions;
+import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
+import org.apache.flink.runtime.minicluster.MiniCluster;
+import org.apache.flink.runtime.minicluster.RpcServiceSharing;
+import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
+import org.apache.flink.test.util.MiniClusterWithClientResource;
 
 public class DeltaTestUtils {
 
@@ -69,6 +77,52 @@ public class DeltaTestUtils {
         FileUtils.copyDirectory(
             new File(initialTablePath),
             new File(targetTablePath));
+    }
+
+    public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
+        MiniCluster miniCluster) throws Exception {
+        switch (type) {
+            case NONE:
+                afterFailAction.run();
+                break;
+            case TASK_MANAGER:
+                restartTaskManager(afterFailAction, miniCluster);
+                break;
+            case JOB_MANAGER:
+                triggerJobManagerFailover(jobId, afterFailAction, miniCluster);
+                break;
+        }
+    }
+
+    public static void triggerJobManagerFailover(
+        JobID jobId, Runnable afterFailAction, MiniCluster miniCluster) throws Exception {
+        System.out.println("Triggering Job Manager failover.");
+        HaLeadershipControl haLeadershipControl = miniCluster.getHaLeadershipControl().get();
+        haLeadershipControl.revokeJobMasterLeadership(jobId).get();
+        afterFailAction.run();
+        haLeadershipControl.grantJobMasterLeadership(jobId).get();
+    }
+
+    public static void restartTaskManager(Runnable afterFailAction, MiniCluster miniCluster)
+        throws Exception {
+        System.out.println("Triggering Task Manager failover.");
+        miniCluster.terminateTaskManager(0).get();
+        afterFailAction.run();
+        miniCluster.startTaskManager();
+    }
+
+    public static MiniClusterWithClientResource buildCluster(int parallelismLevel) {
+        Configuration configuration = new Configuration();
+        configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, false);
+
+        return new MiniClusterWithClientResource(
+            new MiniClusterResourceConfiguration.Builder()
+                .setNumberTaskManagers(1)
+                .setNumberSlotsPerTaskManager(parallelismLevel)
+                .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
+                .withHaLeadershipControl()
+                .setConfiguration(configuration)
+                .build());
     }
 
 }

@@ -10,33 +10,27 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.ExecutionITCaseTestConstants;
+import io.delta.flink.utils.FailoverType;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.connector.source.Boundedness;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.CoreOptions;
-import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
-import org.apache.flink.runtime.minicluster.MiniCluster;
-import org.apache.flink.runtime.minicluster.RpcServiceSharing;
-import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.CharType;
-import org.apache.flink.table.types.logical.IntType;
-import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.util.TestLogger;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
+import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -46,86 +40,34 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
-    protected static final LogicalType[] DATA_COLUMN_TYPES =
-        {new CharType(), new CharType(), new IntType()};
-
-    protected static final List<String> NAME_COLUMN_VALUES =
-        Stream.of("Jan", "Jan").collect(Collectors.toList());
-
-    protected static final Set<String> SURNAME_COLUMN_VALUES =
-        Stream.of("Kowalski", "Duda").collect(Collectors.toSet());
-
-    protected static final Set<Integer> AGE_COLUMN_VALUES =
-        Stream.of(1, 2).collect(Collectors.toSet());
-
-    /**
-     * Columns that are not used as a partition columns.
-     */
-    protected static final String[] DATA_COLUMN_NAMES = {"name", "surname", "age"};
-
-    // Large table has no partitions.
-    protected static final String[] LARGE_TABLE_ALL_COLUMN_NAMES = {"col1", "col2", "col3"};
-
-    protected static final int SMALL_TABLE_COUNT = 2;
-
-    protected static final int LARGE_TABLE_RECORD_COUNT = 1100;
-
     protected static final int PARALLELISM = 4;
 
-    protected static final ExecutorService SINGLE_THREAD_EXECUTOR =
+    protected final ExecutorService singleThreadExecutor =
         Executors.newSingleThreadExecutor();
 
-    public final MiniClusterWithClientResource miniClusterResource = buildCluster();
+    public final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
     /**
-     * Schema for this table has only {@link #DATA_COLUMN_NAMES} of type {@link #DATA_COLUMN_TYPES}
-     * columns.
+     * Schema for this table has only {@link ExecutionITCaseTestConstants#DATA_COLUMN_NAMES}
+     * of type {@link ExecutionITCaseTestConstants#DATA_COLUMN_TYPES} columns.
      */
     protected String nonPartitionedTablePath;
 
     /**
-     * Schema for this table contains data columns {@link #DATA_COLUMN_NAMES} and col1, col2
-     * partition columns. Types of data columns are {@link #DATA_COLUMN_TYPES}
+     * Schema for this table contains data columns
+     * {@link ExecutionITCaseTestConstants#DATA_COLUMN_NAMES} and col1, col2
+     * partition columns. Types of data columns are
+     * {@link ExecutionITCaseTestConstants#DATA_COLUMN_TYPES}
      */
     protected String partitionedTablePath;
 
     /**
-     * Schema for this table has only {@link #LARGE_TABLE_ALL_COLUMN_NAMES} of type {@link
-     * #LARGE_TABLE_ALL_COLUMN_NAMES} columns. Column types are long, long, String
+     * Schema for this table has only
+     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
+     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} columns.
+     * Column types are long, long, String
      */
     protected String nonPartitionedLargeTablePath;
-
-    private static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,
-        MiniCluster miniCluster) throws Exception {
-        switch (type) {
-            case NONE:
-                afterFailAction.run();
-                break;
-            case TASK_MANAGER:
-                restartTaskManager(afterFailAction, miniCluster);
-                break;
-            case JOB_MANAGER:
-                triggerJobManagerFailover(jobId, afterFailAction, miniCluster);
-                break;
-        }
-    }
-
-    private static void triggerJobManagerFailover(
-        JobID jobId, Runnable afterFailAction, MiniCluster miniCluster) throws Exception {
-        System.out.println("Triggering Job Manager failover.");
-        HaLeadershipControl haLeadershipControl = miniCluster.getHaLeadershipControl().get();
-        haLeadershipControl.revokeJobMasterLeadership(jobId).get();
-        afterFailAction.run();
-        haLeadershipControl.grantJobMasterLeadership(jobId).get();
-    }
-
-    public static void restartTaskManager(Runnable afterFailAction, MiniCluster miniCluster)
-        throws Exception {
-        System.out.println("Triggering Task Manager failover.");
-        miniCluster.terminateTaskManager(0).get();
-        afterFailAction.run();
-        miniCluster.startTaskManager();
-    }
 
     public static void beforeAll() throws IOException {
         TMP_FOLDER.create();
@@ -439,7 +381,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         // Trigger The Failover with desired failover failoverType and continue processing after
         // recovery.
-        triggerFailover(
+        DeltaTestUtils.triggerFailover(
             failoverType,
             jobId,
             RecordCounterToFail::continueProcessing,
@@ -540,7 +482,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             startTableUpdaterThread(testDescriptor, tableUpdater, client);
 
         RecordCounterToFail.waitToFail();
-        triggerFailover(
+        DeltaTestUtils.triggerFailover(
             failoverType,
             jobId,
             RecordCounterToFail::continueProcessing,
@@ -558,7 +500,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     protected <T> Future<List<T>> startInitialResultsFetcherThread(
         ContinuousTestDescriptor testDescriptor,
         ClientAndIterator<T> client) {
-        return SINGLE_THREAD_EXECUTOR.submit(
+        return singleThreadExecutor.submit(
             () -> (DataStreamUtils.collectRecordsFromUnboundedStream(client,
                 testDescriptor.getInitialDataSize())));
     }
@@ -595,23 +537,9 @@ public abstract class DeltaSourceITBase extends TestLogger {
         return env;
     }
 
-    private MiniClusterWithClientResource buildCluster() {
-        Configuration configuration = new Configuration();
-        configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, false);
-
-        return new MiniClusterWithClientResource(
-            new MiniClusterResourceConfiguration.Builder()
-                .setNumberTaskManagers(1)
-                .setNumberSlotsPerTaskManager(PARALLELISM)
-                .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
-                .withHaLeadershipControl()
-                .setConfiguration(configuration)
-                .build());
-    }
-
     private <T> Future<List<T>> startTableUpdaterThread(ContinuousTestDescriptor testDescriptor,
         DeltaTableUpdater tableUpdater, ClientAndIterator<T> client) {
-        return SINGLE_THREAD_EXECUTOR.submit(
+        return singleThreadExecutor.submit(
             () ->
             {
                 List<T> results = new LinkedList<>();
@@ -635,23 +563,4 @@ public abstract class DeltaSourceITBase extends TestLogger {
             )
         );
     }
-
-    public enum FailoverType {
-
-        /**
-         * Indicates that no failover should take place.
-         */
-        NONE,
-
-        /**
-         * Indicates that failover was caused by Task Manager failure
-         */
-        TASK_MANAGER,
-
-        /**
-         * Indicates that failover was caused by Job Manager failure
-         */
-        JOB_MANAGER
-    }
-
 }
