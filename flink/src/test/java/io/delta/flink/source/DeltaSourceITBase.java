@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -143,10 +143,9 @@ public abstract class DeltaSourceITBase extends TestLogger {
             nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
             partitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
 
-            // TODO Move this from DeltaSinkTestUtils to DeltaTestUtils
-            DeltaSinkTestUtils.initTestForSourcePartitionedTable(partitionedTablePath);
-            DeltaSinkTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
-            DeltaSinkTestUtils.initTestForNonPartitionedLargeTable(
+            DeltaTestUtils.initTestForSourcePartitionedTable(partitionedTablePath);
+            DeltaTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
+            DeltaTestUtils.initTestForNonPartitionedLargeTable(
                 nonPartitionedLargeTablePath);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);

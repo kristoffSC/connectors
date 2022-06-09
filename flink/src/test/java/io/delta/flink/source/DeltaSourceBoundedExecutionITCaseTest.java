@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.ContinuousTestDescriptor.Descriptor;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;

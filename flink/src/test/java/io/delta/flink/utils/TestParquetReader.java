@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package io.delta.flink.sink.utils;
+package io.delta.flink.utils;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.vector.ParquetColumnarRowSplitReader;
 import org.apache.flink.formats.parquet.vector.ParquetSplitReaderUtil;
@@ -91,7 +92,7 @@ public class TestParquetReader {
         return ParquetSplitReaderUtil.genPartColumnarRowReader(
             true, // utcTimestamp
             true, // caseSensitive
-            DeltaSinkTestUtils.getHadoopConf(),
+            DeltaTestUtils.getHadoopConf(),
             rowType.getFieldNames().toArray(new String[0]),
             rowType.getChildren().stream()
                 .map(TypeConversions::fromLogicalToDataType)

@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import io.delta.flink.DeltaTestUtils;
 import io.delta.flink.source.ContinuousTestDescriptor.Descriptor;
+import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.api.common.serialization.BulkWriter;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.core.fs.Path;

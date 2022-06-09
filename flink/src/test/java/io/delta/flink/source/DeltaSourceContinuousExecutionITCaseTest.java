@@ -12,12 +12,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import io.delta.flink.DeltaTestUtils;
-import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.source.ContinuousTestDescriptor.Descriptor;
 import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -220,7 +219,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // Create a Source object with option "startingVersion" == 1;
         DeltaSource<RowData> source =  DeltaSource.forContinuousRowData(
                 Path.fromLocalFile(new File(nonPartitionedTablePath)),
-                DeltaSinkTestUtils.getHadoopConf()
+                DeltaTestUtils.getHadoopConf()
             )
             .startingVersion(1)
             .build();
