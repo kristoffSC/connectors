@@ -1,4 +1,4 @@
-package io.delta.flink.source;
+package io.delta.flink.utils;
 
 import java.util.ArrayList;
 import java.util.Collections;

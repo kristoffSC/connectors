@@ -12,12 +12,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import io.delta.flink.source.ContinuousTestDescriptor.Descriptor;
-import io.delta.flink.source.RecordCounterToFail.FailCheck;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.utils.ContinuousTestDescriptor;
+import io.delta.flink.utils.ContinuousTestDescriptor.Descriptor;
+import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.FailoverType;
+import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;

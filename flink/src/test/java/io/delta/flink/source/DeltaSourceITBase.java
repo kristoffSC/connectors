@@ -11,10 +11,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import io.delta.flink.source.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.ContinuousTestDescriptor;
+import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.ExecutionITCaseTestConstants;
 import io.delta.flink.utils.FailoverType;
+import io.delta.flink.utils.RecordCounterToFail;
+import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -38,14 +41,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public abstract class DeltaSourceITBase extends TestLogger {
 
-    public static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
+    protected static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
     protected static final int PARALLELISM = 4;
 
     protected final ExecutorService singleThreadExecutor =
         Executors.newSingleThreadExecutor();
 
-    public final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
+    protected final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
     /**
      * Schema for this table has only {@link ExecutionITCaseTestConstants#DATA_COLUMN_NAMES}
