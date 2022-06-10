@@ -107,7 +107,7 @@ public class DeltaGlobalCommitterTest {
             DeltaSinkTestUtils.getListOfDeltaGlobalCommittables(
                 numAddedFiles, DeltaSinkTestUtils.getTestPartitionSpec());
         DeltaGlobalCommitter globalCommitter =
-            getTestGlobalCommitter(DeltaSinkTestUtils.TEST_ROW_TYPE);
+            getTestGlobalCommitter(DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE);
 
         // WHEN
         globalCommitter.commit(globalCommittables);
@@ -136,7 +136,7 @@ public class DeltaGlobalCommitterTest {
 
         // add new field to the schema
         RowType updatedSchema =
-            DeltaSinkTestUtils.addNewColumnToSchema(DeltaSinkTestUtils.TEST_ROW_TYPE);
+            DeltaSinkTestUtils.addNewColumnToSchema(DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE);
 
         DeltaGlobalCommitter globalCommitter = new DeltaGlobalCommitter(
             DeltaTestUtils.getHadoopConf(),
@@ -152,7 +152,7 @@ public class DeltaGlobalCommitterTest {
         // schema before deltaLog.update() is in old format, but after update it equals to the new
         // format
         assertEquals(deltaLog.snapshot().getMetadata().getSchema().toJson(),
-            SchemaConverter.toDeltaDataType(DeltaSinkTestUtils.TEST_ROW_TYPE).toJson());
+            SchemaConverter.toDeltaDataType(DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE).toJson());
         deltaLog.update();
         assertEquals(deltaLog.snapshot().getMetadata().getSchema().toJson(),
             SchemaConverter.toDeltaDataType(updatedSchema).toJson());
@@ -329,7 +329,7 @@ public class DeltaGlobalCommitterTest {
         );
 
         DeltaGlobalCommitter globalCommitter =
-            getTestGlobalCommitter(DeltaSinkTestUtils.TEST_ROW_TYPE);
+            getTestGlobalCommitter(DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE);
 
         // WHEN
         try {
@@ -426,7 +426,7 @@ public class DeltaGlobalCommitterTest {
         DeltaGlobalCommitter globalCommitter = new DeltaGlobalCommitter(
                 hadoopConfig,
                 tablePath,
-                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE,
                 false // mergeSchema
         );
 
