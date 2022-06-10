@@ -30,6 +30,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
@@ -41,6 +43,9 @@ import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
 public class DeltaEndToEndExecutionITCaseTest {
+
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DeltaEndToEndExecutionITCaseTest.class);
 
     private static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
@@ -56,7 +61,7 @@ public class DeltaEndToEndExecutionITCaseTest {
     private String sinkTablePath;
 
     @BeforeAll
-    public void beforeAll() throws IOException {
+    public static void beforeAll() throws IOException {
         TMP_FOLDER.create();
     }
 
@@ -83,7 +88,7 @@ public class DeltaEndToEndExecutionITCaseTest {
         DeltaTestUtils.initTestForNonPartitionedLargeTable(sourceTablePath);
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBoundedRowData(
-                new Path(sinkTablePath),
+                new Path(sourceTablePath),
                 DeltaTestUtils.getHadoopConf()
             )
             .build();
@@ -94,13 +99,9 @@ public class DeltaEndToEndExecutionITCaseTest {
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
         env.enableCheckpointing(100);
 
-
-
-        String sinkPath = TMP_FOLDER.newFolder().getAbsolutePath();
-
         RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
         DeltaSinkInternal<RowData> deltaSink = DeltaSink.forRowData(
-                new Path(sinkPath),
+                new Path(sinkTablePath),
                 DeltaTestUtils.getHadoopConf(),
                 rowType)
             .build();
@@ -116,22 +117,23 @@ public class DeltaEndToEndExecutionITCaseTest {
             miniCluster.executeJobBlocking(jobGraph);
         }
 
-        Snapshot snapshot = verifyDeltaTable(sinkPath, rowType);
+        Snapshot snapshot = verifyDeltaTable(sinkTablePath, rowType);
 
         CloseableIterator<RowRecord> iter = snapshot.open();
         RowRecord row;
         while (iter.hasNext()) {
             row = iter.next();
-            System.out.println(Arrays.toString(row.getSchema().getFieldNames()));
+            LOG.info(Arrays.toString(row.getSchema().getFieldNames()));
         }
         iter.close();
     }
 
+    @SuppressWarnings("unchecked")
     private Snapshot verifyDeltaTable(String sinkPath, RowType rowType) throws IOException {
         DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), sinkPath);
         Snapshot snapshot = deltaLog.snapshot();
         List<AddFile> deltaFiles = snapshot.getAllFiles();
-        int finalTableRecordsCount = TestParquetReader.readAndValidateAllTableRecords()
+        int finalTableRecordsCount = TestParquetReader
             .readAndValidateAllTableRecords(
                 deltaLog,
                 rowType,
