@@ -28,7 +28,7 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.vector.ParquetColumnarRowSplitReader;
 import org.apache.flink.formats.parquet.vector.ParquetSplitReaderUtil;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.data.util.DataFormatConverters;
+import org.apache.flink.table.data.util.DataFormatConverters.DataFormatConverter;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.utils.TypeConversions;
@@ -60,7 +60,25 @@ public class TestParquetReader {
         for (AddFile addedFile : deltaTableFiles) {
             Path parquetFilePath = new Path(deltaLog.getPath().toString(), addedFile.getPath());
             cumulatedRecords += TestParquetReader.parseAndCountRecords(
-                parquetFilePath, DeltaSinkTestUtils.TEST_ROW_TYPE);
+                parquetFilePath,
+                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                DeltaSinkTestUtils.TEST_ROW_TYPE_CONVERTER
+            );
+        }
+        return cumulatedRecords;
+    }
+
+    public static int readAndValidateAllTableRecords(
+        DeltaLog deltaLog,
+        RowType rowType,
+        DataFormatConverter<RowData, Row> converter) throws IOException {
+
+        List<AddFile> deltaTableFiles = deltaLog.snapshot().getAllFiles();
+        int cumulatedRecords = 0;
+        for (AddFile addedFile : deltaTableFiles) {
+            Path parquetFilePath = new Path(deltaLog.getPath().toString(), addedFile.getPath());
+            cumulatedRecords += TestParquetReader
+                .parseAndCountRecords(parquetFilePath, rowType, converter);
         }
         return cumulatedRecords;
     }
@@ -77,23 +95,12 @@ public class TestParquetReader {
      */
     public static int parseAndCountRecords(
             Path parquetFilepath,
-            RowType rowType) throws IOException {
+            RowType rowType,
+            DataFormatConverter<RowData, Row> converter) throws IOException {
         ParquetColumnarRowSplitReader reader = getTestParquetReader(
             parquetFilepath,
             rowType
         );
-
-        DataFormatConverters.DataFormatConverter<RowData, Row> converter;
-        if (DeltaSinkTestUtils.TEST_ROW_TYPE.equals(rowType)) {
-            converter =  DeltaSinkTestUtils.CONVERTER;
-        } else if (DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE.equals(rowType)) {
-            converter = DeltaSinkTestUtils.PARTITIONED_CONVERTER;
-        } else {
-            throw new RuntimeException(
-                "Unable to find DataFormatConverters for used RowType. Probably new "
-                    + "implementation is needed"
-            );
-        }
 
         int recordsRead = 0;
         while (!reader.reachedEnd()) {

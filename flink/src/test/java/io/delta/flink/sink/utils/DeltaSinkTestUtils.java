@@ -82,11 +82,12 @@ public class DeltaSinkTestUtils {
     ));
 
     @SuppressWarnings("unchecked")
-    public static final DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
-        DataFormatConverters.getConverterForDataType(
+    public static final DataFormatConverters.DataFormatConverter<RowData, Row>
+        TEST_ROW_TYPE_CONVERTER = DataFormatConverters.getConverterForDataType(
             TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE)
         );
 
+    @SuppressWarnings("unchecked")
     public static final DataFormatConverters.DataFormatConverter<RowData, Row>
             PARTITIONED_CONVERTER = DataFormatConverters.getConverterForDataType(
             TypeConversions.fromLogicalToDataType(TEST_PARTITIONED_ROW_TYPE)
@@ -97,7 +98,7 @@ public class DeltaSinkTestUtils {
         for (int i = 0; i < num_records; i++) {
             Integer v = i;
             rows.add(
-                CONVERTER.toInternal(
+                TEST_ROW_TYPE_CONVERTER.toInternal(
                     Row.of(
                         String.valueOf(v),
                         String.valueOf((v + v)),
@@ -111,7 +112,7 @@ public class DeltaSinkTestUtils {
     public static RowData getTestRowDataEvent(String name,
                                               String surname,
                                               Integer age) {
-        return CONVERTER.toInternal(Row.of(name, surname, age));
+        return TEST_ROW_TYPE_CONVERTER.toInternal(Row.of(name, surname, age));
     }
 
     public static RowType addNewColumnToSchema(RowType schema) {
@@ -266,7 +267,9 @@ public class DeltaSinkTestUtils {
             assertTrue(file.length() > 100);
             totalRecordsCount += TestParquetReader.parseAndCountRecords(
                 new Path(file.toURI()),
-                DeltaSinkTestUtils.TEST_ROW_TYPE);
+                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                TEST_ROW_TYPE_CONVERTER
+            );
         }
         return totalRecordsCount;
     }

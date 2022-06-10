@@ -301,7 +301,11 @@ public class DeltaWriterBucketTest {
         for (DeltaCommittable committable : committables) {
             Path filePath = new Path(bucketPath, committable.getDeltaPendingFile().getFileName());
             writtenRecordsCount +=
-                TestParquetReader.parseAndCountRecords(filePath, DeltaSinkTestUtils.TEST_ROW_TYPE);
+                TestParquetReader.parseAndCountRecords(
+                    filePath,
+                    DeltaSinkTestUtils.TEST_ROW_TYPE,
+                    DeltaSinkTestUtils.TEST_ROW_TYPE_CONVERTER
+                );
         }
         return writtenRecordsCount;
     }

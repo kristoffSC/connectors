@@ -125,8 +125,9 @@ public class DeltaSinkStreamingExecutionITCase extends StreamingExecutionFileSin
         List<AddFile> initialDeltaFiles = deltaLog.snapshot().getAllFiles();
 
         long initialVersion = deltaLog.snapshot().getVersion();
-        int initialTableRecordsCount = TestParquetReader.readAndValidateAllTableRecords(deltaLog);
-        assertEquals(2, initialTableRecordsCount);
+        int initialTableRecordsCount = TestParquetReader
+            .readAndValidateAllTableRecords(deltaLog);
+        assertEquals(initialDeltaFiles.size(), 2);
 
         JobGraph jobGraph = createJobGraph(deltaTablePath);
 
@@ -290,7 +291,7 @@ public class DeltaSinkStreamingExecutionITCase extends StreamingExecutionFileSin
         private void sendRecordsUntil(int targetNumber, SourceContext<RowData> ctx) {
             while (!isCanceled && nextValue < targetNumber) {
                 synchronized (ctx.getCheckpointLock()) {
-                    RowData row = DeltaSinkTestUtils.CONVERTER.toInternal(
+                    RowData row = DeltaSinkTestUtils.TEST_ROW_TYPE_CONVERTER.toInternal(
                         Row.of(
                             String.valueOf(nextValue),
                             String.valueOf((nextValue + nextValue)),
