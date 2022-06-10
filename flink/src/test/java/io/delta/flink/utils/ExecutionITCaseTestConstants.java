@@ -5,9 +5,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.table.types.logical.VarCharType;
 
 public final class ExecutionITCaseTestConstants {
 
@@ -34,6 +36,9 @@ public final class ExecutionITCaseTestConstants {
 
     // Large table has no partitions.
     public static final String[] LARGE_TABLE_ALL_COLUMN_NAMES = {"col1", "col2", "col3"};
+
+    public static final LogicalType[] LARGE_TABLE_ALL_COLUMN_TYPES =
+        {new BigIntType(), new BigIntType(), new VarCharType()};
 
     public static final int SMALL_TABLE_COUNT = 2;
 

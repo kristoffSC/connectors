@@ -67,7 +67,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
     /**
      * Schema for this table has only
      * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
-     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} columns.
+     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_TYPES} columns.
      * Column types are long, long, String
      */
     protected String nonPartitionedLargeTablePath;
