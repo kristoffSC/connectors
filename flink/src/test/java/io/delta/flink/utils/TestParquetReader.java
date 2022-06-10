@@ -75,9 +75,9 @@ public class TestParquetReader {
      * @return count of written records
      * @throws IOException Thrown if an error occurs while reading the file
      */
-    public static int parseAndCountRecords(Path parquetFilepath,
-        RowType rowType) throws IOException {
-
+    public static int parseAndCountRecords(
+            Path parquetFilepath,
+            RowType rowType) throws IOException {
         ParquetColumnarRowSplitReader reader = getTestParquetReader(
             parquetFilepath,
             rowType
