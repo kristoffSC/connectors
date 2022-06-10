@@ -73,10 +73,24 @@ public class DeltaSinkTestUtils {
         new RowType.RowField("age", new IntType())
     ));
 
+    public static final RowType TEST_PARTITIONED_ROW_TYPE = new RowType(Arrays.asList(
+        new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("age", new IntType()),
+        new RowType.RowField("col1", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("col2", new VarCharType(VarCharType.MAX_LENGTH))
+    ));
+
     @SuppressWarnings("unchecked")
-    public static final DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
-        DataFormatConverters.getConverterForDataType(
+    public static final DataFormatConverters.DataFormatConverter<RowData, Row>
+        TEST_ROW_TYPE_CONVERTER = DataFormatConverters.getConverterForDataType(
             TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE)
+        );
+
+    @SuppressWarnings("unchecked")
+    public static final DataFormatConverters.DataFormatConverter<RowData, Row>
+            PARTITIONED_CONVERTER = DataFormatConverters.getConverterForDataType(
+            TypeConversions.fromLogicalToDataType(TEST_PARTITIONED_ROW_TYPE)
         );
 
     public static List<RowData> getTestRowData(int num_records) {
@@ -84,7 +98,7 @@ public class DeltaSinkTestUtils {
         for (int i = 0; i < num_records; i++) {
             Integer v = i;
             rows.add(
-                CONVERTER.toInternal(
+                TEST_ROW_TYPE_CONVERTER.toInternal(
                     Row.of(
                         String.valueOf(v),
                         String.valueOf((v + v)),
@@ -98,7 +112,7 @@ public class DeltaSinkTestUtils {
     public static RowData getTestRowDataEvent(String name,
                                               String surname,
                                               Integer age) {
-        return CONVERTER.toInternal(Row.of(name, surname, age));
+        return TEST_ROW_TYPE_CONVERTER.toInternal(Row.of(name, surname, age));
     }
 
     public static RowType addNewColumnToSchema(RowType schema) {
@@ -253,7 +267,9 @@ public class DeltaSinkTestUtils {
             assertTrue(file.length() > 100);
             totalRecordsCount += TestParquetReader.parseAndCountRecords(
                 new Path(file.toURI()),
-                DeltaSinkTestUtils.TEST_ROW_TYPE);
+                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                TEST_ROW_TYPE_CONVERTER
+            );
         }
         return totalRecordsCount;
     }
