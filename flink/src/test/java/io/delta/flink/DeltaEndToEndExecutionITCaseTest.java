@@ -1,6 +1,5 @@
 package io.delta.flink;
 
-import io.delta.flink.utils.ContinuousTestDescriptor;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -9,10 +8,11 @@ import java.util.concurrent.Executors;
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.internal.DeltaSinkInternal;
 import io.delta.flink.source.DeltaSource;
+import io.delta.flink.utils.ContinuousTestDescriptor;
 import io.delta.flink.utils.DeltaTestUtils;
-import io.delta.flink.utils.ExecutionExpectedResult;
 import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.TableUpdateDescriptor;
 import io.delta.flink.utils.TestParquetReader;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -34,15 +34,20 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.DATA_COLUMN_NAMES;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.DATA_COLUMN_TYPES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_RECORD_COUNT;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.SMALL_TABLE_COUNT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.data.CloseableIterator;
+import io.delta.standalone.data.RowRecord;
 
 public class DeltaEndToEndExecutionITCaseTest {
 
@@ -119,15 +124,13 @@ public class DeltaEndToEndExecutionITCaseTest {
             miniClusterResource
         );
 
-        ExecutionExpectedResult expectedResult =
-            new ExecutionExpectedResult(LARGE_TABLE_RECORD_COUNT, 0, PARALLELISM);
-        verifyDeltaTable(sinkTablePath, rowType, expectedResult);
+        verifyDeltaTable(sinkTablePath, rowType, LARGE_TABLE_RECORD_COUNT);
     }
 
     @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
     @EnumSource(FailoverType.class)
-    public void endToEndUnboundedStream(FailoverType failoverType) throws Exception {
-        DeltaTestUtils.initTestForNonPartitionedLargeTable(sourceTablePath);
+    public void endToEndUnBoundedStream(FailoverType failoverType) throws Exception {
+        DeltaTestUtils.initTestForNonPartitionedTable(sourceTablePath);
 
         DeltaSource<RowData> deltaSource = DeltaSource.forContinuousRowData(
                 new Path(sourceTablePath),
@@ -135,7 +138,7 @@ public class DeltaEndToEndExecutionITCaseTest {
             )
             .build();
 
-        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
+        RowType rowType = RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES);
         DeltaSinkInternal<RowData> deltaSink = DeltaSink.forRowData(
                 new Path(sinkTablePath),
                 DeltaTestUtils.getHadoopConf(),
@@ -152,27 +155,39 @@ public class DeltaEndToEndExecutionITCaseTest {
             env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "delta-source");
         stream.sinkTo(deltaSink);
 
+        int numberOfTableUpdateBulks = 5;
+        int rowsPerTableUpdate = 5;
+        int expectedRowCount = SMALL_TABLE_COUNT + numberOfTableUpdateBulks * rowsPerTableUpdate;
+
+        ContinuousTestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
+            deltaSource.getTablePath().toUri().toString(),
+            RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
+            SMALL_TABLE_COUNT,
+            new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
+        );
+
         DeltaTestUtils.testContinuousStream(
             failoverType,
-            new ContinuousTestDescriptor(sourceTablePath, )
-            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2,
+            testDescriptor,
+            (FailCheck) readRows -> readRows == expectedRowCount/ 2,
             stream,
             miniClusterResource
         );
 
-        ExecutionExpectedResult expectedResult =
-            new ExecutionExpectedResult(LARGE_TABLE_RECORD_COUNT, 0, PARALLELISM);
-        verifyDeltaTable(sinkTablePath, rowType, expectedResult);
+        verifyDeltaTable(sinkTablePath, rowType, expectedRowCount);
     }
 
     @SuppressWarnings("unchecked")
     private void verifyDeltaTable(
             String sinkPath,
             RowType rowType,
-            ExecutionExpectedResult expectedResult) throws IOException {
+            Integer expectedNumberOfRecords) throws IOException {
 
         DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), sinkPath);
         Snapshot snapshot = deltaLog.snapshot();
+        CloseableIterator<RowRecord> open = snapshot.open();
+        System.out.println(open);
+        open.close();
         List<AddFile> deltaFiles = snapshot.getAllFiles();
         int finalTableRecordsCount = TestParquetReader
             .readAndValidateAllTableRecords(
@@ -182,7 +197,6 @@ public class DeltaEndToEndExecutionITCaseTest {
                     TypeConversions.fromLogicalToDataType(rowType)));
         long finalVersion = snapshot.getVersion();
 
-        // Assert This
         LOG.info(
             String.format(
                 "RESULTS: final record count: [%d], final table version: [%d], number of Delta "
@@ -193,8 +207,6 @@ public class DeltaEndToEndExecutionITCaseTest {
             )
         );
 
-        assertThat(finalTableRecordsCount, equalTo(expectedResult.getExpectedNumberOfRecords()));
-        assertThat(finalVersion, equalTo(expectedResult.getExpectedVersion()));
-        assertThat(deltaFiles.size(), equalTo(expectedResult.getExpectedNumberOfFiles()));
+        assertThat(finalTableRecordsCount, equalTo(expectedNumberOfRecords));
     }
 }

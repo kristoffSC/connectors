@@ -47,16 +47,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
 
     /**
-     * Number of updates done on Delta table, where each updated is bounded into one transaction
-     */
-    private static final int NUMBER_OF_TABLE_UPDATE_BULKS = 5;
-
-    /**
-     * Number of rows added per each update of Delta table
-     */
-    private static final int ROWS_PER_TABLE_UPDATE = 5;
-
-    /**
      * Number of rows in Delta table before inserting a new data into it.
      */
     private static final int INITIAL_DATA_SIZE = 2;
@@ -362,11 +352,14 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         FailoverType failoverType)
         throws Exception {
 
+        int numberOfTableUpdateBulks = 5;
+        int rowsPerTableUpdate = 5;
+
         ContinuousTestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
                 deltaSource.getTablePath().toUri().toString(),
                 RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
                 INITIAL_DATA_SIZE,
-                new TableUpdateDescriptor(NUMBER_OF_TABLE_UPDATE_BULKS, ROWS_PER_TABLE_UPDATE)
+                new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
         );
 
         // WHEN
@@ -374,7 +367,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
                 (FailCheck) readRows -> readRows
                     ==
-                    (INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE)
+                    (INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate)
                         / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
@@ -391,9 +384,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             totalNumberOfRows,
-            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
+            equalTo(INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate));
         assertThat("Source Produced Different Rows that were in Delta Table",
             uniqueValues.size(),
-            equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
+            equalTo(INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate));
     }
 }
