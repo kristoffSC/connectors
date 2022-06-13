@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -90,7 +92,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
         // FailoverType.NONE.
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new ContinuousTestDescriptor(INITIAL_DATA_SIZE),
+            new ContinuousTestDescriptor(
+                deltaSource.getTablePath().toUri().toString(),
+                INITIAL_DATA_SIZE),
             (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
 
         // total number of read rows.
@@ -120,7 +124,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new ContinuousTestDescriptor(LARGE_TABLE_RECORD_COUNT),
+            new ContinuousTestDescriptor(
+                deltaSource.getTablePath().toUri().toString(),
+                LARGE_TABLE_RECORD_COUNT),
             (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
@@ -257,12 +263,16 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         int expectedNumberOfChanges =
             versionOneUpdate.getNumberOfNewRows() + versionTwoUpdate.getNumberOfNewRows();
 
+        ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+
         // Read data
         Future<List<RowData>> dataFuture =
-            startInitialResultsFetcherThread(
+            DeltaTestUtils.startInitialResultsFetcherThread(
                 new ContinuousTestDescriptor(
+                    source.getTablePath().toUri().toString(),
                     versionOneUpdate.getNumberOfNewRows() + versionTwoUpdate.getNumberOfNewRows()),
-                client
+                client,
+                singleThreadExecutor
             );
 
         // Creating a new thread that will wait some time to check if there are any "extra"
@@ -306,8 +316,12 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     @Override
     protected List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource) throws Exception {
-        return testContinuousDeltaSource(FailoverType.NONE, deltaSource,
-            new ContinuousTestDescriptor(2), (FailCheck) integer -> true).get(0);
+        return testContinuousDeltaSource(
+                FailoverType.NONE,
+                deltaSource,
+                new ContinuousTestDescriptor(deltaSource.getTablePath().toUri().toString(), 2),
+                (FailCheck) integer -> true)
+            .get(0);
     }
 
     /**
@@ -347,7 +361,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         DeltaSource<RowData> deltaSource,
         FailoverType failoverType)
         throws Exception {
-        ContinuousTestDescriptor testDescriptor = prepareTableUpdates();
+
+        ContinuousTestDescriptor testDescriptor =
+            prepareTableUpdates(deltaSource.getTablePath().toUri().toString());
 
         // WHEN
         List<List<RowData>> resultData =
@@ -382,8 +398,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      * describes a scenario where Delta table will be updated {@link #NUMBER_OF_TABLE_UPDATE_BULKS}
      * times, where every update will contain {@link #ROWS_PER_TABLE_UPDATE} new unique rows.
      */
-    private ContinuousTestDescriptor prepareTableUpdates() {
-        ContinuousTestDescriptor testDescriptor = new ContinuousTestDescriptor(INITIAL_DATA_SIZE);
+    private ContinuousTestDescriptor prepareTableUpdates(String tablePath) {
+        ContinuousTestDescriptor testDescriptor =
+            new ContinuousTestDescriptor(tablePath, INITIAL_DATA_SIZE);
         for (int i = 0; i < NUMBER_OF_TABLE_UPDATE_BULKS; i++) {
             List<Row> newRows = new ArrayList<>();
             for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
