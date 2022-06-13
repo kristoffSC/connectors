@@ -399,8 +399,10 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      * times, where every update will contain {@link #ROWS_PER_TABLE_UPDATE} new unique rows.
      */
     private ContinuousTestDescriptor prepareTableUpdates(String tablePath) {
+
         ContinuousTestDescriptor testDescriptor =
             new ContinuousTestDescriptor(tablePath, INITIAL_DATA_SIZE);
+
         for (int i = 0; i < NUMBER_OF_TABLE_UPDATE_BULKS; i++) {
             List<Row> newRows = new ArrayList<>();
             for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
