@@ -2,7 +2,6 @@ package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -22,6 +21,7 @@ import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.TableUpdateDescriptor;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -362,8 +362,12 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         FailoverType failoverType)
         throws Exception {
 
-        ContinuousTestDescriptor testDescriptor =
-            prepareTableUpdates(deltaSource.getTablePath().toUri().toString());
+        ContinuousTestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
+                deltaSource.getTablePath().toUri().toString(),
+                RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
+                INITIAL_DATA_SIZE,
+                new TableUpdateDescriptor(NUMBER_OF_TABLE_UPDATE_BULKS, ROWS_PER_TABLE_UPDATE)
+        );
 
         // WHEN
         List<List<RowData>> resultData =
@@ -391,26 +395,5 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         assertThat("Source Produced Different Rows that were in Delta Table",
             uniqueValues.size(),
             equalTo(INITIAL_DATA_SIZE + NUMBER_OF_TABLE_UPDATE_BULKS * ROWS_PER_TABLE_UPDATE));
-    }
-
-    /**
-     * Creates a {@link ContinuousTestDescriptor} for tests. The descriptor created by this method
-     * describes a scenario where Delta table will be updated {@link #NUMBER_OF_TABLE_UPDATE_BULKS}
-     * times, where every update will contain {@link #ROWS_PER_TABLE_UPDATE} new unique rows.
-     */
-    private ContinuousTestDescriptor prepareTableUpdates(String tablePath) {
-
-        ContinuousTestDescriptor testDescriptor =
-            new ContinuousTestDescriptor(tablePath, INITIAL_DATA_SIZE);
-
-        for (int i = 0; i < NUMBER_OF_TABLE_UPDATE_BULKS; i++) {
-            List<Row> newRows = new ArrayList<>();
-            for (int j = 0; j < ROWS_PER_TABLE_UPDATE; j++) {
-                newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
-            }
-            testDescriptor.add(
-                RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES), newRows);
-        }
-        return testDescriptor;
     }
 }
