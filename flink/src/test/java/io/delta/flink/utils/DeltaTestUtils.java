@@ -22,7 +22,9 @@ import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
+import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
+import org.apache.flink.types.Row;
 
 public class DeltaTestUtils {
 
@@ -359,4 +361,30 @@ public class DeltaTestUtils {
             });
     }
 
+    /**
+     * Creates a {@link ContinuousTestDescriptor} for tests. The descriptor created by this method
+     * describes a scenario where Delta table will be updated
+     * {@link TableUpdateDescriptor#getNumberOfNewVersions()}
+     * times, where every update/version will contain
+     * {@link TableUpdateDescriptor#getNumberOfRecordsPerNewVersion()}
+     * new unique rows.
+     */
+    public static ContinuousTestDescriptor prepareTableUpdates(
+            String tablePath,
+            RowType rowType,
+            int initialDataSize,
+            TableUpdateDescriptor tableUpdateDescriptor) {
+
+        ContinuousTestDescriptor testDescriptor =
+            new ContinuousTestDescriptor(tablePath, initialDataSize);
+
+        for (int i = 0; i < tableUpdateDescriptor.getNumberOfNewVersions(); i++) {
+            List<Row> newRows = new ArrayList<>();
+            for (int j = 0; j < tableUpdateDescriptor.getNumberOfRecordsPerNewVersion(); j++) {
+                newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
+            }
+            testDescriptor.add(rowType, newRows);
+        }
+        return testDescriptor;
+    }
 }
