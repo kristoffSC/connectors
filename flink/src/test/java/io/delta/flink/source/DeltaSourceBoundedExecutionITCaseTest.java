@@ -129,7 +129,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     }
 
     // TODO PR 14 finish this, read all columns
-    @Test
+    // @Test
     public void foo() throws Exception {
         String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
         //DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
