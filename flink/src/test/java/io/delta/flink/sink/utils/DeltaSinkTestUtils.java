@@ -341,7 +341,7 @@ public class DeltaSinkTestUtils {
                 ),
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
-                DeltaSinkTestUtils.TEST_ROW_TYPE,
+                DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE,
                 false // mergeSchema
             );
             return builder
