@@ -128,6 +128,19 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
     }
 
+    // TODO PR 14 finish this, read all columns
+    @Test
+    public void foo() throws Exception {
+        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+        //DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
+        DeltaTestUtils.initTestFor("/test-data/table", sourceTablePath);
+
+        DeltaSource<RowData> deltaSource = initSourceAllColumns(sourceTablePath);
+
+        List<RowData> rowData = testBoundedDeltaSource(deltaSource);
+        System.out.println(rowData);
+    }
+
     @Override
     protected List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource) throws Exception {
         return testBoundedDeltaSource(deltaSource);

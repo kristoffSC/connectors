@@ -1,9 +1,13 @@
 package io.delta.flink;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
+import java.sql.Timestamp;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.internal.DeltaSinkInternal;
@@ -28,12 +32,16 @@ import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.ALL_DATA_TABLE_COLUMN_NAMES;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.ALL_DATA_TABLE_COLUMN_TYPES;
+import static io.delta.flink.utils.ExecutionITCaseTestConstants.ALL_DATA_TABLE_RECORD_COUNT;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.DATA_COLUMN_NAMES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.DATA_COLUMN_TYPES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
@@ -42,6 +50,8 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_RECO
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.SMALL_TABLE_COUNT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.core.IsNot.not;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -57,9 +67,6 @@ public class DeltaEndToEndExecutionITCaseTest {
     private static final TemporaryFolder TMP_FOLDER = new TemporaryFolder();
 
     private static final int PARALLELISM = 4;
-
-    private final ExecutorService singleThreadExecutor =
-        Executors.newSingleThreadExecutor();
 
     private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
@@ -92,7 +99,7 @@ public class DeltaEndToEndExecutionITCaseTest {
 
     @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
     @EnumSource(FailoverType.class)
-    public void endToEndBoundedStream(FailoverType failoverType) throws Exception {
+    public void testEndToEndBoundedStream(FailoverType failoverType) throws Exception {
         DeltaTestUtils.initTestForNonPartitionedLargeTable(sourceTablePath);
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBoundedRowData(
@@ -129,7 +136,7 @@ public class DeltaEndToEndExecutionITCaseTest {
 
     @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
     @EnumSource(FailoverType.class)
-    public void endToEndUnBoundedStream(FailoverType failoverType) throws Exception {
+    public void testEndToEndUnBoundedStream(FailoverType failoverType) throws Exception {
         DeltaTestUtils.initTestForNonPartitionedTable(sourceTablePath);
 
         DeltaSource<RowData> deltaSource = DeltaSource.forContinuousRowData(
@@ -177,17 +184,108 @@ public class DeltaEndToEndExecutionITCaseTest {
         verifyDeltaTable(sinkTablePath, rowType, expectedRowCount);
     }
 
+    @Test
+    public void testEndToEndReadAllDataTypes() throws Exception {
+        DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
+
+        DeltaSource<RowData> deltaSource = DeltaSource.forBoundedRowData(
+                new Path(sourceTablePath),
+                DeltaTestUtils.getHadoopConf()
+            )
+            .build();
+
+        RowType rowType = RowType.of(ALL_DATA_TABLE_COLUMN_TYPES, ALL_DATA_TABLE_COLUMN_NAMES);
+        DeltaSinkInternal<RowData> deltaSink = DeltaSink.forRowData(
+                new Path(sinkTablePath),
+                DeltaTestUtils.getHadoopConf(),
+                rowType)
+            .build();
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(PARALLELISM);
+        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
+        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
+
+        DataStream<RowData> stream =
+            env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "delta-source");
+        stream.sinkTo(deltaSink);
+
+        DeltaTestUtils.testBoundedStream(stream, miniClusterResource);
+
+        Snapshot snapshot = verifyDeltaTable(sinkTablePath, rowType, ALL_DATA_TABLE_RECORD_COUNT);
+
+        final AtomicInteger index = new AtomicInteger(0);
+        try(CloseableIterator<RowRecord> iterator = snapshot.open()) {
+            while (iterator.hasNext()) {
+                final int i = index.getAndIncrement();
+                BigDecimal expectedBigDecimal = (i > 0) ?
+                    BigDecimal.valueOf((double) i).setScale(18) :
+                    new BigDecimal(
+                        new BigInteger(String.valueOf(i)),
+                        18, // scale
+                        MathContext.DECIMAL32
+                    );
+
+                RowRecord row = iterator.next();
+                LOG.info("Row Content: " + row.toString());
+                assertAll(() -> {
+                        assertThat(row.getByte(ALL_DATA_TABLE_COLUMN_NAMES[0]),
+                            equalTo(new Integer(i).byteValue()));
+                        assertThat(row.getShort(ALL_DATA_TABLE_COLUMN_NAMES[1]),
+                            equalTo((short) i));
+                        assertThat(row.getInt(ALL_DATA_TABLE_COLUMN_NAMES[2]), equalTo(i));
+                        assertThat(row.getDouble(ALL_DATA_TABLE_COLUMN_NAMES[3]),
+                            equalTo(new Integer(i).doubleValue()));
+                        assertThat(row.getFloat(ALL_DATA_TABLE_COLUMN_NAMES[4]),
+                            equalTo(new Integer(i).floatValue()));
+
+                        // In Source Table this column was generated as: BigInt(x)
+                        assertThat(row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[5]),
+                            equalTo(expectedBigDecimal));
+
+                        // In Source Table this column was generated as: BigDecimal(x),
+                        // There is a problem with parquet library used by delta standalone when
+                        // reading BigDecimal values. The issue should be resolved
+                        // after https://github.com/delta-io/connectors/pull/303
+                        if (i > 0) {
+                            assertThat(row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[6]),
+                                not(equalTo(BigDecimal.valueOf((double) i).setScale(18))));
+                        }
+
+                        // same value for all columns
+                        assertThat(row.getTimestamp(ALL_DATA_TABLE_COLUMN_NAMES[7])
+                                .toLocalDateTime().toInstant(ZoneOffset.UTC),
+                            equalTo(Timestamp.valueOf("2022-06-14 18:54:24.547557")
+                                .toLocalDateTime().toInstant(ZoneOffset.UTC)));
+                        assertThat(row.getString(ALL_DATA_TABLE_COLUMN_NAMES[8]),
+                            equalTo(String.valueOf(i)));
+
+                        // same value for all columns
+                        assertThat(row.getBoolean(ALL_DATA_TABLE_COLUMN_NAMES[9]), equalTo(true));
+                    }
+                );
+            }
+        }
+    }
+
+    /**
+     * Verifies if Delta table under parameter {@code sinPath} contains expected number of rows with
+     * given rowType format.
+     *
+     * @param sinkPath                Path to Delta table.
+     * @param rowType                 {@link RowType} for test Delta table.
+     * @param expectedNumberOfRecords expected number of row in Delta table.
+     * @return Head snapshot of Delta table.
+     * @throws IOException If any issue while reading Delta Table.
+     */
     @SuppressWarnings("unchecked")
-    private void verifyDeltaTable(
+    private Snapshot verifyDeltaTable(
             String sinkPath,
             RowType rowType,
             Integer expectedNumberOfRecords) throws IOException {
 
         DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), sinkPath);
         Snapshot snapshot = deltaLog.snapshot();
-        CloseableIterator<RowRecord> open = snapshot.open();
-        System.out.println(open);
-        open.close();
         List<AddFile> deltaFiles = snapshot.getAllFiles();
         int finalTableRecordsCount = TestParquetReader
             .readAndValidateAllTableRecords(
@@ -208,5 +306,6 @@ public class DeltaEndToEndExecutionITCaseTest {
         );
 
         assertThat(finalTableRecordsCount, equalTo(expectedNumberOfRecords));
+        return snapshot;
     }
 }
