@@ -74,7 +74,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
             partitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
 
-            DeltaTestUtils.initTestForSourcePartitionedTable(partitionedTablePath);
+            DeltaTestUtils.initTestForPartitionedTable(partitionedTablePath);
             DeltaTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
             DeltaTestUtils.initTestForNonPartitionedLargeTable(
                 nonPartitionedLargeTablePath);
