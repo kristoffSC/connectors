@@ -359,7 +359,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                 deltaSource.getTablePath().toUri().toString(),
                 RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
                 INITIAL_DATA_SIZE,
-                new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
+            new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
         );
 
         // WHEN
