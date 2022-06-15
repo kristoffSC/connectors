@@ -15,16 +15,17 @@ import java.util.stream.Collectors;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
-import io.delta.flink.utils.ContinuousTestDescriptor;
-import io.delta.flink.utils.ContinuousTestDescriptor.Descriptor;
 import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.TableUpdateDescriptor;
+import io.delta.flink.utils.TestDescriptor;
+import io.delta.flink.utils.TestDescriptor.Descriptor;
 import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
@@ -32,6 +33,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterAll;
@@ -84,7 +86,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
         // FailoverType.NONE.
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new ContinuousTestDescriptor(
+            new TestDescriptor(
                 deltaSource.getTablePath().toUri().toString(),
                 INITIAL_DATA_SIZE),
             (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
@@ -118,7 +120,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // WHEN
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new ContinuousTestDescriptor(
+            new TestDescriptor(
                 deltaSource.getTablePath().toUri().toString(),
                 LARGE_TABLE_RECORD_COUNT),
             (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
@@ -266,7 +268,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // Read data
         Future<List<RowData>> dataFuture =
             DeltaTestUtils.startInitialResultsFetcherThread(
-                new ContinuousTestDescriptor(
+                new TestDescriptor(
                     source.getTablePath().toUri().toString(),
                     versionOneUpdate.getNumberOfNewRows() + versionTwoUpdate.getNumberOfNewRows()),
                 client,
@@ -313,11 +315,13 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     }
 
     @Override
-    protected List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource) throws Exception {
+    protected List<RowData> testSource(
+            DeltaSource<RowData> deltaSource,
+            TestDescriptor testDescriptor) throws Exception {
         return testContinuousDeltaSource(
                 FailoverType.NONE,
                 deltaSource,
-                new ContinuousTestDescriptor(deltaSource.getTablePath().toUri().toString(), 2),
+                testDescriptor,
                 (FailCheck) integer -> true)
             .get(0);
     }
@@ -363,7 +367,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         int numberOfTableUpdateBulks = 5;
         int rowsPerTableUpdate = 5;
 
-        ContinuousTestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
+        TestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
                 deltaSource.getTablePath().toUri().toString(),
                 RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
                 INITIAL_DATA_SIZE,
@@ -396,5 +400,74 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         assertThat("Source Produced Different Rows that were in Delta Table",
             uniqueValues.size(),
             equalTo(INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate));
+    }
+
+    /**
+     * Base method used for testing {@link DeltaSource} in {@link Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode. This method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSource} instance without any failover.
+     *
+     * @param source         The {@link DeltaSource} that should be used in this test.
+     * @param testDescriptor The {@link TestDescriptor} used for test run.
+     * @param <T>            Type of objects produced by source.
+     * @return A {@link List} of produced records.
+     */
+    private <T> List<List<T>> testContinuousDeltaSource(
+            DeltaSource<T> source,
+            TestDescriptor testDescriptor)
+        throws Exception {
+
+        // Since we don't do any failover here (used FailoverType.NONE) we don't need any
+        // actually FailCheck.
+        // We do need to pass the check at least once, to call
+        // RecordCounterToFail#continueProcessing.get() hence (FailCheck) integer -> true
+        return testContinuousDeltaSource(
+            FailoverType.NONE,
+            source,
+            testDescriptor,
+            (FailCheck) integer -> true
+        );
+    }
+
+    /**
+     * Base method used for testing {@link DeltaSource} in {@link Boundedness#CONTINUOUS_UNBOUNDED}
+     * mode. This method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSource} instance.
+     * <p>
+     * <p>
+     * The created environment can perform a failover after condition described by {@link FailCheck}
+     * which is evaluated every record produced by {@code DeltaSource}
+     *
+     * @param failoverType   The {@link FailoverType} type that should be performed for given test
+     *                       setup.
+     * @param source         The {@link DeltaSource} that should be used in this test.
+     * @param testDescriptor The {@link TestDescriptor} used for test run.
+     * @param failCheck      The {@link FailCheck} condition which is evaluated for every row
+     *                       produced by source.
+     * @param <T>            Type of objects produced by source.
+     * @return A {@link List} of produced records.
+     * @implNote For Implementation details please refer to
+     * {@link DeltaTestUtils#testContinuousStream(FailoverType,
+     * TestDescriptor, FailCheck, DataStream, MiniClusterWithClientResource)}
+     */
+    private <T> List<List<T>> testContinuousDeltaSource(
+            FailoverType failoverType,
+            DeltaSource<T> source,
+            TestDescriptor testDescriptor,
+            FailCheck failCheck)
+            throws Exception {
+
+        StreamExecutionEnvironment env = prepareStreamingEnvironment(source);
+
+        DataStream<T> stream =
+            env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
+
+        return DeltaTestUtils.testContinuousStream(
+            failoverType,
+            testDescriptor,
+            failCheck,
+            stream,
+            miniClusterResource
+        );
     }
 }

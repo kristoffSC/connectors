@@ -12,11 +12,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.internal.DeltaSinkInternal;
 import io.delta.flink.source.DeltaSource;
-import io.delta.flink.utils.ContinuousTestDescriptor;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.TableUpdateDescriptor;
+import io.delta.flink.utils.TestDescriptor;
 import io.delta.flink.utils.TestParquetReader;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -166,7 +166,7 @@ public class DeltaEndToEndExecutionITCaseTest {
         int rowsPerTableUpdate = 5;
         int expectedRowCount = SMALL_TABLE_COUNT + numberOfTableUpdateBulks * rowsPerTableUpdate;
 
-        ContinuousTestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
+        TestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
             deltaSource.getTablePath().toUri().toString(),
             RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
             SMALL_TABLE_COUNT,
@@ -214,6 +214,7 @@ public class DeltaEndToEndExecutionITCaseTest {
 
         Snapshot snapshot = verifyDeltaTable(sinkTablePath, rowType, ALL_DATA_TABLE_RECORD_COUNT);
 
+        // read entire snapshot using delta standalone and check every column.
         final AtomicInteger index = new AtomicInteger(0);
         try(CloseableIterator<RowRecord> iterator = snapshot.open()) {
             while (iterator.hasNext()) {
@@ -229,36 +230,52 @@ public class DeltaEndToEndExecutionITCaseTest {
                 RowRecord row = iterator.next();
                 LOG.info("Row Content: " + row.toString());
                 assertAll(() -> {
-                        assertThat(row.getByte(ALL_DATA_TABLE_COLUMN_NAMES[0]),
-                            equalTo(new Integer(i).byteValue()));
-                        assertThat(row.getShort(ALL_DATA_TABLE_COLUMN_NAMES[1]),
-                            equalTo((short) i));
+                        assertThat(
+                            row.getByte(ALL_DATA_TABLE_COLUMN_NAMES[0]),
+                            equalTo(new Integer(i).byteValue())
+                        );
+                        assertThat(
+                            row.getShort(ALL_DATA_TABLE_COLUMN_NAMES[1]),
+                            equalTo((short) i)
+                        );
                         assertThat(row.getInt(ALL_DATA_TABLE_COLUMN_NAMES[2]), equalTo(i));
-                        assertThat(row.getDouble(ALL_DATA_TABLE_COLUMN_NAMES[3]),
-                            equalTo(new Integer(i).doubleValue()));
-                        assertThat(row.getFloat(ALL_DATA_TABLE_COLUMN_NAMES[4]),
-                            equalTo(new Integer(i).floatValue()));
+                        assertThat(
+                            row.getDouble(ALL_DATA_TABLE_COLUMN_NAMES[3]),
+                            equalTo(new Integer(i).doubleValue())
+                        );
+                        assertThat(
+                            row.getFloat(ALL_DATA_TABLE_COLUMN_NAMES[4]),
+                            equalTo(new Integer(i).floatValue())
+                        );
 
                         // In Source Table this column was generated as: BigInt(x)
-                        assertThat(row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[5]),
-                            equalTo(expectedBigDecimal));
+                        assertThat(
+                            row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[5]),
+                            equalTo(expectedBigDecimal)
+                        );
 
                         // In Source Table this column was generated as: BigDecimal(x),
                         // There is a problem with parquet library used by delta standalone when
                         // reading BigDecimal values. The issue should be resolved
                         // after https://github.com/delta-io/connectors/pull/303
                         if (i > 0) {
-                            assertThat(row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[6]),
-                                not(equalTo(BigDecimal.valueOf((double) i).setScale(18))));
+                            assertThat(
+                                row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[6]),
+                                not(equalTo(BigDecimal.valueOf((double) i).setScale(18)))
+                            );
                         }
 
                         // same value for all columns
-                        assertThat(row.getTimestamp(ALL_DATA_TABLE_COLUMN_NAMES[7])
+                        assertThat(
+                            row.getTimestamp(ALL_DATA_TABLE_COLUMN_NAMES[7])
                                 .toLocalDateTime().toInstant(ZoneOffset.UTC),
                             equalTo(Timestamp.valueOf("2022-06-14 18:54:24.547557")
-                                .toLocalDateTime().toInstant(ZoneOffset.UTC)));
-                        assertThat(row.getString(ALL_DATA_TABLE_COLUMN_NAMES[8]),
-                            equalTo(String.valueOf(i)));
+                                .toLocalDateTime().toInstant(ZoneOffset.UTC))
+                        );
+                        assertThat(
+                            row.getString(ALL_DATA_TABLE_COLUMN_NAMES[8]),
+                            equalTo(String.valueOf(i))
+                        );
 
                         // same value for all columns
                         assertThat(row.getBoolean(ALL_DATA_TABLE_COLUMN_NAMES[9]), equalTo(true));

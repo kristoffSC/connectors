@@ -8,16 +8,24 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.delta.flink.utils.ContinuousTestDescriptor.Descriptor;
 import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.TestDescriptor;
+import io.delta.flink.utils.TestDescriptor.Descriptor;
 import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import io.github.artsok.RepeatedIfExceptionsTest;
+import org.apache.flink.api.common.RuntimeExecutionMode;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.restartstrategy.RestartStrategies;
+import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterAll;
@@ -132,21 +140,10 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
     }
 
-    // TODO PR 14 finish this, read all columns
-    // @Test
-    public void foo() throws Exception {
-        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-        //DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
-        DeltaTestUtils.initTestFor("/test-data/table", sourceTablePath);
-
-        DeltaSource<RowData> deltaSource = initSourceAllColumns(sourceTablePath);
-
-        List<RowData> rowData = testBoundedDeltaSource(deltaSource);
-        System.out.println(rowData);
-    }
-
     @Override
-    protected List<RowData> testWithPartitions(DeltaSource<RowData> deltaSource) throws Exception {
+    protected List<RowData> testSource(
+            DeltaSource<RowData> deltaSource,
+            TestDescriptor testDescriptor) throws Exception {
         return testBoundedDeltaSource(deltaSource);
     }
 
@@ -201,5 +198,64 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
             equalTo(LARGE_TABLE_RECORD_COUNT));
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
             equalTo(LARGE_TABLE_RECORD_COUNT));
+    }
+
+    /**
+     * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code
+     * DeltaSource} instance without any failover.
+     *
+     * @param source The {@link DeltaSource} that should be used in this test.
+     * @param <T>    Type of objects produced by source.
+     * @return A {@link List} of produced records.
+     */
+    private <T> List<T> testBoundedDeltaSource(DeltaSource<T> source)
+        throws Exception {
+
+        // Since we don't do any failover here (used FailoverType.NONE) we don't need any
+        // actually FailCheck.
+        // We do need to pass the check at least once, to call
+        // RecordCounterToFail#continueProcessing.get() hence (FailCheck) integer -> true
+        return testBoundedDeltaSource(FailoverType.NONE, source, (FailCheck) integer -> true);
+    }
+
+    /**
+     * Base method used for testing {@link DeltaSource} in {@link Boundedness#BOUNDED} mode. This
+     * method creates a {@link StreamExecutionEnvironment} and uses provided {@code DeltaSource}
+     * instance.
+     * <p>
+     * <p>
+     * The created environment can perform a failover after condition described by {@link FailCheck}
+     * which is evaluated every record produced by {@code DeltaSource}
+     *
+     * @param failoverType The {@link FailoverType} type that should be performed for given test
+     *                     setup.
+     * @param source       The {@link DeltaSource} that should be used in this test.
+     * @param failCheck    The {@link FailCheck} condition which is evaluated for every row produced
+     *                     by source.
+     * @param <T>          Type of objects produced by source.
+     * @return A {@link List} of produced records.
+     * @implNote For Implementation details please refer to
+     * {@link DeltaTestUtils#testBoundedStream(FailoverType,
+     * FailCheck, DataStream, MiniClusterWithClientResource)} method.
+     */
+    private <T> List<T> testBoundedDeltaSource(FailoverType failoverType, DeltaSource<T> source,
+        FailCheck failCheck) throws Exception {
+
+        if (source.getBoundedness() != Boundedness.BOUNDED) {
+            throw new RuntimeException(
+                "Not using Bounded source in Bounded test setup. This will not work properly.");
+        }
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setParallelism(PARALLELISM);
+        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
+        env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
+
+        DataStream<T> stream =
+            env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source");
+
+        return DeltaTestUtils
+            .testBoundedStream(failoverType, failCheck, stream, miniClusterResource);
     }
 }
