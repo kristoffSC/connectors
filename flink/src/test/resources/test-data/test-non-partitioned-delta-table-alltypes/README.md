@@ -2,7 +2,7 @@
 This table contains 5 rows with 10 columns for each row. This table has no partition columns.
 This table has only one Delta Snapshot version (version 0).
 
-Colum names and their types:
+Table Schema
 
 | Column name | Column Type |
 |-------------|:-----------:|

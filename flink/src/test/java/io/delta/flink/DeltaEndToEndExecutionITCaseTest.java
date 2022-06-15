@@ -186,6 +186,9 @@ public class DeltaEndToEndExecutionITCaseTest {
 
     @Test
     public void testEndToEndReadAllDataTypes() throws Exception {
+
+        // this test uses test-non-partitioned-delta-table-alltypes table. See README.md from
+        // table's folder for detail information about this table.
         DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
 
         DeltaSource<RowData> deltaSource = DeltaSource.forBoundedRowData(

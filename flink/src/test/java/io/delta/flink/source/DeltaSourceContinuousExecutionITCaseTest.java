@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
@@ -36,17 +38,26 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
+import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase {
+
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DeltaSourceContinuousExecutionITCaseTest.class);
 
     /**
      * Number of rows in Delta table before inserting a new data into it.
@@ -314,6 +325,147 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         );
     }
 
+    /**
+     * @return Stream of test {@link Arguments} elements. Arguments are in order:
+     * <ul>
+     *     <li>Version used as a value of "startingVersion" option.</li>
+     *     <li>Expected number of record/changes read starting from version defined by
+     *     startingVersion</li>
+     *     <li>Lowest expected value of col1 column for version defined by startingVersion</li>
+     * </ul>
+     */
+    private static Stream<Arguments> startingVersionArguments() {
+        return Stream.of(
+            // Skipping version 0 due to know issue of not supporting Metadata and Protocol actions
+            // Waiting for Delta standalone enhancement.
+            // Arguments.of(0, 75, 0),
+            Arguments.of(1, 70, 5),
+            Arguments.of(2, 60, 15),
+            Arguments.of(3, 40, 35)
+        );
+    }
+
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L,
+        repeats = 3,
+        name =
+            "{index}: startingVersion = [{0}], "
+                + "Expected Number of rows = [{1}], "
+                + "Start Index = [{2}]"
+    )
+    @MethodSource("startingVersionArguments")
+    public void shouldReadStartingVersion(
+            long versionAsOf,
+            int expectedNumberOfRow,
+            int startIndex) throws Exception {
+
+        // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
+        // table's folder for detail information about this table.
+        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+
+        DeltaSource<RowData> deltaSource = DeltaSource
+            .forContinuousRowData(
+                new Path(sourceTablePath),
+                DeltaTestUtils.getHadoopConf())
+            .startingVersion(versionAsOf)
+            .build();
+
+        List<RowData> rowData = testContinuousDeltaSource(
+            deltaSource,
+            new TestDescriptor(sourceTablePath, expectedNumberOfRow)
+        );
+
+        assertRows("startingVersion " + versionAsOf, expectedNumberOfRow, startIndex, rowData);
+    }
+
+    /**
+     * @return Stream of test {@link Arguments} elements. Arguments are in order:
+     * <ul>
+     *     <li>Version used as a value of "startingTimestamp" option.</li>
+     *     <li>Expected number of record/changes read starting from version defined by
+     *     startingTimestamp</li>
+     *     <li>Lowest expected value of col1 column for version defined by startingTimestamp</li>
+     * </ul>
+     */
+    private static Stream<Arguments> startingTimestampArguments() {
+        return Stream.of(
+            // Skipping version 0 due to know issue of not supporting Metadata and Protocol actions
+            // Waiting for Delta standalone enhancement.
+            // Arguments.of("2022-06-15 13:24:33.613", 75, 0),
+            Arguments.of("2022-06-15 13:24:33.630", 70, 5),
+            Arguments.of("2022-06-15 13:24:33.633", 60, 15),
+            Arguments.of("2022-06-15 13:24:33.634", 40, 35)
+        );
+    }
+
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L,
+        repeats = 3,
+        name =
+            "{index}: startingTimestamp = [{0}], "
+                + "Expected Number of rows = [{1}], "
+                + "Start Index = [{2}]"
+    )
+    @MethodSource("startingTimestampArguments")
+    public void shouldReadStartingTimestamp(
+        String startingTimestamp,
+        int expectedNumberOfRow,
+        int startIndex) throws Exception {
+
+        // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
+        // table's folder for detail information about this table.
+        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+
+        DeltaSource<RowData> deltaSource = DeltaSource
+            .forContinuousRowData(
+                new Path(sourceTablePath),
+                DeltaTestUtils.getHadoopConf())
+            .startingTimestamp(startingTimestamp)
+            .build();
+
+        List<RowData> rowData = testContinuousDeltaSource(
+            deltaSource,
+            new TestDescriptor(sourceTablePath, expectedNumberOfRow)
+        );
+
+        assertRows(
+            "startingTimestamp " + startingTimestamp,
+            expectedNumberOfRow,
+            startIndex,
+            rowData
+        );
+    }
+
+    private void assertRows(
+        String sizeMsg,
+        int expectedNumberOfRow,
+        int startIndex,
+        List<RowData> rowData) {
+
+        String rangeMessage =
+            "Index value for col1 should be in range of <" + startIndex + " - 74>";
+
+        assertAll(() -> {
+                assertThat(
+                    "Source read different number of rows that expected for " + sizeMsg,
+                    rowData.size(), IsEqual.equalTo(expectedNumberOfRow)
+                );
+                rowData.forEach(row -> {
+                    LOG.info("Row content " + row);
+                    long col1Val = row.getLong(0);
+                    assertThat(
+                        rangeMessage + " but was " + col1Val,
+                        col1Val >= startIndex,
+                        equalTo(true)
+                    );
+                    assertThat(rangeMessage  + " but was " + col1Val, col1Val <= 74, equalTo(true));
+                });
+            }
+        );
+    }
+
     @Override
     protected List<RowData> testSource(
             DeltaSource<RowData> deltaSource,
@@ -412,7 +564,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
      * @param <T>            Type of objects produced by source.
      * @return A {@link List} of produced records.
      */
-    private <T> List<List<T>> testContinuousDeltaSource(
+    private <T> List<T> testContinuousDeltaSource(
             DeltaSource<T> source,
             TestDescriptor testDescriptor)
         throws Exception {
@@ -421,12 +573,19 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // actually FailCheck.
         // We do need to pass the check at least once, to call
         // RecordCounterToFail#continueProcessing.get() hence (FailCheck) integer -> true
-        return testContinuousDeltaSource(
+        List<List<T>> tmpResult = testContinuousDeltaSource(
             FailoverType.NONE,
             source,
             testDescriptor,
             (FailCheck) integer -> true
         );
+
+        ArrayList<T> result = new ArrayList<>();
+        for (List<T> list : tmpResult) {
+            result.addAll(list);
+        }
+
+        return result;
     }
 
     /**

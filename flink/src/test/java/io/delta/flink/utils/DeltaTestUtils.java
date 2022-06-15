@@ -59,6 +59,9 @@ public class DeltaTestUtils {
     public static final String TEST_DELTA_TABLE_ALL_DATA_TYPES =
         "/test-data/test-non-partitioned-delta-table-alltypes";
 
+    public static final String TEST_VERSIONED_DELTA_TABLE =
+        "/test-data/test-non-partitioned-delta-table-4-versions";
+
     public static void initTestForAllDataTypes(String targetTablePath)
         throws IOException {
         initTestFor(TEST_DELTA_TABLE_ALL_DATA_TYPES, targetTablePath);
@@ -77,6 +80,11 @@ public class DeltaTestUtils {
     public static void initTestForNonPartitionedLargeTable(String targetTablePath)
         throws IOException {
         initTestFor(TEST_DELTA_LARGE_TABLE_INITIAL_STATE_DIR, targetTablePath);
+    }
+
+    public static void initTestForVersionedTable(String targetTablePath)
+        throws IOException {
+        initTestFor(TEST_VERSIONED_DELTA_TABLE, targetTablePath);
     }
 
     public static void initTestFor(String testDeltaTableInitialStateNpDir, String targetTablePath)

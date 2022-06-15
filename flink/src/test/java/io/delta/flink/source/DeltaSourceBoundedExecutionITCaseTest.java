@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
@@ -32,12 +33,20 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
+
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DeltaSourceBoundedExecutionITCaseTest.class);
 
     @BeforeAll
     public static void beforeAll() throws IOException {
@@ -138,6 +147,129 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         // We are expecting to read version 0, before table update.
         assertThat(rowData.size(), equalTo(SMALL_TABLE_COUNT));
 
+    }
+
+    /**
+     * @return Stream of test {@link Arguments} elements. Arguments are in order:
+     * <ul>
+     *     <li>Snapshot version used as a value of "versionAsOf" option.</li>
+     *     <li>Expected number of record for version defined by versionAsOf</li>
+     *     <li>Highest value of col1 column for version defined by versionAsOf</li>
+     * </ul>
+     */
+    private static Stream<Arguments> versionAsOfArguments() {
+        return Stream.of(
+            Arguments.of(0, 5, 4),
+            Arguments.of(1, 15, 14),
+            Arguments.of(2, 35, 34),
+            Arguments.of(3, 75, 74)
+        );
+    }
+
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L,
+        repeats = 3,
+        name =
+            "{index}: versionAsOf = [{0}], "
+                + "Expected Number of rows = [{1}], "
+                + "End Index = [{2}]"
+    )
+    @MethodSource("versionAsOfArguments")
+    public void shouldReadVersionAsOf(
+            long versionAsOf,
+            int expectedNumberOfRow,
+            int endIndex) throws Exception {
+
+        // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
+        // table's folder for detail information about this table.
+        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+
+        DeltaSource<RowData> deltaSource = DeltaSource
+            .forBoundedRowData(
+                new Path(sourceTablePath),
+                DeltaTestUtils.getHadoopConf())
+            .versionAsOf(versionAsOf)
+            .build();
+
+        List<RowData> rowData = testBoundedDeltaSource(deltaSource);
+
+        assertRows("versionAsOf " + versionAsOf, expectedNumberOfRow, endIndex, rowData);
+    }
+
+    /**
+     * @return Stream of test {@link Arguments} elements. Arguments are in order:
+     * <ul>
+     *     <li>Timestamp used as a value of "timestampAsOf" option.</li>
+     *     <li>Expected number of record in version defined by timestampAsOf</li>
+     *     <li>Highest value of col1 column for version defined by versionAsOf</li>
+     * </ul>
+     */
+    private static Stream<Arguments> timestampAsOfArguments() {
+        return Stream.of(
+            Arguments.of("2022-06-15 13:24:33.613", 5, 4),
+            Arguments.of("2022-06-15 13:24:33.632", 15, 14),
+            Arguments.of("2022-06-15 13:24:33.633", 35, 34),
+            Arguments.of("2022-06-15 13:24:33.634", 75, 74)
+        );
+    }
+
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L,
+        repeats = 3,
+        name =
+            "{index}: timestampAsOf = [{0}], "
+                + "Expected Number of rows = [{1}], "
+                + "End Index = [{2}]"
+    )
+    @MethodSource("timestampAsOfArguments")
+    public void shouldReadTimestampAsOf(
+            String timestampAsOf,
+            int expectedNumberOfRow,
+            int endIndex) throws Exception {
+
+        // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
+        // table's folder for detail information about this table.
+        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+
+        DeltaSource<RowData> deltaSource = DeltaSource
+            .forBoundedRowData(
+                new Path(sourceTablePath),
+                DeltaTestUtils.getHadoopConf())
+            .timestampAsOf(timestampAsOf)
+            .build();
+
+        List<RowData> rowData = testBoundedDeltaSource(deltaSource);
+
+        assertRows("timestampAsOf " + timestampAsOf, expectedNumberOfRow, endIndex, rowData);
+    }
+
+    private void assertRows(
+            String sizeMsg,
+            int expectedNumberOfRow,
+            int endIndex,
+            List<RowData> rowData) {
+
+        String rangeMessage = "Index value for col1 should be in range of <0 - " + endIndex + ">";
+
+        assertAll(() -> {
+                assertThat(
+                    "Source read different number of rows that expected for " + sizeMsg,
+                    rowData.size(), equalTo(expectedNumberOfRow)
+                );
+                rowData.forEach(row -> {
+                    LOG.info("Row content " + row);
+                    long col1Val = row.getLong(0);
+                    assertThat(rangeMessage + " but was " + col1Val, col1Val >= 0, equalTo(true));
+                    assertThat(
+                        rangeMessage + " but was " + col1Val,
+                        col1Val <= endIndex,
+                        equalTo(true)
+                    );
+                });
+            }
+        );
     }
 
     @Override
