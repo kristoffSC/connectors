@@ -413,6 +413,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         int expectedNumberOfRow,
         int startIndex) throws Exception {
 
+        LOG.info("Running shouldReadStartingTimestamp test for startingTimestamp - "
+            + startingTimestamp);
         // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
         // table's folder for detail information about this table.
         String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
