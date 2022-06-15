@@ -21,6 +21,8 @@ import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.connector.source.Boundedness;
+import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
+import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -146,7 +148,6 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // We are expecting to read version 0, before table update.
         assertThat(rowData.size(), equalTo(SMALL_TABLE_COUNT));
-
     }
 
     /**
