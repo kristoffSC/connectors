@@ -378,6 +378,13 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         assertRows("startingVersion " + versionAsOf, expectedNumberOfRow, startIndex, rowData);
     }
 
+    private static final String[] startingTimestampValues = {
+        "2022-06-15 13:23:33.613",
+        "2022-06-15 13:24:33.630",
+        "2022-06-15 13:25:33.633",
+        "2022-06-15 13:26:33.634",
+    };
+
     /**
      * @return Stream of test {@link Arguments} elements. Arguments are in order:
      * <ul>
@@ -391,10 +398,10 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         return Stream.of(
             // Skipping version 0 due to know issue of not supporting Metadata and Protocol actions
             // Waiting for Delta standalone enhancement.
-            // Arguments.of("2022-06-15 13:24:33.613", 75, 0),
-            Arguments.of("2022-06-15 13:24:33.630", 70, 5),
-            Arguments.of("2022-06-15 13:24:33.633", 60, 15),
-            Arguments.of("2022-06-15 13:24:33.634", 40, 35)
+            // Arguments.of(startingTimestampValues[0], 75, 0),
+            Arguments.of(startingTimestampValues[1], 70, 5),
+            Arguments.of(startingTimestampValues[2], 60, 15),
+            Arguments.of(startingTimestampValues[3], 40, 35)
         );
     }
 
@@ -408,9 +415,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     )
     @MethodSource("startingTimestampArguments")
     public void shouldReadStartingTimestamp(
-        String startingTimestamp,
-        int expectedNumberOfRow,
-        int startIndex) throws Exception {
+            String startingTimestamp,
+            int expectedNumberOfRow,
+            int startIndex) throws Exception {
 
         LOG.info("Running shouldReadStartingTimestamp test for startingTimestamp - "
             + startingTimestamp);
@@ -418,6 +425,11 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // table's folder for detail information about this table.
         String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
         DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+
+        // Delta standalone uses "last modification time" file attribute for providing commits
+        // before/after or at timestamp. It Does not use an actually commits creation timestamp
+        // from Delta's log.
+        changeDeltaLogLastModifyTimestamp(sourceTablePath, startingTimestampValues);
 
         DeltaSource<RowData> deltaSource = DeltaSource
             .forContinuousRowData(
