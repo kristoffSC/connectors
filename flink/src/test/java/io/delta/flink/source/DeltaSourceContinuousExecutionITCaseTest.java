@@ -2,6 +2,7 @@ package io.delta.flink.source;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -414,9 +415,13 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         int expectedNumberOfRow,
         int startIndex) throws Exception {
 
+        long convertToTimestamp = TimestampFormatConverter.convertToTimestamp(startingTimestamp);
         LOG.info("Running shouldReadStartingTimestamp test for startingTimestamp - "
             + startingTimestamp
-            + " converted to: " + TimestampFormatConverter.convertToTimestamp(startingTimestamp));
+            + " converted to: " + convertToTimestamp);
+        Timestamp tsp = new Timestamp(convertToTimestamp);
+        LOG.info("TIMESTAMP -> " + tsp);
+        LOG.info("TIMESTAMP getTime -> " + tsp.getTime());
 
         // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
         // table's folder for detail information about this table.
