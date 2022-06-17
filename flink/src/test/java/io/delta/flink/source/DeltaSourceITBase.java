@@ -391,7 +391,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
             String sourceTablePath,
             String[] lastModifyValues) throws IOException {
 
-        List<java.nio.file.Path> sortedDeltaLogs =
+        List<java.nio.file.Path> sortedLogFiles =
             Files.list(Paths.get(sourceTablePath + "/_delta_log"))
                 .filter(file -> file.getFileName().toUri().toString().endsWith(".json"))
                 .sorted()
@@ -400,21 +400,21 @@ public abstract class DeltaSourceITBase extends TestLogger {
         assertThat(
             "Delta log for table " + sourceTablePath + " size, does not match"
                 + " test's last modify argument size " + lastModifyValues.length,
-            sortedDeltaLogs.size(),
+            sortedLogFiles.size(),
             equalTo(lastModifyValues.length)
         );
 
         int i = 0;
-        for (java.nio.file.Path deltaLog : sortedDeltaLogs) {
+        for (java.nio.file.Path logFile : sortedLogFiles) {
             String timestampAsOfValue = lastModifyValues[i++];
             long toTimestamp = TimestampFormatConverter.convertToTimestamp(timestampAsOfValue);
             LOG.info(
-                "Changing Last Modified timestamp on file " + deltaLog
+                "Changing Last Modified timestamp on file " + logFile
                     + " to " + timestampAsOfValue + " -> " + timestampAsOfValue
             );
             assertThat(
-                "Unable to modify " + deltaLog + " last modified timestamp.",
-                deltaLog.toFile().setLastModified(toTimestamp), equalTo(true));
+                "Unable to modify " + logFile + " last modified timestamp.",
+                logFile.toFile().setLastModified(toTimestamp), equalTo(true));
         }
     }
 
