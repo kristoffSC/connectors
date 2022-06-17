@@ -91,6 +91,7 @@ private[internal] case class DeltaHistoryManager(deltaLog: DeltaLogImpl) extends
       mustBeRecreatable: Boolean = true,
       canReturnEarliestCommit: Boolean = false): Commit = {
     val time = timestamp.getTime
+    logInfo("getActiveCommitAtTime time " + time)
     val earliestVersion = if (mustBeRecreatable) {
       getEarliestReproducibleCommitVersion
     } else {
@@ -100,6 +101,11 @@ private[internal] case class DeltaHistoryManager(deltaLog: DeltaLogImpl) extends
 
     // Search for the commit
     val commits = getCommits(deltaLog.store, deltaLog.logPath, earliestVersion, latestVersion + 1)
+    commits
+      .foreach(
+        c => logInfo("commit version - " + c.getVersion + ", commit timestamp - " + c.getTimestamp)
+      )
+
 
     // If it returns empty, we will fail below with `timestampEarlierThanTableFirstCommit`
     val commit = lastCommitBeforeTimestamp(commits, time).getOrElse(commits.head)
@@ -207,8 +213,10 @@ private[internal] case class DeltaHistoryManager(deltaLog: DeltaLogImpl) extends
     val commits = logStore.listFrom(FileNames.deltaFile(logPath, start), deltaLog.hadoopConf)
       .asScala
       .filter(f => FileNames.isDeltaFile(f.getPath))
-      .map { fileStatus =>
-        Commit(FileNames.deltaVersion(fileStatus.getPath), fileStatus.getModificationTime)
+      .map { fileStatus => {
+          logInfo("ModificationTime - " + fileStatus.getModificationTime)
+          Commit(FileNames.deltaVersion(fileStatus.getPath), fileStatus.getModificationTime)
+        }
       }
       .takeWhile(_.version < end)
 
