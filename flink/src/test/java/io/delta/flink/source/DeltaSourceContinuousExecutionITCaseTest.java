@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
 import io.delta.flink.source.internal.DeltaSourceOptions;
+import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
 import io.delta.flink.utils.DeltaTableUpdater;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.FailoverType;
@@ -399,7 +400,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         );
     }
 
-    @ParameterizedRepeatedIfExceptionsTest(
+    /*@ParameterizedRepeatedIfExceptionsTest(
         suspend = 2000L,
         repeats = 3,
         name =
@@ -407,14 +408,16 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                 + "Expected Number of rows = [{1}], "
                 + "Start Index = [{2}]"
     )
-    @MethodSource("startingTimestampArguments")
+    @MethodSource("startingTimestampArguments")*/
     public void shouldReadStartingTimestamp(
         String startingTimestamp,
         int expectedNumberOfRow,
         int startIndex) throws Exception {
 
         LOG.info("Running shouldReadStartingTimestamp test for startingTimestamp - "
-            + startingTimestamp);
+            + startingTimestamp
+            + " converted to: " + TimestampFormatConverter.convertToTimestamp(startingTimestamp));
+
         // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
         // table's folder for detail information about this table.
         String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
