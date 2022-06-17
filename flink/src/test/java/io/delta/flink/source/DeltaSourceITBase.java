@@ -5,11 +5,14 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.ZoneOffset;
 import java.util.Iterator;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.ExecutionITCaseTestConstants;
 import io.delta.flink.utils.TestDescriptor;
@@ -375,6 +378,44 @@ public abstract class DeltaSourceITBase extends TestLogger {
         env.enableCheckpointing(200L);
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(5, 1000));
         return env;
+    }
+
+    /**
+     * Changes last modification time for delta log files.
+     *
+     * @param sourceTablePath  Path to delta log to change last modification time.
+     * @param lastModifyValues An array of times to which last modification time should be change
+     *                         to.
+     */
+    protected void changeDeltaLogLastModifyTimestamp(
+            String sourceTablePath,
+            String[] lastModifyValues) throws IOException {
+
+        List<java.nio.file.Path> sortedLogFiles =
+            Files.list(Paths.get(sourceTablePath + "/_delta_log"))
+                .filter(file -> file.getFileName().toUri().toString().endsWith(".json"))
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertThat(
+            "Delta log for table " + sourceTablePath + " size, does not match"
+                + " test's last modify argument size " + lastModifyValues.length,
+            sortedLogFiles.size(),
+            equalTo(lastModifyValues.length)
+        );
+
+        int i = 0;
+        for (java.nio.file.Path logFile : sortedLogFiles) {
+            String timestampAsOfValue = lastModifyValues[i++];
+            long toTimestamp = TimestampFormatConverter.convertToTimestamp(timestampAsOfValue);
+            LOG.info(
+                "Changing Last Modified timestamp on file " + logFile
+                    + " to " + timestampAsOfValue + " -> " + timestampAsOfValue
+            );
+            assertThat(
+                "Unable to modify " + logFile + " last modified timestamp.",
+                logFile.toFile().setLastModified(toTimestamp), equalTo(true));
+        }
     }
 
     private void assertNoMoreColumns(List<RowData> resultData, int columnIndex) {

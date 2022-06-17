@@ -196,6 +196,13 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         assertRows("versionAsOf " + versionAsOf, expectedNumberOfRow, endIndex, rowData);
     }
 
+    private static final String[] timestampAsOfValues = {
+        "2022-06-15 13:24:33.613",
+        "2022-06-15 13:25:33.632",
+        "2022-06-15 13:26:33.633",
+        "2022-06-15 13:27:33.634"
+    };
+
     /**
      * @return Stream of test {@link Arguments} elements. Arguments are in order:
      * <ul>
@@ -206,10 +213,10 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
      */
     private static Stream<Arguments> timestampAsOfArguments() {
         return Stream.of(
-            Arguments.of("2022-06-15 13:24:33.613", 5, 4),
-            Arguments.of("2022-06-15 13:24:33.632", 15, 14),
-            Arguments.of("2022-06-15 13:24:33.633", 35, 34),
-            Arguments.of("2022-06-15 13:24:33.634", 75, 74)
+            Arguments.of(timestampAsOfValues[0], 5, 4),
+            Arguments.of(timestampAsOfValues[1], 15, 14),
+            Arguments.of(timestampAsOfValues[2], 35, 34),
+            Arguments.of(timestampAsOfValues[3], 75, 74)
         );
     }
 
@@ -231,6 +238,11 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         // table's folder for detail information about this table.
         String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
         DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+
+        // Delta standalone uses "last modification time" file attribute for providing commits
+        // before/after or at timestamp. It Does not use an actually commits creation timestamp
+        // from Delta's log.
+        changeDeltaLogLastModifyTimestamp(sourceTablePath, timestampAsOfValues);
 
         DeltaSource<RowData> deltaSource = DeltaSource
             .forBoundedRowData(
