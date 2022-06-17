@@ -38,7 +38,6 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.conf.Configuration;
-import org.hamcrest.core.IsEqual;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -452,7 +451,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         assertAll(() -> {
                 assertThat(
                     "Source read different number of rows that expected for " + sizeMsg,
-                    rowData.size(), IsEqual.equalTo(expectedNumberOfRow)
+                    rowData.size(), equalTo(expectedNumberOfRow)
                 );
                 rowData.forEach(row -> {
                     LOG.info("Row content " + row);

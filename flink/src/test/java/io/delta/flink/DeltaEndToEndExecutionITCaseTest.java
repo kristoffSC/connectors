@@ -2,8 +2,6 @@ package io.delta.flink;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.MathContext;
 import java.sql.Timestamp;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -136,7 +134,7 @@ public class DeltaEndToEndExecutionITCaseTest {
 
     @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
     @EnumSource(FailoverType.class)
-    public void testEndToEndUnBoundedStream(FailoverType failoverType) throws Exception {
+    public void testEndToEndContinuousStream(FailoverType failoverType) throws Exception {
         DeltaTestUtils.initTestForNonPartitionedTable(sourceTablePath);
 
         DeltaSource<RowData> deltaSource = DeltaSource.forContinuousRowData(
@@ -222,13 +220,8 @@ public class DeltaEndToEndExecutionITCaseTest {
         try(CloseableIterator<RowRecord> iterator = snapshot.open()) {
             while (iterator.hasNext()) {
                 final int i = index.getAndIncrement();
-                BigDecimal expectedBigDecimal = (i > 0) ?
-                    BigDecimal.valueOf((double) i).setScale(18) :
-                    new BigDecimal(
-                        new BigInteger(String.valueOf(i)),
-                        18, // scale
-                        MathContext.DECIMAL32
-                    );
+
+                BigDecimal expectedBigDecimal = BigDecimal.valueOf((double) i).setScale(18);
 
                 RowRecord row = iterator.next();
                 LOG.info("Row Content: " + row.toString());
@@ -264,7 +257,7 @@ public class DeltaEndToEndExecutionITCaseTest {
                         if (i > 0) {
                             assertThat(
                                 row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[6]),
-                                not(equalTo(BigDecimal.valueOf((double) i).setScale(18)))
+                                not(equalTo(expectedBigDecimal))
                             );
                         }
 
