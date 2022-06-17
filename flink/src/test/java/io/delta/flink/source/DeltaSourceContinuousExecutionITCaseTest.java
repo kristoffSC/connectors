@@ -400,7 +400,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         );
     }
 
-    /*@ParameterizedRepeatedIfExceptionsTest(
+    @ParameterizedRepeatedIfExceptionsTest(
         suspend = 2000L,
         repeats = 3,
         name =
@@ -408,7 +408,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
                 + "Expected Number of rows = [{1}], "
                 + "Start Index = [{2}]"
     )
-    @MethodSource("startingTimestampArguments")*/
+    @MethodSource("startingTimestampArguments")
     public void shouldReadStartingTimestamp(
         String startingTimestamp,
         int expectedNumberOfRow,
