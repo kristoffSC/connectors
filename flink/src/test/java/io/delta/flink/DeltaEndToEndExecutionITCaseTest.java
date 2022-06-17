@@ -17,6 +17,8 @@ import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.TableUpdateDescriptor;
 import io.delta.flink.utils.TestDescriptor;
 import io.delta.flink.utils.TestParquetReader;
+import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
+import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -32,8 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
@@ -97,7 +97,11 @@ public class DeltaEndToEndExecutionITCaseTest {
         }
     }
 
-    @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L,
+        repeats = 3,
+        name = "{index}: FailoverType = [{0}]"
+    )
     @EnumSource(FailoverType.class)
     public void testEndToEndBoundedStream(FailoverType failoverType) throws Exception {
         DeltaTestUtils.initTestForNonPartitionedLargeTable(sourceTablePath);
@@ -143,7 +147,11 @@ public class DeltaEndToEndExecutionITCaseTest {
         verifyDeltaTable(this.sinkTablePath, rowType, LARGE_TABLE_RECORD_COUNT);
     }
 
-    @ParameterizedTest(name = "{index}: FailoverType = [{0}]")
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L,
+        repeats = 3,
+        name = "{index}: FailoverType = [{0}]"
+    )
     @EnumSource(FailoverType.class)
     public void testEndToEndContinuousStream(FailoverType failoverType) throws Exception {
         DeltaTestUtils.initTestForNonPartitionedTable(sourceTablePath);
@@ -202,7 +210,7 @@ public class DeltaEndToEndExecutionITCaseTest {
         verifyDeltaTable(this.sinkTablePath, rowType, expectedRowCount);
     }
 
-    @Test
+    @RepeatedIfExceptionsTest(suspend = 2000L, repeats = 3)
     public void testEndToEndReadAllDataTypes() throws Exception {
 
         // this test uses test-non-partitioned-delta-table-alltypes table. See README.md from
@@ -248,7 +256,15 @@ public class DeltaEndToEndExecutionITCaseTest {
             ALL_DATA_TABLE_RECORD_COUNT
         );
 
-        // read entire snapshot using delta standalone and check every column.
+        assertRowsFromSnapshot(snapshot);
+    }
+
+    /**
+     * Read entire snapshot using delta standalone and check every column.
+     * @param snapshot {@link Snapshot} to read data from.
+     */
+    private void assertRowsFromSnapshot(Snapshot snapshot) throws IOException {
+
         final AtomicInteger index = new AtomicInteger(0);
         try(CloseableIterator<RowRecord> iterator = snapshot.open()) {
             while (iterator.hasNext()) {
