@@ -7,19 +7,24 @@ Official Delta Lake connector for [Apache Flink](https://flink.apache.org/).
 ## Introduction
 
 Flink/Delta Connector is a JVM library to read and write data from Apache Flink applications to Delta tables
-utilizing [Delta Standalone JVM library](https://github.com/delta-io/connectors#delta-standalone). It includes:
+utilizing [Delta Standalone JVM library](https://github.com/delta-io/connectors#delta-standalone).
+The connector provides exactly-once delivery guarantees.
 
+Flink/Delta Connector  includes:
 - `DeltaSink` for writing data from Apache Flink to a Delta table.
 - `DeltaSource` for reading Delta tables using Apache Flink.
 
-### Delta Sink
-
-- `DeltaSink` provides exactly-once delivery guarantees.
-- Depending on the version of the connector you can use it with following Apache Flink versions:
+Depending on the version of the connector you can use it with following Apache Flink versions:
   
-  | connector's version  | Flink's version |
-  | :---: | :---: |
-  |    0.4.x    |    >= 1.12.0    |
+| Connector's version | Flink's version |
+|:-------------------:|:---------------:|
+|  0.4.x (Sink Only)  |    >= 1.12.0    |
+|        0.5.x        |    >= 1.13.0    |
+
+#### Known limitations:
+
+- The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in the next releases.
+- The current version only provides Delta Lake's transactional guarantees for tables stored on HDFS and Microsoft Azure Storage.
 
 ### Delta Source
 #### Modes
@@ -44,10 +49,6 @@ In both cases, Source connector will discover what are the Delta types for every
 Flink Delta source connector will use Delta table log to determine which columns are partition columns.
 No additional actions are needed from user end.
 
-#### Known limitations:
-
-- The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in the next releases.
-- The current version only provides Delta Lake's transactional guarantees for tables stored on HDFS and Microsoft Azure Storage.
 
 ### Flink metrics
 #### Delta Sink
