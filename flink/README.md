@@ -21,6 +21,8 @@ Depending on the version of the connector you can use it with following Apache F
 |  0.4.x (Sink Only)  |    >= 1.12.0    |
 |        0.5.x        |    >= 1.13.0    |
 
+<br>
+
 #### Known limitations:
 
 - The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in the next releases.
