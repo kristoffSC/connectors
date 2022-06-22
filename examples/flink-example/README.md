@@ -11,7 +11,7 @@ To run example in-memory Flink job writing data a non-partitioned Delta table ru
 ```shell
 > cd examples/flink-example/
 >
-> mvn package exec:java -Dexec.cleanupDaemonThreads=false -Dexec.mainClass=org.example.DeltaSinkExample -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
+> mvn package exec:java -Dexec.cleanupDaemonThreads=false -Dexec.mainClass=org.example.sink.DeltaSinkExample -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
 ```
 
 - with SBT:
@@ -20,7 +20,7 @@ To run example in-memory Flink job writing data a non-partitioned Delta table ru
 > export STANDALONE_VERSION=x.y.z  # update to desired version
 > export EXTRA_MAVEN_REPO={staged_repo}  # include staged repo if desired
 >
-> build/sbt "flinkExample/runMain org.example.DeltaSinkExample"
+> build/sbt "flinkExample/runMain org.example.sink.DeltaSinkExample"
 ```
 
 ## Run example for partitioned Delta table
@@ -33,7 +33,7 @@ To run example in-memory Flink job writing data a non-partitioned Delta table ru
 ```shell
 > cd examples/flink-example/
 >
-> mvn package exec:java -Dexec.cleanupDaemonThreads=false -Dexec.mainClass=org.example.DeltaSinkPartitionedTableExample -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
+> mvn package exec:java -Dexec.cleanupDaemonThreads=false -Dexec.mainClass=org.example.sink.DeltaSinkPartitionedTableExample -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
 ```
 
 - with SBT:
@@ -42,7 +42,7 @@ To run example in-memory Flink job writing data a non-partitioned Delta table ru
 > export STANDALONE_VERSION=x.y.z  # update to desired version
 > export EXTRA_MAVEN_REPO={staged_repo}  # include staged repo if desired
 >
-> build/sbt "flinkExample/runMain org.example.DeltaSinkPartitionedTableExample"
+> build/sbt "flinkExample/runMain org.example.sink.DeltaSinkPartitionedTableExample"
 ```
 
 ## Verify
@@ -67,7 +67,7 @@ After that you should find the packaged fat-jar under path: `<connectors-repo-lo
 ```shell
 > cd <local-flink-cluster-dir>
 > ./bin/start-cluster.sh
-> ./bin/flink run -c org.example.DeltaSinkExample <connectors-repo-local-dir>/flink-example/target/flink-example-<version>-jar-with-dependencies.jar
+> ./bin/flink run -c org.example.sink.DeltaSinkExample <connectors-repo-local-dir>/flink-example/target/flink-example-<version>-jar-with-dependencies.jar
 ```
 4. Go the http://localhost:8081 on your browser where you should find Flink UI and you will be able to inspect your running job. You can also look for the written files under `/tmp/delta-flink-example/<UUID>` directory.
 ![flink job ui](src/main/resources/assets/images/flink-cluster-job.png)

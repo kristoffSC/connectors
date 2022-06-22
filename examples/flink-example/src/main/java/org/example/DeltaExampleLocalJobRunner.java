@@ -25,7 +25,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 /**
  * Internal class providing utility methods to run local Flink job in memory.
  */
-public interface DeltaSinkLocalJobRunner {
+public interface DeltaExampleLocalJobRunner {
 
     default MiniCluster getMiniCluster() {
         final org.apache.flink.configuration.Configuration config =
@@ -54,8 +54,16 @@ public interface DeltaSinkLocalJobRunner {
 
     default StreamExecutionEnvironment getStreamExecutionEnvironment() {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
+        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
         env.enableCheckpointing(2000, CheckpointingMode.EXACTLY_ONCE);
         return env;
     }
+
+    default StreamExecutionEnvironment getBatchExecutionEnvironment() {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        return env;
+    }
+
+    void run(String tablePath) throws Exception;
 }

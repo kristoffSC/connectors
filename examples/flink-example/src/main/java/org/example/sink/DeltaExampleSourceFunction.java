@@ -15,30 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.example;
+package org.example.sink;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.util.DataFormatConverters;
 import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.types.Row;
-
-import java.util.concurrent.ThreadLocalRandom;
+import org.utils.Utils;
 
 /**
  * Internal class providing mock implementation for example stream source.
  * <p>
- * This streaming source will be generating events of type {@link DeltaSinkExample.ROW_TYPE} with
- * interval of {@link DeltaSinkExampleSourceFunction.NEXT_ROW_INTERVAL_MILLIS} that will be further
+ * This streaming source will be generating events of type {@link Utils#ROW_TYPE} with
+ * interval of {@link DeltaExampleSourceFunction#NEXT_ROW_INTERVAL_MILLIS} that will be further
  * fed to the Flink job until the parent process is stopped.
  */
-public class DeltaSinkExampleSourceFunction extends RichParallelSourceFunction<RowData> {
+public class DeltaExampleSourceFunction extends RichParallelSourceFunction<RowData> {
 
     static int NEXT_ROW_INTERVAL_MILLIS = 800;
 
     public static final DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
             DataFormatConverters.getConverterForDataType(
-                    TypeConversions.fromLogicalToDataType(DeltaSinkExample.ROW_TYPE)
+                    TypeConversions.fromLogicalToDataType(Utils.ROW_TYPE)
             );
 
     private volatile boolean cancelled = false;

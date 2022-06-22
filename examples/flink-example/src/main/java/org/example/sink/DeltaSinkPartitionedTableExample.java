@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.example;
+package org.example.sink;
 
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.RowDataDeltaSinkBuilder;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
+import org.utils.Utils;
 
 /**
  * Demonstrates how the Flink Delta Sink can be used to write data to a partitioned Delta table.
@@ -31,10 +33,28 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class DeltaSinkPartitionedTableExample extends DeltaSinkExampleBase {
 
-    static String TABLE_PATH = resolveExampleTableAbsolutePath("example_partitioned_table");
+    static String TABLE_PATH = Utils.resolveExampleTableAbsolutePath("example_partitioned_table");
 
     public static void main(String[] args) throws Exception {
         new DeltaSinkPartitionedTableExample().run(TABLE_PATH);
+    }
+
+    @Override
+    StreamExecutionEnvironment createPipeline(
+            String tablePath,
+            int sourceParallelism,
+            int sinkParallelism) {
+
+        DeltaSink<RowData> deltaSink = getDeltaSink(tablePath);
+        StreamExecutionEnvironment env = getStreamExecutionEnvironment();
+
+        env.addSource(new DeltaExampleSourceFunction())
+            .setParallelism(sourceParallelism)
+            .sinkTo(deltaSink)
+            .name("MyDeltaSink")
+            .setParallelism(sinkParallelism);
+
+        return env;
     }
 
     @Override
@@ -42,7 +62,7 @@ public class DeltaSinkPartitionedTableExample extends DeltaSinkExampleBase {
         String[] partitionCols = {"f1"};
 
         RowDataDeltaSinkBuilder deltaSinkBuilder = DeltaSink.forRowData(
-            new Path(TABLE_PATH), new Configuration(), ROW_TYPE);
+            new Path(TABLE_PATH), new Configuration(), Utils.ROW_TYPE);
         deltaSinkBuilder.withPartitionColumns(partitionCols);
         return deltaSinkBuilder.build();
     }
