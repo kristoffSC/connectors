@@ -15,11 +15,9 @@
  */
 package org.example.sink;
 
-import java.io.File;
 import java.util.UUID;
 
 import io.delta.flink.sink.DeltaSink;
-import org.apache.commons.io.FileUtils;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
@@ -45,12 +43,7 @@ public class DeltaSinkExampleCluster extends DeltaSinkExampleBase {
     @Override
     public void run(String tablePath) throws Exception {
         System.out.println("Will use table path: " + tablePath);
-        File tableDir = new File(tablePath);
-        if (tableDir.exists()) {
-            FileUtils.cleanDirectory(tableDir);
-        } else {
-            tableDir.mkdirs();
-        }
+        Utils.prepareDirs(tablePath);
         StreamExecutionEnvironment env = createPipeline(tablePath, 1, 1);
         env.execute("TestJob");
     }

@@ -1,6 +1,5 @@
 package org.example.source.continuous;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -9,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.delta.flink.source.DeltaSource;
-import org.apache.commons.io.FileUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.types.Row;
@@ -26,15 +24,7 @@ public abstract class DeltaContinuousSourceExampleBase implements DeltaExampleLo
     public void run(String tablePath) throws Exception {
         System.out.println("Will use table from path: " + tablePath);
 
-        File tableWorkDir = new File(workPath);
-        if (tableWorkDir.exists()) {
-            FileUtils.cleanDirectory(tableWorkDir);
-        } else {
-            tableWorkDir.mkdirs();
-        }
-
-        FileUtils.copyDirectory(new File(tablePath), tableWorkDir);
-
+        Utils.prepareDirs(tablePath, workPath);
         StreamExecutionEnvironment env = createPipeline(workPath, 2, 3);
         runFlinkJobInBackground(env);
         runSourceTableUpdater(workPath);

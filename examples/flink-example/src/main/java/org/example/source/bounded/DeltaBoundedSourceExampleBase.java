@@ -4,14 +4,18 @@ import io.delta.flink.source.DeltaSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.utils.DeltaExampleLocalJobRunner;
+import org.utils.Utils;
 
 public abstract class DeltaBoundedSourceExampleBase implements DeltaExampleLocalJobRunner {
+
+    private final String workPath = Utils.resolveExampleTableAbsolutePath("example_table");
 
     @Override
     public void run(String tablePath) throws Exception {
         System.out.println("Will use table path: " + tablePath);
 
-        StreamExecutionEnvironment env = createPipeline(tablePath, 2, 3);
+        Utils.prepareDirs(tablePath, workPath);
+        StreamExecutionEnvironment env = createPipeline(workPath, 2, 3);
         runFlinkJobInBackground(env);
     }
 
@@ -21,7 +25,5 @@ public abstract class DeltaBoundedSourceExampleBase implements DeltaExampleLocal
         int sinkParallelism
     );
 
-
     protected abstract DeltaSource<RowData> getDeltaSource(String tablePath);
-
 }

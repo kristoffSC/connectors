@@ -15,15 +15,14 @@
  */
 package org.example.sink;
 
-import java.io.File;
 import java.util.Collections;
 
 import io.delta.flink.sink.DeltaSink;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.utils.DeltaExampleLocalJobRunner;
+import org.utils.Utils;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -36,12 +35,8 @@ public abstract class DeltaSinkExampleBase implements DeltaExampleLocalJobRunner
 
     public void run(String tablePath) throws Exception {
         System.out.println("Will use table path: " + tablePath);
-        File tableDir = new File(tablePath);
-        if (tableDir.exists()) {
-            FileUtils.cleanDirectory(tableDir);
-        } else {
-            tableDir.mkdirs();
-        }
+
+        Utils.prepareDirs(tablePath);
         StreamExecutionEnvironment env = createPipeline(tablePath, 2, 3);
         runFlinkJobInBackground(env);
         printDeltaTableRows(tablePath);
