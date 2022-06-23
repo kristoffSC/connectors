@@ -11,11 +11,10 @@ import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.hadoop.conf.Configuration;
-import org.example.source.DeltaSourceExampleBase;
 import org.utils.ConsoleSink;
 import org.utils.Utils;
 
-public class DeltaBoundedSourceUserColumnsExample extends DeltaSourceExampleBase {
+public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceExampleBase {
 
     private static final String TABLE_PATH =
         Utils.resolveExampleTableAbsolutePath("data/source_table_no_partitions");

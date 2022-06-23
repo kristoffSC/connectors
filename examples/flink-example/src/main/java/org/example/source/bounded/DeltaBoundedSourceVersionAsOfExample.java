@@ -6,11 +6,10 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
-import org.example.source.DeltaSourceExampleBase;
 import org.utils.ConsoleSink;
 import org.utils.Utils;
 
-public class DeltaBoundedSourceVersionAsOfExample extends DeltaSourceExampleBase {
+public class DeltaBoundedSourceVersionAsOfExample extends DeltaBoundedSourceExampleBase {
 
     private static final String TABLE_PATH =
         Utils.resolveExampleTableAbsolutePath("data/source_table_no_partitions");

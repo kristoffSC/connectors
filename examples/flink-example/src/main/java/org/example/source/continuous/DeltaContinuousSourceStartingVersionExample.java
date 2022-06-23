@@ -6,11 +6,10 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
-import org.example.source.DeltaSourceExampleBase;
 import org.utils.ConsoleSink;
 import org.utils.Utils;
 
-public class DeltaContinuousSourceStartingVersionExample extends DeltaSourceExampleBase {
+public class DeltaContinuousSourceStartingVersionExample extends DeltaContinuousSourceExampleBase {
 
     private static final String TABLE_PATH =
         Utils.resolveExampleTableAbsolutePath("data/source_table_no_partitions");
@@ -39,11 +38,11 @@ public class DeltaContinuousSourceStartingVersionExample extends DeltaSourceExam
 
     @Override
     protected DeltaSource<RowData> getDeltaSource(String tablePath) {
-        return DeltaSource.forBoundedRowData(
+        return DeltaSource.forContinuousRowData(
                 new Path(tablePath),
                 new Configuration()
             )
-            .versionAsOf(1)
+            .startingVersion(10)
             .build();
     }
 }
