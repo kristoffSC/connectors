@@ -23,7 +23,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
-import org.example.DeltaExampleLocalJobRunner;
+import org.utils.DeltaExampleLocalJobRunner;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;

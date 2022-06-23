@@ -3,7 +3,7 @@ package org.example.source;
 import io.delta.flink.source.DeltaSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
-import org.example.DeltaExampleLocalJobRunner;
+import org.utils.DeltaExampleLocalJobRunner;
 
 public abstract class DeltaSourceExampleBase implements DeltaExampleLocalJobRunner {
 
@@ -15,13 +15,13 @@ public abstract class DeltaSourceExampleBase implements DeltaExampleLocalJobRunn
         runFlinkJobInBackground(env);
     }
 
-    abstract StreamExecutionEnvironment createPipeline(
+    protected abstract StreamExecutionEnvironment createPipeline(
         String tablePath,
         int sourceParallelism,
         int sinkParallelism
     );
 
 
-    abstract DeltaSource<RowData> getDeltaSource(String tablePath);
+    protected abstract DeltaSource<RowData> getDeltaSource(String tablePath);
 
 }

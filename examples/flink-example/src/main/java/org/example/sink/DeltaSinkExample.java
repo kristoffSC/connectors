@@ -62,7 +62,7 @@ public class DeltaSinkExample extends DeltaSinkExampleBase {
             .forRowData(
                 new Path(TABLE_PATH),
                 new Configuration(),
-                Utils.ROW_TYPE)
+                Utils.FULL_SCHEMA_ROW_TYPE)
             .build();
     }
 }

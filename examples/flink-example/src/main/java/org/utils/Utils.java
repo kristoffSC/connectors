@@ -11,7 +11,7 @@ public final class Utils {
 
     private Utils() {}
 
-    public static final RowType ROW_TYPE = new RowType(Arrays.asList(
+    public static final RowType FULL_SCHEMA_ROW_TYPE = new RowType(Arrays.asList(
         new RowType.RowField("f1", new VarCharType(VarCharType.MAX_LENGTH)),
         new RowType.RowField("f2", new VarCharType(VarCharType.MAX_LENGTH)),
         new RowType.RowField("f3", new IntType())

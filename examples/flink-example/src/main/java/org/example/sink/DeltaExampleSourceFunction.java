@@ -29,7 +29,7 @@ import org.utils.Utils;
 /**
  * Internal class providing mock implementation for example stream source.
  * <p>
- * This streaming source will be generating events of type {@link Utils#ROW_TYPE} with
+ * This streaming source will be generating events of type {@link Utils#FULL_SCHEMA_ROW_TYPE} with
  * interval of {@link DeltaExampleSourceFunction#NEXT_ROW_INTERVAL_MILLIS} that will be further
  * fed to the Flink job until the parent process is stopped.
  */
@@ -39,7 +39,7 @@ public class DeltaExampleSourceFunction extends RichParallelSourceFunction<RowDa
 
     public static final DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
             DataFormatConverters.getConverterForDataType(
-                    TypeConversions.fromLogicalToDataType(Utils.ROW_TYPE)
+                    TypeConversions.fromLogicalToDataType(Utils.FULL_SCHEMA_ROW_TYPE)
             );
 
     private volatile boolean cancelled = false;

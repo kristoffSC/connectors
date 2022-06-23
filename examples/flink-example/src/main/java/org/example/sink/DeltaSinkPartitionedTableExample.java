@@ -62,7 +62,7 @@ public class DeltaSinkPartitionedTableExample extends DeltaSinkExampleBase {
         String[] partitionCols = {"f1"};
 
         RowDataDeltaSinkBuilder deltaSinkBuilder = DeltaSink.forRowData(
-            new Path(TABLE_PATH), new Configuration(), Utils.ROW_TYPE);
+            new Path(TABLE_PATH), new Configuration(), Utils.FULL_SCHEMA_ROW_TYPE);
         deltaSinkBuilder.withPartitionColumns(partitionCols);
         return deltaSinkBuilder.build();
     }
