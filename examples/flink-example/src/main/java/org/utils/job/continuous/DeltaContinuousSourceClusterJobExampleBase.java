@@ -20,7 +20,7 @@ public abstract class DeltaContinuousSourceClusterJobExampleBase implements Delt
         env.disableOperatorChaining();
 
         env.executeAsync("Continuous Example Job");
-        Utils.runSourceTableUpdater(workPath);
+        Utils.runSourceTableUpdater(workPath).get();
     }
 
     public abstract DeltaSource<RowData> getDeltaSource(String tablePath);

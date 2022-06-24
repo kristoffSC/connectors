@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -49,13 +50,14 @@ public final class Utils {
         FileUtils.copyDirectory(new File(sourcePath), new File(workPath));
     }
 
-    public static void runSourceTableUpdater(String tablePath) {
+    public static ScheduledFuture<?> runSourceTableUpdater(String tablePath) {
 
         final DeltaTableUpdater tableUpdater = new DeltaTableUpdater(tablePath);
 
         AtomicInteger index = new AtomicInteger(0);
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleWithFixedDelay(
+
+        return scheduler.scheduleWithFixedDelay(
             () -> {
                 int i = index.getAndIncrement();
                 List<Row> rows = Collections.singletonList(
