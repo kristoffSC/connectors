@@ -56,7 +56,7 @@ To inspect written data look inside `examples/flink-example/src/main/resources/e
 NOTE: there is no need to manually delete previous data to run the example job again - the example application will do it automatically
 
 # Run example on a local Flink cluster
-1. Setup Flink cluster on your local machine by following the instructions provided [here](https://nightlies.apache.org/flink/flink-docs-release-1.12/try-flink/local_installation.html) (note: link redirects to Flink 1.12 release so be aware to choose your desired release).
+1. Setup Flink cluster on your local machine by following the instructions provided [here](https://nightlies.apache.org/flink/flink-docs-release-1.13/try-flink/local_installation.html) (note: link redirects to Flink 1.13 release so be aware to choose your desired release).
 2. Go to the examples directory in order to package the jar
 ```shell
 > cd examples/flink-example/
@@ -67,7 +67,7 @@ After that you should find the packaged fat-jar under path: `<connectors-repo-lo
 ```shell
 > cd <local-flink-cluster-dir>
 > ./bin/start-cluster.sh
-> ./bin/flink run -c org.example.sink.DeltaSinkExample <connectors-repo-local-dir>/flink-example/target/flink-example-<version>-jar-with-dependencies.jar
+> ./bin/flink run -c org.example.sink.DeltaSinkExampleCluster <connectors-repo-local-dir>/flink-example/target/flink-example-<version>-jar-with-dependencies.jar
 ```
 4. Go the http://localhost:8081 on your browser where you should find Flink UI and you will be able to inspect your running job. You can also look for the written files under `/tmp/delta-flink-example/<UUID>` directory.
 ![flink job ui](src/main/resources/assets/images/flink-cluster-job.png)

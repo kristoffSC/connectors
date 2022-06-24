@@ -14,7 +14,7 @@ public abstract class DeltaBoundedSourceClusterJobExampleBase implements DeltaEx
     public void run(String tablePath) throws Exception {
         System.out.println("Will use table path: " + workPath);
         Utils.prepareDirs(tablePath, workPath);
-        StreamExecutionEnvironment env = createPipeline(tablePath, 1, 1);
+        StreamExecutionEnvironment env = createPipeline(workPath, 1, 1);
         env.execute("Bounded Example Job");
     }
 

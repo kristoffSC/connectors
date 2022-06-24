@@ -39,7 +39,7 @@ public class DeltaContinuousSourceClusterExample extends
 
     @Override
     public DeltaSource<RowData> getDeltaSource(String tablePath) {
-        return DeltaSource.forBoundedRowData(
+        return DeltaSource.forContinuousRowData(
             new Path(tablePath),
             new Configuration()
         ).build();
