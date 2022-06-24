@@ -32,6 +32,7 @@ public class DeltaContinuousSourceClusterExample extends
             .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "continuous-delta-source")
             .setParallelism(sourceParallelism)
             .addSink(new ConsoleSink(Utils.FULL_SCHEMA_ROW_TYPE))
+            .name("Console Sink")
             .setParallelism(1);
 
         return env;

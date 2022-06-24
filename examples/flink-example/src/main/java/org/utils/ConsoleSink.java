@@ -8,8 +8,12 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.RowType.RowField;
 import org.apache.flink.util.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ConsoleSink extends RichSinkFunction<RowData> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConsoleSink.class);
 
     private final RowType rowType;
 
@@ -29,6 +33,6 @@ public class ConsoleSink extends RichSinkFunction<RowData> {
             joiner.add( field.getName() + " -> [" + value + "]");
         }
 
-        System.out.println("Delta table row content: " + joiner);
+        LOG.info("Delta table row content: " + joiner);
     }
 }

@@ -14,7 +14,7 @@ public abstract class DeltaContinuousSourceClusterJobExampleBase implements Delt
     public void run(String tablePath) throws Exception {
         System.out.println("Will use table path: " + workPath);
         Utils.prepareDirs(tablePath, workPath);
-        StreamExecutionEnvironment env = createPipeline(tablePath, 1, 1);
+        StreamExecutionEnvironment env = createPipeline(tablePath, 2, 1);
         env.execute("Continuous Example Job");
         Utils.runSourceTableUpdater(workPath);
     }
