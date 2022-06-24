@@ -10,6 +10,17 @@ import org.utils.ConsoleSink;
 import org.utils.Utils;
 import org.utils.job.continuous.DeltaContinuousSourceLocalJobExampleBase;
 
+/**
+ * Demonstrates how the Flink Delta source can be used to read data from Delta table.
+ * <p>
+ * If you run this example then application will spawn example local Flink streaming job that will
+ * read data from Delta table placed under "src/main/resources/data/source_table_no_partitions"
+ * and will start to actively monitor this table for any new changes.
+ * Read records will be printed to log using custom Sink Function.
+ * <p>
+ * This configuration will read all columns from underlying Delta table form the latest Snapshot.
+ * If any of the columns was a partition column, connector will automatically detect it.
+ */
 public class DeltaContinuousSourceExample extends DeltaContinuousSourceLocalJobExampleBase {
 
     private static final String TABLE_PATH =
@@ -19,6 +30,9 @@ public class DeltaContinuousSourceExample extends DeltaContinuousSourceLocalJobE
         new DeltaContinuousSourceExample().run(TABLE_PATH);
     }
 
+    /**
+     * An example of using Flink Delta Source in streaming pipeline.
+     */
     @Override
     public StreamExecutionEnvironment createPipeline(
             String tablePath,
@@ -37,6 +51,11 @@ public class DeltaContinuousSourceExample extends DeltaContinuousSourceLocalJobE
         return env;
     }
 
+    /**
+     * An example of Flink Delta Source configuration that will read all columns from Delta table
+     * using the latest snapshot. The {@code .forContinuousRowData(...) } creates Delta Flink
+     * source that will monitor delta table for any new changes.
+     */
     @Override
     public DeltaSource<RowData> getDeltaSource(String tablePath) {
         return DeltaSource.forContinuousRowData(

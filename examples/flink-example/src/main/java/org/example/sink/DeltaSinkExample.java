@@ -40,6 +40,9 @@ public class DeltaSinkExample extends DeltaSinkLocalJobExampleBase {
         new DeltaSinkExample().run(TABLE_PATH);
     }
 
+    /**
+     * An example of using Flink Delta Sink in streaming pipeline.
+     */
     @Override
     public StreamExecutionEnvironment createPipeline(
             String tablePath,
@@ -49,7 +52,9 @@ public class DeltaSinkExample extends DeltaSinkLocalJobExampleBase {
         DeltaSink<RowData> deltaSink = getDeltaSink(tablePath);
         StreamExecutionEnvironment env = getStreamExecutionEnvironment();
 
-        env.addSource(new DeltaExampleSourceFunction())
+        // Using Flink Delta Sink in processing pipeline
+        env
+            .addSource(new DeltaExampleSourceFunction())
             .setParallelism(sourceParallelism)
             .sinkTo(deltaSink)
             .name("MyDeltaSink")
@@ -58,6 +63,9 @@ public class DeltaSinkExample extends DeltaSinkLocalJobExampleBase {
         return env;
     }
 
+    /**
+     * An example of Flink Delta Sink configuration.
+     */
     @Override
     public DeltaSink<RowData> getDeltaSink(String tablePath) {
         return DeltaSink

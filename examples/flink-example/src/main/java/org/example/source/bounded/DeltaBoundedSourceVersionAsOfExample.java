@@ -10,6 +10,18 @@ import org.utils.ConsoleSink;
 import org.utils.Utils;
 import org.utils.job.bounded.DeltaBoundedSourceLocalJobExampleBase;
 
+/**
+ * Demonstrates how the Flink Delta source can be used to read data from Delta table from
+ * specific Delta Snapshot version.
+ * <p>
+ * If you run this example then application will spawn example local Flink batch job that will read
+ * data from Delta table placed under "src/main/resources/data/source_table_no_partitions".
+ * Read records will be printed to log using custom Sink Function.
+ * <p>
+ * This configuration will read all columns from underlying Delta table form version
+ * specified by source configuration.
+ * If any of the columns was a partition column, connector will automatically detect it.
+ */
 public class DeltaBoundedSourceVersionAsOfExample extends DeltaBoundedSourceLocalJobExampleBase {
 
     private static final String TABLE_PATH =
@@ -19,6 +31,9 @@ public class DeltaBoundedSourceVersionAsOfExample extends DeltaBoundedSourceLoca
         new DeltaBoundedSourceVersionAsOfExample().run(TABLE_PATH);
     }
 
+    /**
+     * An example of using Flink Delta Source in streaming pipeline.
+     */
     @Override
     public StreamExecutionEnvironment createPipeline(
             String tablePath,
@@ -37,6 +52,11 @@ public class DeltaBoundedSourceVersionAsOfExample extends DeltaBoundedSourceLoca
         return env;
     }
 
+    /**
+     * An example of Flink Delta Source configuration that will from defined Delta snapshot version.
+     * The version can be used via {@code .versionAsOf(long)} method. Alternatively,
+     * the {@code .option("versionAsOf", long} method can be used.
+     */
     @Override
     public DeltaSource<RowData> getDeltaSource(String tablePath) {
         return DeltaSource.forBoundedRowData(

@@ -15,6 +15,17 @@ import org.utils.ConsoleSink;
 import org.utils.Utils;
 import org.utils.job.bounded.DeltaBoundedSourceLocalJobExampleBase;
 
+/**
+ * Demonstrates how the Flink Delta source can be used to read data from Delta table.
+ * <p>
+ * If you run this example then application will spawn example local Flink batch job that will read
+ * data from Delta table placed under "src/main/resources/data/source_table_no_partitions".
+ * Read records will be printed to log using custom Sink Function.
+ * <p>
+ * This configuration will read only columns specified by user.
+ * If any of the columns was a partition column, connector will automatically detect it.
+ * Source will read data from the latest snapshot.
+ */
 public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceLocalJobExampleBase {
 
     private static final String TABLE_PATH =
@@ -29,6 +40,9 @@ public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceLoca
         new DeltaBoundedSourceUserColumnsExample().run(TABLE_PATH);
     }
 
+    /**
+     * An example of using Flink Delta Source in streaming pipeline.
+     */
     @Override
     public StreamExecutionEnvironment createPipeline(
             String tablePath,
@@ -47,6 +61,12 @@ public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceLoca
         return env;
     }
 
+    // TODO PR 18 implement .option("columnNames", ...) was missed.
+    /**
+     * An example of Flink Delta Source configuration that will read only columns specified by user.
+     * via {@code .columnNames(...)} method. Alternatively, the {@code .option("columnNames",
+     * List<String> names} method can be used.
+     */
     @Override
     public DeltaSource<RowData> getDeltaSource(String tablePath) {
         return DeltaSource.forBoundedRowData(

@@ -41,6 +41,9 @@ public class DeltaSinkPartitionedTableExample extends DeltaSinkLocalJobExampleBa
         new DeltaSinkPartitionedTableExample().run(TABLE_PATH);
     }
 
+    /**
+     * An example of using Flink Delta Sink in streaming pipeline.
+     */
     @Override
     public StreamExecutionEnvironment createPipeline(
             String tablePath,
@@ -50,7 +53,9 @@ public class DeltaSinkPartitionedTableExample extends DeltaSinkLocalJobExampleBa
         DeltaSink<RowData> deltaSink = getDeltaSink(tablePath);
         StreamExecutionEnvironment env = getStreamExecutionEnvironment();
 
-        env.addSource(new DeltaExampleSourceFunction())
+        // Using Flink Delta Sink in processing pipeline
+        env
+            .addSource(new DeltaExampleSourceFunction())
             .setParallelism(sourceParallelism)
             .sinkTo(deltaSink)
             .name("MyDeltaSink")
@@ -59,6 +64,9 @@ public class DeltaSinkPartitionedTableExample extends DeltaSinkLocalJobExampleBa
         return env;
     }
 
+    /**
+     * An example of Flink Delta Sink configuration with partition column.
+     */
     @Override
     public DeltaSink<RowData> getDeltaSink(String tablePath) {
         String[] partitionCols = {"f1"};
