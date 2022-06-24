@@ -13,19 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.utils;
+package org.utils.job;
 
-import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.configuration.RestOptions;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.MiniClusterConfiguration;
-import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 /**
  * Internal class providing utility methods to run local Flink job in memory.
  */
-public interface DeltaExampleLocalJobRunner {
+public interface DeltaExampleLocalJobRunner extends DeltaExampleJobRunner {
 
     default MiniCluster getMiniCluster() {
         final org.apache.flink.configuration.Configuration config =
@@ -51,19 +49,4 @@ public interface DeltaExampleLocalJobRunner {
             }
         }).start();
     }
-
-    default StreamExecutionEnvironment getStreamExecutionEnvironment() {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setRuntimeMode(RuntimeExecutionMode.AUTOMATIC);
-        env.enableCheckpointing(2000, CheckpointingMode.EXACTLY_ONCE);
-        return env;
-    }
-
-    default StreamExecutionEnvironment getBatchExecutionEnvironment() {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
-        return env;
-    }
-
-    void run(String tablePath) throws Exception;
 }

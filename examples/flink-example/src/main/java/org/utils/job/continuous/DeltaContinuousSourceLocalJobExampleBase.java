@@ -1,29 +1,25 @@
-package org.example.source.bounded;
+package org.utils.job.continuous;
 
 import io.delta.flink.source.DeltaSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
-import org.utils.DeltaExampleLocalJobRunner;
 import org.utils.Utils;
+import org.utils.job.DeltaExampleLocalJobRunner;
 
-public abstract class DeltaBoundedSourceExampleBase implements DeltaExampleLocalJobRunner {
+public abstract class DeltaContinuousSourceLocalJobExampleBase
+    implements DeltaExampleLocalJobRunner {
 
     private final String workPath = Utils.resolveExampleTableAbsolutePath("example_table");
 
     @Override
     public void run(String tablePath) throws Exception {
-        System.out.println("Will use table path: " + tablePath);
+        System.out.println("Will use table from path: " + tablePath);
 
         Utils.prepareDirs(tablePath, workPath);
         StreamExecutionEnvironment env = createPipeline(workPath, 2, 3);
         runFlinkJobInBackground(env);
+        Utils.runSourceTableUpdater(workPath);
     }
 
-    protected abstract StreamExecutionEnvironment createPipeline(
-        String tablePath,
-        int sourceParallelism,
-        int sinkParallelism
-    );
-
-    protected abstract DeltaSource<RowData> getDeltaSource(String tablePath);
+    public abstract DeltaSource<RowData> getDeltaSource(String tablePath);
 }

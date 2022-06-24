@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.example.sink;
+package org.utils.job;
 
 import java.util.Collections;
 
@@ -21,7 +21,6 @@ import io.delta.flink.sink.DeltaSink;
 import org.apache.commons.lang.StringUtils;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
-import org.utils.DeltaExampleLocalJobRunner;
 import org.utils.Utils;
 
 import io.delta.standalone.DeltaLog;
@@ -29,7 +28,7 @@ import io.delta.standalone.Snapshot;
 import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
-public abstract class DeltaSinkExampleBase implements DeltaExampleLocalJobRunner {
+public abstract class DeltaSinkLocalJobExampleBase implements DeltaExampleLocalJobRunner {
 
     static int PRINT_PAD_LENGTH = 4;
 
@@ -42,13 +41,7 @@ public abstract class DeltaSinkExampleBase implements DeltaExampleLocalJobRunner
         printDeltaTableRows(tablePath);
     }
 
-    abstract DeltaSink<RowData> getDeltaSink(String tablePath);
-
-    abstract StreamExecutionEnvironment createPipeline(
-        String tablePath,
-        int sourceParallelism,
-        int sinkParallelism
-    );
+    public abstract DeltaSink<RowData> getDeltaSink(String tablePath);
 
     public static void printDeltaTableRows(String tablePath) throws InterruptedException {
         DeltaLog deltaLog =

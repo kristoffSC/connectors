@@ -8,8 +8,9 @@ import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
 import org.utils.ConsoleSink;
 import org.utils.Utils;
+import org.utils.job.continuous.DeltaContinuousSourceLocalJobExampleBase;
 
-public class DeltaContinuousSourceExample extends DeltaContinuousSourceExampleBase {
+public class DeltaContinuousSourceExample extends DeltaContinuousSourceLocalJobExampleBase {
 
     private static final String TABLE_PATH =
         Utils.resolveExampleTableAbsolutePath("data/source_table_no_partitions");
@@ -19,7 +20,7 @@ public class DeltaContinuousSourceExample extends DeltaContinuousSourceExampleBa
     }
 
     @Override
-    protected StreamExecutionEnvironment createPipeline(
+    public StreamExecutionEnvironment createPipeline(
             String tablePath,
             int sourceParallelism,
             int sinkParallelism) {
@@ -28,7 +29,7 @@ public class DeltaContinuousSourceExample extends DeltaContinuousSourceExampleBa
         StreamExecutionEnvironment env = getStreamExecutionEnvironment();
 
         env
-            .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "delta-source")
+            .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "continuous-delta-source")
             .setParallelism(sourceParallelism)
             .addSink(new ConsoleSink(Utils.FULL_SCHEMA_ROW_TYPE))
             .setParallelism(1);
@@ -37,7 +38,7 @@ public class DeltaContinuousSourceExample extends DeltaContinuousSourceExampleBa
     }
 
     @Override
-    protected DeltaSource<RowData> getDeltaSource(String tablePath) {
+    public DeltaSource<RowData> getDeltaSource(String tablePath) {
         return DeltaSource.forContinuousRowData(
             new Path(tablePath),
             new Configuration()

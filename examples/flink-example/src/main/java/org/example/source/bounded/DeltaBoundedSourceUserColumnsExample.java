@@ -13,8 +13,9 @@ import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.hadoop.conf.Configuration;
 import org.utils.ConsoleSink;
 import org.utils.Utils;
+import org.utils.job.bounded.DeltaBoundedSourceLocalJobExampleBase;
 
-public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceExampleBase {
+public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceLocalJobExampleBase {
 
     private static final String TABLE_PATH =
         Utils.resolveExampleTableAbsolutePath("data/source_table_no_partitions");
@@ -29,7 +30,7 @@ public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceExam
     }
 
     @Override
-    protected StreamExecutionEnvironment createPipeline(
+    public StreamExecutionEnvironment createPipeline(
             String tablePath,
             int sourceParallelism,
             int sinkParallelism) {
@@ -38,7 +39,7 @@ public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceExam
         StreamExecutionEnvironment env = getStreamExecutionEnvironment();
 
         env
-            .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "delta-source")
+            .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "bounded-delta-source")
             .setParallelism(sourceParallelism)
             .addSink(new ConsoleSink(ROW_TYPE))
             .setParallelism(1);
@@ -47,7 +48,7 @@ public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceExam
     }
 
     @Override
-    protected DeltaSource<RowData> getDeltaSource(String tablePath) {
+    public DeltaSource<RowData> getDeltaSource(String tablePath) {
         return DeltaSource.forBoundedRowData(
                 new Path(tablePath),
                 new Configuration()
@@ -55,5 +56,4 @@ public class DeltaBoundedSourceUserColumnsExample extends DeltaBoundedSourceExam
             .columnNames("f1", "f3")
             .build();
     }
-
 }

@@ -20,7 +20,9 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
+import org.utils.DeltaExampleSourceFunction;
 import org.utils.Utils;
+import org.utils.job.DeltaSinkLocalJobExampleBase;
 
 /**
  * Demonstrates how the Flink Delta Sink can be used to write data to Delta table.
@@ -30,7 +32,7 @@ import org.utils.Utils;
  * run in a daemon thread while in the main app's thread there will Delta Standalone application
  * reading and printing all the data to the std out.
  */
-public class DeltaSinkExample extends DeltaSinkExampleBase {
+public class DeltaSinkExample extends DeltaSinkLocalJobExampleBase {
 
     static String TABLE_PATH = Utils.resolveExampleTableAbsolutePath("example_table");
 
@@ -39,7 +41,7 @@ public class DeltaSinkExample extends DeltaSinkExampleBase {
     }
 
     @Override
-    StreamExecutionEnvironment createPipeline(
+    public StreamExecutionEnvironment createPipeline(
             String tablePath,
             int sourceParallelism,
             int sinkParallelism) {
@@ -57,7 +59,7 @@ public class DeltaSinkExample extends DeltaSinkExampleBase {
     }
 
     @Override
-    DeltaSink<RowData> getDeltaSink(String tablePath) {
+    public DeltaSink<RowData> getDeltaSink(String tablePath) {
         return DeltaSink
             .forRowData(
                 new Path(TABLE_PATH),

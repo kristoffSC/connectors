@@ -1,4 +1,4 @@
-package org.example.source.bounded;
+package org.example.source.continuous;
 
 import io.delta.flink.source.DeltaSource;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -8,14 +8,15 @@ import org.apache.flink.table.data.RowData;
 import org.apache.hadoop.conf.Configuration;
 import org.utils.ConsoleSink;
 import org.utils.Utils;
-import org.utils.job.bounded.DeltaBoundedSourceClusterJobExampleBase;
+import org.utils.job.continuous.DeltaContinuousSourceClusterJobExampleBase;
 
-public class DeltaBoundedSourceClusterExample extends DeltaBoundedSourceClusterJobExampleBase {
+public class DeltaContinuousSourceClusterExample extends
+    DeltaContinuousSourceClusterJobExampleBase {
 
     private static final String TABLE_PATH = "/tmp/delta-flink-example/source_table";
 
     public static void main(String[] args) throws Exception {
-        new DeltaBoundedSourceClusterExample().run(TABLE_PATH);
+        new DeltaContinuousSourceClusterExample().run(TABLE_PATH);
     }
 
     @Override
@@ -28,7 +29,7 @@ public class DeltaBoundedSourceClusterExample extends DeltaBoundedSourceClusterJ
         StreamExecutionEnvironment env = getStreamExecutionEnvironment();
 
         env
-            .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "bounded-delta-source")
+            .fromSource(deltaSink, WatermarkStrategy.noWatermarks(), "continuous-delta-source")
             .setParallelism(sourceParallelism)
             .addSink(new ConsoleSink(Utils.FULL_SCHEMA_ROW_TYPE))
             .setParallelism(1);

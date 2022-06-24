@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.example.sink;
+package org.utils;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -24,7 +24,6 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.util.DataFormatConverters;
 import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.types.Row;
-import org.utils.Utils;
 
 /**
  * Internal class providing mock implementation for example stream source.
