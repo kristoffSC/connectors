@@ -53,11 +53,12 @@ public class DeltaSourceOptions {
     // This options can be set/used by end user while configuring Flink Delta source.
 
     /**
-     * An option that allow to specify by user, which columns should be read from Delta table.
-     * This string should contain a non-blank, comma separated values.
+     * An option that can be used to specify which columns should be read from Delta table.
+     * This string should contain a non-blank, comma separated values, for example:
+     * "col1, col2, col3"
      * <p>
      * <p>
-     * The String representation for this option is <b>versionAsOf</b>.
+     * The String representation for this option is <b>columnNames</b>.
      */
     public static final DeltaConfigOption<String> COLUMN_NAMES =
         DeltaConfigOption.of(
