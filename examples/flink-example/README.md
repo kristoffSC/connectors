@@ -17,7 +17,7 @@ To run Flink example job reading data from Delta table:
   - `org.example.source.bounded.DeltaBoundedSourceVersionAsOfExample` class.
 
 Examples for bound mode will terminate after reading all data from Snapshot. This is expected since those are examples of batch jobs.
-The ConsoleSink out in logs can look something like log snipped below, where the order of log liens can be different for every run.
+The ConsoleSink out in logs can look something like log snipped below, where the order of log lines can be different for every run.
 ```
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val23], f2 -> [f2_val23], f3 -> [23]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val17], f2 -> [f2_val17], f3 -> [17]
@@ -54,9 +54,9 @@ or different number of columns depending on used value in builder's `.columnName
   - `org.example.source.continuous.DeltaContinuousSourceStartingVersionExample` class.
   - `org.example.source.continuous.DeltaContinuousSourceUserColumnsExample` class.
 
-Examples for continuous mode will NOT terminate by themselves. In order to stop, you need to terminate the manually using `ctr + c` command.
+Examples for continuous mode will not terminate by themselves. In order to stop, you need to terminate the manually using `ctr + c` command.
 This is expected since those are examples of streaming jobs that by design run forever.
-The ConsoleSink out in logs can look something like log snipped below, where the order of log liens can be different for every run.
+The ConsoleSink out in logs can look something like log snipped below, where the order of log lines can be different for every run.
 ```
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val7], f2 -> [f2_val7], f3 -> [7]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val1], f2 -> [f2_val1], f3 -> [1]
