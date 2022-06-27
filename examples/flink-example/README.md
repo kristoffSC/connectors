@@ -6,10 +6,16 @@ Examples for Delta Flink source are using already created Delta table that can b
 "src/main/resources/data/source_table_no_partitions" folder.
 The detailed description of this table can be found in its [README.md](src/main/resources/data/source_table_no_partitions/README.md)
 
-To run Flink example job reading data from Delta table:
+For Maven and SBT examples, if you wished to use Flink connector SNAPSHOT version,
+you need to build it locally and publish to your local repository. You can do it using below code:
+```shell
+build/sbt standaloneCosmetic/publishM2
+build/sbt flink/publishM2
+```
 
 ### Local IDE
-  Simply run class that contains `main` method from `org.example.source` package.
+To run Flink example job reading data from Delta table from Local IDE
+simply run class that contains `main` method from `org.example.source` package.
 
   For bounded mode:
   - `org.example.source.bounded.DeltaBoundedSourceExample` class.
@@ -48,6 +54,7 @@ For rest of the examples for continuous mode, you will see similar logs but with
 or different number of columns depending on used value in builder's `.columnNames(String[])` method.
 
 ### Maven
+To run Flink example job reading data from Delta table from Maven, simply run:
 ```shell
 > cd examples/flink-example/
 >
@@ -57,6 +64,7 @@ or different number of columns depending on used value in builder's `.columnName
 In `-Dexec.mainClass` argument you can use any of the full class names from `Local IDE` paragraph.
 
 ### SBT
+To run Flink example job reading data from Delta table from SBT, simply run:
 ```shell
 > cd examples/
 > export STANDALONE_VERSION=x.y.z  # update to desired version
@@ -65,7 +73,7 @@ In `-Dexec.mainClass` argument you can use any of the full class names from `Loc
 > build/sbt "flinkExample/runMain org.example.source.bounded.DeltaBoundedSourceExample"
 ```
 
-Similar to `Maven` paragraph, here you can also use any of the full class names from the `Local IDE` paragraph as `build/sbt "flinkExample/runMain` argument. 
+Similar to `Maven` paragraph, here you can also use any of the full class names from the `Local IDE` paragraph as `build/sbt "flinkExample/runMain` argument.
 
 # Delta Sink
 ## Run example for non-partitioned Delta table
