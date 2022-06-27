@@ -72,7 +72,7 @@ org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_1], f2 -> [
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_2], f2 -> [f2_newVal_2], f3 -> [2]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_3], f2 -> [f2_newVal_3], f3 -> [3]
 ```
-The example is constructed in a way, that after reading Delta table, new records will start be adding to it.
+The example is constructed in a way, after few moments from finishing reading Delta table consent, new records will begin to be added to the table.
 The Sink connector will read them as well. New records will have `newVal` for `f1` and `f2` column values.
 
 For rest of the examples for continuous mode, you will see similar logs but with different number of rows (depending on version used for `startingVersion` option)
