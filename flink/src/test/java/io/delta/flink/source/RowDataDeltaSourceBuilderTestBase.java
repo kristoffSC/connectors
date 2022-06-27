@@ -1,5 +1,6 @@
 package io.delta.flink.source;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.when;
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.Metadata;
+import io.delta.standalone.types.StringType;
 import io.delta.standalone.types.StructField;
 import io.delta.standalone.types.StructType;
 
@@ -59,6 +62,34 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         }
     }
 
+    @Test
+    public void testColumnArrays() {
+
+        when(deltaLog.snapshot()).thenReturn(headSnapshot);
+
+        StructField[] schema = {
+            new StructField("col1", new StringType()),
+            new StructField("col2", new StringType()),
+        };
+        mockDeltaTableForSchema(schema);
+
+        List<DeltaSourceBuilderBase<?, ?>> builders = Arrays.asList(
+            ((DeltaSourceBuilderBase<?, ?>) getBuilderAllColumns()
+                .columnNames(Arrays.asList("col1", "col2"))),
+            ((DeltaSourceBuilderBase<?, ?>) getBuilderAllColumns()
+                .option(DeltaSourceOptions.COLUMN_NAMES.key(), "col1, col2"))
+        );
+
+        assertAll(() -> {
+            for (DeltaSourceBuilderBase<?, ?> builder : builders) {
+                builder.build();
+                assertArrayEquals(new String[]{"col1", "col2"},
+                    builder.getUserColumnNames().toArray());
+            }
+        });
+    }
+
+
     /**
      * @return A Stream of arguments for parametrized test such that every element contains:
      * <ul>
@@ -69,7 +100,7 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
      *     </li>
      * </ul>
      */
-    protected static Stream<Arguments> columnArrays() {
+    protected static Stream<Arguments> invalidColumnArrays() {
         return Stream.of(
             // Validation error due to blank column name.
             Arguments.of(new String[]{"col1", " "}, 1),
@@ -86,15 +117,15 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
     }
 
     /**
-     * Test for column name and colum type arrays.
+     * Test for column name arrays.
      *
      * @param columnNames        An array with column names.
      * @param expectedErrorCount Number of expected validation errors for given combination of
      *                           column names and types.
      */
-    @ParameterizedTest
-    @MethodSource("columnArrays")
-    public void testColumnArrays(String[] columnNames, int expectedErrorCount) {
+    @ParameterizedTest(name = "{index}: Column names = [{0}]")
+    @MethodSource("invalidColumnArrays")
+    public void testInvalidColumnArrays(String[] columnNames, int expectedErrorCount) {
 
         Optional<Exception> validation = testValidation(
             () -> getBuilderForColumns(columnNames).build()
@@ -103,10 +134,43 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
         DeltaSourceValidationException exception =
             (DeltaSourceValidationException) validation.orElseThrow(
                 () -> new AssertionError(
-                    "Builder should throw exception on invalid column names and column types "
-                        + "arrays."));
+                    "Builder should throw exception on invalid column names arrays."));
 
         assertThat(exception.getValidationMessages().size(), equalTo(expectedErrorCount));
+    }
+
+    /**
+     * @return A Stream of arguments for parametrized test such that every eelement represents
+     * a string with column names.
+     */
+    protected static Stream<Arguments> invalidColumnOptions() {
+        return Stream.of(
+            Arguments.of(""),
+            Arguments.of((Object) null),
+            Arguments.of(" "),
+            Arguments.of("col1, "),
+            Arguments.of("col1,, col2"),
+            Arguments.of("col1, col2, ")
+        );
+    }
+
+    @ParameterizedTest(name = "{index}: Column names = [{0}]")
+    @MethodSource("invalidColumnOptions")
+    public void testInvalidColumnOption(String columnNames) {
+
+        Optional<Exception> validation = testValidation(
+            () -> ((DeltaSourceBuilderBase<?, ?>)
+                getBuilderAllColumns()
+                    .option(DeltaSourceOptions.COLUMN_NAMES.key(), columnNames))
+                .build()
+        );
+
+        DeltaSourceValidationException exception =
+            (DeltaSourceValidationException) validation.orElseThrow(
+                () -> new AssertionError(
+                    "Builder should throw exception on invalid column names arrays."));
+
+        LOG.info(exception.toString());
     }
 
     @Test

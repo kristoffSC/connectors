@@ -1,9 +1,12 @@
 package io.delta.flink.source.internal.builder;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.DeltaSourceConfiguration;
@@ -17,6 +20,7 @@ import io.delta.flink.source.internal.file.DeltaFileEnumerator;
 import io.delta.flink.source.internal.state.DeltaSourceSplit;
 import io.delta.flink.source.internal.utils.SourceSchema;
 import io.delta.flink.source.internal.utils.SourceUtils;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.connector.file.src.assigners.FileSplitAssigner;
 import org.apache.flink.connector.file.src.assigners.LocalityAwareSplitAssigner;
 import org.apache.flink.core.fs.Path;
@@ -63,7 +67,8 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     /**
      * Default reference value for column names list.
      */
-    protected static final List<String> DEFAULT_COLUMNS = new ArrayList<>(0);
+    protected static final List<String> DEFAULT_COLUMNS =
+        Collections.unmodifiableList(new ArrayList<>(0));
 
     /**
      * Message prefix for validation exceptions.
@@ -209,24 +214,39 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     protected Validator validateOptionalParameters() {
         Validator validator = new Validator();
 
-        if (userColumnNames != DEFAULT_COLUMNS) {
-            validator.checkNotNull(userColumnNames,
-                EXCEPTION_PREFIX + "used a null reference for user columns.");
-
-            if (userColumnNames != null) {
-                validator.checkArgument(!userColumnNames.isEmpty(),
-                    EXCEPTION_PREFIX + "user column names list is empty.");
-                if (!userColumnNames.isEmpty()) {
-                    validator.checkArgument(
-                        userColumnNames.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
-                        EXCEPTION_PREFIX
-                            + "user column names list contains at least one element that is null, "
-                            + "empty, or has only whitespace characters.");
-                }
+        if (userColumnNames == DEFAULT_COLUMNS) {
+            if (sourceConfiguration.hasOption(DeltaSourceOptions.COLUMN_NAMES)) {
+                String userColumnsString =
+                    sourceConfiguration.getValue(DeltaSourceOptions.COLUMN_NAMES);
+                userColumnNames = Arrays
+                    .stream(userColumnsString.split(","))
+                    .map(String::trim)
+                    .collect(Collectors.toList());
             }
         }
 
+        if (userColumnNames != DEFAULT_COLUMNS) {
+            validateUserColumns(validator);
+        }
+
         return validator;
+    }
+
+    private void validateUserColumns(Validator validator) {
+        validator.checkNotNull(userColumnNames,
+            EXCEPTION_PREFIX + "used a null reference for user columns.");
+
+        if (userColumnNames != null) {
+            validator.checkArgument(!userColumnNames.isEmpty(),
+                EXCEPTION_PREFIX + "user column names list is empty.");
+            if (!userColumnNames.isEmpty()) {
+                validator.checkArgument(
+                    userColumnNames.stream().noneMatch(StringUtils::isNullOrWhitespaceOnly),
+                    EXCEPTION_PREFIX
+                        + "user column names list contains at least one element that is null, "
+                        + "empty, or has only whitespace characters.");
+            }
+        }
     }
 
     /**
@@ -337,5 +357,13 @@ public abstract class DeltaSourceBuilderBase<T, SELF> {
     @FunctionalInterface
     protected interface Executable {
         void execute();
+    }
+
+    /**
+     * @return unmodifiable version of list with Delta table columns defined by user.
+     */
+    @VisibleForTesting
+    public List<String> getUserColumnNames() {
+        return Collections.unmodifiableList(userColumnNames);
     }
 }

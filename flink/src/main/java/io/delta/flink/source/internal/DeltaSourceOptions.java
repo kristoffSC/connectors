@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.delta.flink.source.internal.builder.BooleanOptionTypeConverter;
+import io.delta.flink.source.internal.builder.ColumnNamesOptionTypeConverter;
 import io.delta.flink.source.internal.builder.DeltaConfigOption;
 import io.delta.flink.source.internal.builder.NonNegativeNumberTypeConverter;
 import io.delta.flink.source.internal.builder.StartingVersionOptionTypeConverter;
@@ -50,6 +51,19 @@ public class DeltaSourceOptions {
 
     // ----- PUBLIC AND NONE-PUBLIC OPTIONS ----- //
     // This options can be set/used by end user while configuring Flink Delta source.
+
+    /**
+     * An option that allow to specify by user, which columns should be read from Delta table.
+     * This string should contain a non-blank, comma separated values.
+     * <p>
+     * <p>
+     * The String representation for this option is <b>versionAsOf</b>.
+     */
+    public static final DeltaConfigOption<String> COLUMN_NAMES =
+        DeltaConfigOption.of(
+            ConfigOptions.key("columnNames").stringType().noDefaultValue(),
+            String.class,
+            new ColumnNamesOptionTypeConverter());
 
     /**
      * An option that allow time travel to {@link io.delta.standalone.Snapshot} version to read
@@ -233,6 +247,7 @@ public class DeltaSourceOptions {
         USER_FACING_SOURCE_OPTIONS.put(IGNORE_DELETES.key(), IGNORE_DELETES);
         USER_FACING_SOURCE_OPTIONS.put(IGNORE_CHANGES.key(), IGNORE_CHANGES);
         USER_FACING_SOURCE_OPTIONS.put(PARQUET_BATCH_SIZE.key(), PARQUET_BATCH_SIZE);
+        USER_FACING_SOURCE_OPTIONS.put(COLUMN_NAMES.key(), COLUMN_NAMES);
     }
 
     static {

@@ -315,6 +315,4 @@ class RowDataBoundedDeltaSourceBuilderTest extends RowDataDeltaSourceBuilderTest
             .timestampAsOf("2022-02-24T04:55:00.001")
             .option(DeltaSourceOptions.VERSION_AS_OF.key(), 10);
     }
-
-
 }

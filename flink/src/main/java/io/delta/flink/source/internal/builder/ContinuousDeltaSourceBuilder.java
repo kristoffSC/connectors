@@ -9,6 +9,7 @@ import io.delta.flink.source.internal.enumerator.ContinuousSplitEnumeratorProvid
 import io.delta.flink.source.internal.enumerator.supplier.ContinuousSnapshotSupplierFactory;
 import org.apache.flink.core.fs.Path;
 import org.apache.hadoop.conf.Configuration;
+import static io.delta.flink.source.internal.DeltaSourceOptions.COLUMN_NAMES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_CHANGES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.IGNORE_DELETES;
 import static io.delta.flink.source.internal.DeltaSourceOptions.PARQUET_BATCH_SIZE;
@@ -47,7 +48,8 @@ public abstract class ContinuousDeltaSourceBuilder<T, SELF>
             IGNORE_DELETES.key(),
             UPDATE_CHECK_INTERVAL.key(),
             UPDATE_CHECK_INITIAL_DELAY.key(),
-            PARQUET_BATCH_SIZE.key()
+            PARQUET_BATCH_SIZE.key(),
+            COLUMN_NAMES.key()
         )
     );
 
