@@ -18,7 +18,7 @@ import org.utils.job.bounded.DeltaBoundedSourceLocalJobExampleBase;
  * data from Delta table placed under "src/main/resources/data/source_table_no_partitions".
  * Read records will be printed to log using custom Sink Function.
  * <p>
- * This configuration will read all columns from underlying Delta table form version
+ * This configuration will read all columns from underlying Delta table from version
  * specified by source configuration.
  * If any of the columns was a partition column, connector will automatically detect it.
  */

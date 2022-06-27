@@ -18,7 +18,7 @@ import org.utils.job.continuous.DeltaContinuousSourceLocalJobExampleBase;
  * and will start to actively monitor this table for any new changes.
  * Read records will be printed to log using custom Sink Function.
  * <p>
- * This configuration will read all columns from underlying Delta table form the latest Snapshot.
+ * This configuration will read all columns from underlying Delta table from the latest Snapshot.
  * If any of the columns was a partition column, connector will automatically detect it.
  */
 public class DeltaContinuousSourceExample extends DeltaContinuousSourceLocalJobExampleBase {
