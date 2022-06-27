@@ -19,28 +19,6 @@ To run Flink example job reading data from Delta table:
 Examples for bound mode will terminate after reading all data from Snapshot. This is expected since those are examples of batch jobs.
 The ConsoleSink out in logs can look something like log snipped below, where the order of log lines can be different for every run.
 ```
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val23], f2 -> [f2_val23], f3 -> [23]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val17], f2 -> [f2_val17], f3 -> [17]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val10], f2 -> [f2_val10], f3 -> [10]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val3], f2 -> [f2_val3], f3 -> [3]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val8], f2 -> [f2_val8], f3 -> [8]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val18], f2 -> [f2_val18], f3 -> [18]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val24], f2 -> [f2_val24], f3 -> [24]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val12], f2 -> [f2_val12], f3 -> [12]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val21], f2 -> [f2_val21], f3 -> [21]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val20], f2 -> [f2_val20], f3 -> [20]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val2], f2 -> [f2_val2], f3 -> [2]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val7], f2 -> [f2_val7], f3 -> [7]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val11], f2 -> [f2_val11], f3 -> [11]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val0], f2 -> [f2_val0], f3 -> [0]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val22], f2 -> [f2_val22], f3 -> [22]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val16], f2 -> [f2_val16], f3 -> [16]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val4], f2 -> [f2_val4], f3 -> [4]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val1], f2 -> [f2_val1], f3 -> [1]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val14], f2 -> [f2_val14], f3 -> [14]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val5], f2 -> [f2_val5], f3 -> [5]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val13], f2 -> [f2_val13], f3 -> [13]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val9], f2 -> [f2_val9], f3 -> [9]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val15], f2 -> [f2_val15], f3 -> [15]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val6], f2 -> [f2_val6], f3 -> [6]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val19], f2 -> [f2_val19], f3 -> [19]
@@ -58,19 +36,10 @@ Examples for continuous mode will not terminate by themselves. In order to stop,
 This is expected since those are examples of streaming jobs that by design run forever.
 The ConsoleSink out in logs can look something like log snipped below, where the order of log lines can be different for every run.
 ```
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val7], f2 -> [f2_val7], f3 -> [7]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val1], f2 -> [f2_val1], f3 -> [1]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val14], f2 -> [f2_val14], f3 -> [14]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val5], f2 -> [f2_val5], f3 -> [5]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val13], f2 -> [f2_val13], f3 -> [13]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val9], f2 -> [f2_val9], f3 -> [9]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val15], f2 -> [f2_val15], f3 -> [15]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val6], f2 -> [f2_val6], f3 -> [6]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_val19], f2 -> [f2_val19], f3 -> [19]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_0], f2 -> [f2_newVal_0], f3 -> [0]
 org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_1], f2 -> [f2_newVal_1], f3 -> [1]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_2], f2 -> [f2_newVal_2], f3 -> [2]
-org.utils.ConsoleSink [] - Delta table row content: f1 -> [f1_newVal_3], f2 -> [f2_newVal_3], f3 -> [3]
 ```
 The example is constructed in a way, after few moments from finishing reading Delta table consent, new records will begin to be added to the table.
 The Sink connector will read them as well. New records will have `newVal` for `f1` and `f2` column values.
