@@ -105,8 +105,8 @@ public class DeltaSinkTableITCase {
             deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             // one of the optional options is whether the sink should try to update the table's
             // schema, so we are initializing an existing table to test this behaviour
-            DeltaTestUtils.initTestForTableApiTable(deltaTablePath);
             if (includeOptionalOptions) {
+                DeltaTestUtils.initTestForTableApiTable(deltaTablePath);
                 testRowType = DeltaSinkTestUtils.addNewColumnToSchema(TEST_ROW_TYPE);
             }
         } catch (IOException e) {
@@ -214,7 +214,7 @@ public class DeltaSinkTableITCase {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setRestartStrategy(RestartStrategies.noRestart());
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
-        env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+        env.enableCheckpointing(1000, CheckpointingMode.EXACTLY_ONCE);
         return env;
     }
 

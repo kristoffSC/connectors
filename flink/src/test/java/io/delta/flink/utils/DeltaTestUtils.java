@@ -155,7 +155,7 @@ public class DeltaTestUtils {
             if (i > 20) throw new RuntimeException(
                 "Timeout. DeltaLog for table has not been initialized");
             i++;
-            Thread.sleep(500);
+            Thread.sleep(1000);
             deltaLog.update();
         }
     }

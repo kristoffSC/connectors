@@ -17,17 +17,23 @@
  */
 package io.delta.flink.table;
 
+import io.delta.flink.sink.internal.DeltaBucketAssigner;
+import io.delta.flink.sink.internal.DeltaPartitionComputer.DeltaRowDataPartitionComputer;
+import io.delta.flink.sink.internal.DeltaSinkBuilder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.delta.flink.sink.DeltaSink;
-import io.delta.flink.sink.RowDataDeltaSinkBuilder;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.formats.parquet.row.ParquetRowDataBuilder;
+import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.BasePathBucketAssigner;
+import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkProvider;
 import org.apache.flink.table.connector.sink.abilities.SupportsPartitioning;
+import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
@@ -104,12 +110,30 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     @Override
     public SinkRuntimeProvider getSinkRuntimeProvider(Context context) {
 
-        RowDataDeltaSinkBuilder builder =
-            DeltaSink.forRowData(this.basePath, this.conf, this.rowType)
-                .withMergeSchema(shouldTryUpdateSchema);
+        DeltaSinkBuilder<RowData> builder =
+            new DeltaSinkBuilder.DefaultDeltaFormatBuilder<>(
+                this.basePath,
+                this.conf,
+                ParquetRowDataBuilder.createWriterFactory(
+                    this.rowType,
+                    this.conf,
+                    true // utcTimestamp
+                ),
+                new BasePathBucketAssigner<>(),
+                OnCheckpointRollingPolicy.build(),
+                this.rowType,
+                shouldTryUpdateSchema // mergeSchema
+            );
 
         if (catalogTable.isPartitioned()) {
-            builder.withPartitionColumns(staticPartitionSpec.keySet().toArray(new String[0]));
+            DeltaRowDataPartitionComputer partitionComputer =
+                new DeltaRowDataPartitionComputer(
+                    rowType, catalogTable.getPartitionKeys().toArray(new String[0]),
+                    staticPartitionSpec);
+            DeltaBucketAssigner<RowData> partitionAssigner =
+                new DeltaBucketAssigner<>(partitionComputer);
+
+            builder.withBucketAssigner(partitionAssigner);
         }
 
         return SinkProvider.of(builder.build());
