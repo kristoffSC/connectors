@@ -77,10 +77,10 @@ lazy val commonSettings = Seq(
     "-Dspark.sql.sources.parallelPartitionDiscovery.parallelism=5",
     "-Xmx1024m"
   ),
-  compileScalastyle := (Compile / scalastyle).toTask("").value,
-  (Compile / compile ) := ((Compile / compile) dependsOn compileScalastyle).value,
-  testScalastyle := (Test / scalastyle).toTask("").value,
-  (Test / test) := ((Test / test) dependsOn testScalastyle).value,
+  // compileScalastyle := (Compile / scalastyle).toTask("").value,
+  // (Compile / compile ) := ((Compile / compile) dependsOn compileScalastyle).value,
+   testScalastyle := (Test / scalastyle).toTask("").value,
+   (Test / test) := ((Test / test) dependsOn testScalastyle).value,
 
   // Can be run explicitly via: build/sbt $module/checkstyle
   // Will automatically be run during compilation (e.g. build/sbt compile)
@@ -162,6 +162,15 @@ lazy val hive = (project in file("hive")) dependsOn(standaloneCosmetic) settings
   name := "delta-hive",
   commonSettings,
   releaseSettings,
+  assembly / assemblyMergeStrategy := {
+    // Discard `module-info.class` to fix the `different file contents found` error.
+    // TODO Upgrade SBT to 1.5 which will do this automatically
+    case "module-info.class" => MergeStrategy.discard
+    case PathList(ps @ _*) if ps.contains("module-info.class") => MergeStrategy.discard
+    case x =>
+      val oldStrategy = (assembly / assemblyMergeStrategy).value
+      oldStrategy(x)
+  },
 
   // Minimal dependencies to compile the codes. This project doesn't run any tests so we don't need
   // any runtime dependencies.
@@ -506,6 +515,7 @@ lazy val standalone = (project in file("standalone"))
       // Discard `module-info.class` to fix the `different file contents found` error.
       // TODO Upgrade SBT to 1.5 which will do this automatically
       case "module-info.class" => MergeStrategy.discard
+      case PathList(ps @ _*) if ps.contains("module-info.class") => MergeStrategy.discard
       case x =>
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
@@ -664,9 +674,9 @@ def flinkScalaVersion(scalaBinaryVersion: String): String = {
   }
 }
 
-val flinkVersion = "1.13.0"
+val flinkVersion = "1.15.0"
 lazy val flink = (project in file("flink"))
-  .dependsOn(standaloneCosmetic % "provided")
+  .dependsOn(standalone % "provided")
   .enablePlugins(GenJavadocPlugin, JavaUnidocPlugin)
   .settings (
     name := "delta-flink",
@@ -695,14 +705,15 @@ lazy val flink = (project in file("flink"))
         </developers>,
     crossPaths := false,
     libraryDependencies ++= Seq(
-      "org.apache.flink" % ("flink-parquet_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "provided",
+      "org.apache.flink" % "flink-parquet" % flinkVersion % "provided",
       "org.apache.flink" % "flink-table-common" % flinkVersion % "provided",
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided",
-      "org.apache.flink" % "flink-connector-files" % flinkVersion % "test" classifier "tests",
-      "org.apache.flink" % ("flink-table-runtime-blink_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "provided",
+      /* "org.apache.flink" % "flink-connector-files" % flinkVersion % "test" classifier "tests",*/
+      "org.apache.flink" % "flink-connector-files" % flinkVersion % "provided",
+      "org.apache.flink" % "flink-table-runtime" % flinkVersion % "provided",
       "org.apache.flink" % "flink-connector-test-utils" % flinkVersion % "test",
-      "org.apache.flink" % ("flink-clients_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
-      "org.apache.flink" % ("flink-test-utils_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
+      "org.apache.flink" % "flink-clients" % flinkVersion % "test",
+      "org.apache.flink" % "flink-test-utils" % flinkVersion % "test",
       "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "test" classifier "tests",
       "org.mockito" % "mockito-inline" % "3.8.0" % "test",
       "net.aichler" % "jupiter-interface" % JupiterKeys.jupiterVersion.value % Test,
