@@ -54,8 +54,8 @@ public class DeltaSourceOptions {
 
     /**
      * An option that can be used to specify which columns should be read from Delta table.
-     * This string should contain a non-blank, comma separated values, for example:
-     * "col1, col2, col3"
+     * This string should contain a non-blank, comma separated values, for example
+     * "col1, col2, col3" or "col1,col2,col3".
      * <p>
      * <p>
      * The String representation for this option is <b>columnNames</b>.

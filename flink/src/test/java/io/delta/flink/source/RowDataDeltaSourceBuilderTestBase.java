@@ -77,7 +77,9 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
             ((DeltaSourceBuilderBase<?, ?>) getBuilderAllColumns()
                 .columnNames(Arrays.asList("col1", "col2"))),
             ((DeltaSourceBuilderBase<?, ?>) getBuilderAllColumns()
-                .option(DeltaSourceOptions.COLUMN_NAMES.key(), "col1, col2"))
+                .option(DeltaSourceOptions.COLUMN_NAMES.key(), "col1, col2")),
+            ((DeltaSourceBuilderBase<?, ?>) getBuilderAllColumns()
+                .option(DeltaSourceOptions.COLUMN_NAMES.key(), "col1,col2"))
         );
 
         assertAll(() -> {
@@ -88,7 +90,6 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
             }
         });
     }
-
 
     /**
      * @return A Stream of arguments for parametrized test such that every element contains:
@@ -150,7 +151,9 @@ public abstract class RowDataDeltaSourceBuilderTestBase {
             Arguments.of(" "),
             Arguments.of("col1, "),
             Arguments.of("col1,, col2"),
-            Arguments.of("col1, col2, ")
+            Arguments.of("col1, col2, "),
+            Arguments.of(",col1, col2"),
+            Arguments.of(" ,col1, col2")
         );
     }
 
