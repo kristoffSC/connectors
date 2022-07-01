@@ -51,13 +51,10 @@ public class TestParquetReader {
      *
      * @param deltaLog {@link DeltaLog} instance representing table for which the validation should
      *                 be run
-     * @param rowType         Flink's logical type that will be used for parsing back data read
-     *                        from Parquet file
      * @return number of read and successfully validated records in the table
      * @throws IOException Thrown when the data cannot be read or writer cannot be instantiated
      */
-    public static int readAndValidateAllTableRecords(DeltaLog deltaLog,
-                                                     RowType rowType) throws IOException {
+    public static int readAndValidateAllTableRecords(DeltaLog deltaLog) throws IOException {
         List<AddFile> deltaTableFiles = deltaLog.snapshot().getAllFiles();
         int cumulatedRecords = 0;
         for (AddFile addedFile : deltaTableFiles) {

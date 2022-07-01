@@ -21,15 +21,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.delta.flink.sink.DeltaSink;
-import io.delta.flink.sink.DeltaSinkBuilder;
-import io.delta.flink.sink.DeltaTablePartitionAssigner;
+import io.delta.flink.sink.RowDataDeltaSinkBuilder;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkProvider;
 import org.apache.flink.table.connector.sink.abilities.SupportsPartitioning;
-import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
@@ -105,20 +103,16 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
      */
     @Override
     public SinkRuntimeProvider getSinkRuntimeProvider(Context context) {
-        DeltaSinkBuilder<RowData> deltaSinkBuilder = DeltaSink.forRowData(
-            this.basePath, this.conf, this.rowType
-        ).withShouldTryUpdateSchema(shouldTryUpdateSchema);
+
+        RowDataDeltaSinkBuilder builder =
+            DeltaSink.forRowData(this.basePath, this.conf, this.rowType)
+                .withMergeSchema(shouldTryUpdateSchema);
 
         if (catalogTable.isPartitioned()) {
-            DeltaTablePartitionAssigner.DeltaRowDataPartitionComputer partitionComputer =
-                new DeltaTablePartitionAssigner.DeltaRowDataPartitionComputer(
-                    rowType, catalogTable.getPartitionKeys(), staticPartitionSpec);
-            DeltaTablePartitionAssigner<RowData> partitionAssigner =
-                new DeltaTablePartitionAssigner<>(partitionComputer);
-            deltaSinkBuilder.withBucketAssigner(partitionAssigner);
+            builder.withPartitionColumns(staticPartitionSpec.keySet().toArray(new String[0]));
         }
 
-        return SinkProvider.of(deltaSinkBuilder.build());
+        return SinkProvider.of(builder.build());
     }
 
     @Override

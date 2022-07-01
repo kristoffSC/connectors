@@ -125,8 +125,7 @@ public class DeltaSinkStreamingExecutionITCase extends StreamingExecutionFileSin
         List<AddFile> initialDeltaFiles = deltaLog.snapshot().getAllFiles();
 
         long initialVersion = deltaLog.snapshot().getVersion();
-        int initialTableRecordsCount = TestParquetReader
-            .readAndValidateAllTableRecords(deltaLog);
+        int initialTableRecordsCount = TestParquetReader.readAndValidateAllTableRecords(deltaLog);
         assertEquals(2, initialTableRecordsCount);
 
         JobGraph jobGraph = createJobGraph(deltaTablePath);
@@ -160,8 +159,7 @@ public class DeltaSinkStreamingExecutionITCase extends StreamingExecutionFileSin
             assertTrue(Integer.parseInt(operationMetrics.get().get("numOutputBytes")) > 0);
 
         }
-        int finalTableRecordsCount = TestParquetReader.readAndValidateAllTableRecords(
-            deltaLog, DeltaSinkTestUtils.TEST_ROW_TYPE);
+        int finalTableRecordsCount = TestParquetReader.readAndValidateAllTableRecords(deltaLog);
 
         assertEquals(finalDeltaFiles.size() - initialDeltaFiles.size(), totalAddedFiles);
         assertEquals((NUM_RECORDS * NUM_SOURCES), totalRowsAdded);

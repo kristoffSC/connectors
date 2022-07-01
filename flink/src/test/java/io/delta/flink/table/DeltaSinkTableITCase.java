@@ -18,6 +18,8 @@
 
 package io.delta.flink.table;
 
+import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.TestParquetReader;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
-import io.delta.flink.sink.utils.TestParquetReader;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.streaming.api.CheckpointingMode;
@@ -34,9 +35,11 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.table.data.util.DataFormatConverters;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
+import org.apache.flink.table.types.utils.TypeConversions;
 import org.hamcrest.CoreMatchers;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -44,13 +47,14 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
 
+// TODO migrate to Junit5
 @RunWith(Parameterized.class)
 public class DeltaSinkTableITCase {
 
@@ -99,10 +103,10 @@ public class DeltaSinkTableITCase {
     public void setup() {
         try {
             deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+            // one of the optional options is whether the sink should try to update the table's
+            // schema, so we are initializing an existing table to test this behaviour
+            DeltaTestUtils.initTestForTableApiTable(deltaTablePath);
             if (includeOptionalOptions) {
-                // one of the optional options is whether the sink should try to update the table's
-                // schema, so we are initializing an existing table to test this behaviour
-                DeltaSinkTestUtils.initTestForTableApiTable(deltaTablePath);
                 testRowType = DeltaSinkTestUtils.addNewColumnToSchema(TEST_ROW_TYPE);
             }
         } catch (IOException e) {
@@ -110,10 +114,11 @@ public class DeltaSinkTableITCase {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testTableApi() throws Exception {
         // GIVEN
-        DeltaLog deltaLog = DeltaLog.forTable(DeltaSinkTestUtils.getHadoopConf(), deltaTablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
         List<AddFile> initialDeltaFiles = deltaLog.snapshot().getAllFiles();
 
         // WHEN
@@ -122,22 +127,26 @@ public class DeltaSinkTableITCase {
         } else {
             runFlinkJobInBackground();
         }
-        DeltaSinkTestUtils.waitUntilDeltaLogExists(deltaLog, deltaLog.snapshot().getVersion() + 1);
+        DeltaTestUtils.waitUntilDeltaLogExists(deltaLog, deltaLog.snapshot().getVersion() + 1);
 
         // THEN
         deltaLog.update();
         int tableRecordsCount =
-            TestParquetReader.readAndValidateAllTableRecords(deltaLog, TEST_ROW_TYPE);
+            TestParquetReader.readAndValidateAllTableRecords(
+                deltaLog,
+                TEST_ROW_TYPE,
+                DataFormatConverters.getConverterForDataType(
+                    TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE)));
         List<AddFile> files = deltaLog.update().getAllFiles();
-        assertTrue(files.size() > initialDeltaFiles.size());
-        assertTrue(tableRecordsCount > 0);
+        assertThat(files.size() > initialDeltaFiles.size(), equalTo(true));
+        assertThat(tableRecordsCount > 0, equalTo(true));
 
         if (isPartitioned) {
             assertThat(
                 deltaLog.snapshot().getMetadata().getPartitionColumns(),
                 CoreMatchers.is(Arrays.asList("col1", "col3")));
         } else {
-            assertTrue(deltaLog.snapshot().getMetadata().getPartitionColumns().isEmpty());
+            assertThat(deltaLog.snapshot().getMetadata().getPartitionColumns().isEmpty(), equalTo(true));
         }
 
         List<String> expectedTableCols = includeOptionalOptions ?
@@ -148,7 +157,7 @@ public class DeltaSinkTableITCase {
 
         if (useStaticPartition) {
             for (AddFile file : deltaLog.snapshot().getAllFiles()) {
-                assertEquals("val1", file.getPartitionValues().get("col1"));
+                assertThat(file.getPartitionValues().get("col1"), equalTo("val1"));
             }
         }
     }

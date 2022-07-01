@@ -61,8 +61,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import io.delta.standalone.DeltaLog;
-
 public class DeltaSinkTestUtils {
 
     ///////////////////////////////////////////////////////////////////////////
@@ -331,14 +329,23 @@ public class DeltaSinkTestUtils {
     ///////////////////////////////////////////////////////////////////////////
 
     public static DeltaSinkInternal<RowData> createDeltaSink(String deltaTablePath,
-                                                             boolean isTablePartitioned) {
+        boolean isTablePartitioned) {
         if (isTablePartitioned) {
-            return DeltaSink
-                .forRowData(
-                    new Path(deltaTablePath),
-                    DeltaSinkTestUtils.getHadoopConf(),
-                    DeltaSinkTestUtils.TEST_ROW_TYPE
-                ).withBucketAssigner(getTestPartitionAssigner())
+            DeltaSinkBuilder<RowData> builder = new DeltaSinkBuilder.DefaultDeltaFormatBuilder<>(
+                new Path(deltaTablePath),
+                DeltaTestUtils.getHadoopConf(),
+                ParquetRowDataBuilder.createWriterFactory(
+                    DeltaSinkTestUtils.TEST_ROW_TYPE,
+                    DeltaTestUtils.getHadoopConf(),
+                    true // utcTimestamp
+                ),
+                new BasePathBucketAssigner<>(),
+                OnCheckpointRollingPolicy.build(),
+                DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE,
+                false // mergeSchema
+            );
+            return builder
+                .withBucketAssigner(getTestPartitionAssigner())
                 .build();
         }
         return DeltaSink

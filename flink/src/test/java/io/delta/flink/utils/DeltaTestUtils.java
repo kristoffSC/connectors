@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.delta.standalone.DeltaLog;
+
 public class DeltaTestUtils {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeltaTestUtils.class);
@@ -80,6 +82,9 @@ public class DeltaTestUtils {
     public static final String TEST_VERSIONED_DELTA_TABLE =
         "/test-data/test-non-partitioned-delta-table-4-versions";
 
+    public static final String TEST_DELTA_TABLE_INITIAL_STATE_TABLE_API_DIR =
+        "/test-data/test-table-api";
+
     public static void initTestForAllDataTypes(String targetTablePath)
         throws IOException {
         initTestFor(TEST_DELTA_TABLE_ALL_DATA_TYPES, targetTablePath);
@@ -105,6 +110,11 @@ public class DeltaTestUtils {
         initTestFor(TEST_VERSIONED_DELTA_TABLE, targetTablePath);
     }
 
+    public static void initTestForTableApiTable(String targetTablePath)
+        throws IOException {
+        initTestFor(TEST_DELTA_TABLE_INITIAL_STATE_TABLE_API_DIR, targetTablePath);
+    }
+
     public static void initTestFor(String testDeltaTableInitialStateNpDir, String targetTablePath)
         throws IOException {
         File resourcesDirectory = new File("src/test/resources");
@@ -113,6 +123,41 @@ public class DeltaTestUtils {
         FileUtils.copyDirectory(
             new File(initialTablePath),
             new File(targetTablePath));
+    }
+
+    /**
+     * In this method we check in short time intervals for the total time of 10 seconds whether
+     * the DeltaLog for the table has been already created by the Flink job running in the deamon
+     * thread.
+     *
+     * @param deltaLog {@link DeltaLog} instance for test table
+     * @throws InterruptedException when the thread is interrupted when waiting for the log to be
+     *                              created
+     */
+    public static void waitUntilDeltaLogExists(DeltaLog deltaLog) throws InterruptedException {
+        waitUntilDeltaLogExists(deltaLog, 0L);
+    }
+
+    /**
+     * In this method we check in short time intervals for the total time of 10 seconds whether
+     * the DeltaLog for the table has been already created by the Flink job running in the deamon
+     * thread and whether the table version is equal or higher than specified.
+     *
+     * @param deltaLog {@link DeltaLog} instance for test table
+     * @param minVersion minimum version of the table
+     * @throws InterruptedException when the thread is interrupted when waiting for the log to be
+     *                              created
+     */
+    public static void waitUntilDeltaLogExists(DeltaLog deltaLog, Long minVersion)
+        throws InterruptedException {
+        int i = 0;
+        while (deltaLog.snapshot().getVersion() < minVersion) {
+            if (i > 20) throw new RuntimeException(
+                "Timeout. DeltaLog for table has not been initialized");
+            i++;
+            Thread.sleep(500);
+            deltaLog.update();
+        }
     }
 
     public static void triggerFailover(FailoverType type, JobID jobId, Runnable afterFailAction,

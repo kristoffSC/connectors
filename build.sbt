@@ -700,6 +700,7 @@ lazy val flink = (project in file("flink"))
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided",
       "org.apache.flink" % "flink-connector-files" % flinkVersion % "test" classifier "tests",
       "org.apache.flink" % ("flink-table-runtime-blink_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "provided",
+      "org.apache.flink" % ("flink-table-planner-blink_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
       "org.apache.flink" % "flink-connector-test-utils" % flinkVersion % "test",
       "org.apache.flink" % ("flink-clients_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
       "org.apache.flink" % ("flink-test-utils_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
