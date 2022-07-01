@@ -31,7 +31,17 @@ object StandaloneMimaExcludes {
     ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.DeltaLog.getChanges"),
     ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.DeltaLog.startTransaction"),
     ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.Snapshot.scan"),
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.DeltaLog.tableExists")
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.DeltaLog.tableExists"),
+
+    // Switch to using delta-storage LogStore API in 0.4.0 -> 0.5.0
+    ProblemFilters.exclude[MissingClassProblem]("io.delta.standalone.storage.LogStore"),
+
+    // Ignore missing shaded attributes
+    ProblemFilters.exclude[Problem]("shadedelta.*"),
+
+    // Public API changes in 0.4.0 -> 0.5.0
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.DeltaLog.getVersionBeforeOrAtTimestamp"),
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.delta.standalone.DeltaLog.getVersionAtOrAfterTimestamp")
 
     // scalastyle:on line.size.limit
   )

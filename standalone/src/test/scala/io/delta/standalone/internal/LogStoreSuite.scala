@@ -20,14 +20,14 @@ import java.io.File
 
 import scala.collection.JavaConverters._
 
+import io.delta.storage.{CloseableIterator, LogStore}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileStatus, Path, RawLocalFileSystem}
 import org.scalatest.FunSuite
 
 import io.delta.standalone.Operation
 import io.delta.standalone.actions.{AddFile => AddFileJ, Metadata => MetadataJ}
-import io.delta.standalone.data.{CloseableIterator => CloseableIteratorJ}
-import io.delta.standalone.storage.LogStore
+import io.delta.standalone.types.{StringType, StructType}
 
 import io.delta.standalone.internal.sources.StandaloneHadoopConf
 import io.delta.standalone.internal.storage.{AzureLogStore, HDFSLogStore, LocalLogStore, LogStoreProvider, S3SingleDriverLogStore}
@@ -52,7 +52,7 @@ abstract class LogStoreSuiteBase extends FunSuite with LogStoreProvider {
   protected def shouldUseRenameToWriteCheckpoint: Boolean
 
   test("instantiation through HadoopConf") {
-    val expectedClassName = logStoreClassName.getOrElse(LogStoreProvider.defaultLogStoreClassName)
+    val expectedClassName = logStoreClassName.getOrElse(LogStoreProvider.defaultLogStoreClass)
     assert(createLogStore(hadoopConf).getClass.getName == expectedClassName)
   }
 
@@ -136,7 +136,10 @@ abstract class LogStoreSuiteBase extends FunSuite with LogStoreProvider {
       val log = DeltaLogImpl.forTable(conf, tempDir.getCanonicalPath)
       val addFile = AddFileJ.builder("/path", Map.empty[String, String].asJava, 100L,
         System.currentTimeMillis(), true).build()
-      val metadata = MetadataJ.builder().build()
+      val metadata = MetadataJ
+        .builder()
+        .schema(new StructType().add("foo", new StringType()))
+        .build()
 
       log.startTransaction().commit((metadata :: addFile :: Nil).asJava,
         new Operation(Operation.Name.MANUAL_UPDATE), "engineInfo")
@@ -189,10 +192,42 @@ class LocalLogStoreSuite extends LogStoreSuiteBase {
 /**
  * Test not providing a LogStore classname, in which case [[LogStoreProvider]] will use
  * the default value.
+ *
+ * This tests [[DelegatingLogStore]].
  */
 class DefaultLogStoreSuite extends LogStoreSuiteBase {
   override def logStoreClassName: Option[String] = None
   override protected def shouldUseRenameToWriteCheckpoint: Boolean = true
+}
+
+class PublicHDFSLogStoreSuite extends LogStoreSuiteBase {
+  override def logStoreClassName: Option[String] =
+    Some(classOf[io.delta.storage.HDFSLogStore].getName)
+  override protected def shouldUseRenameToWriteCheckpoint: Boolean = true
+}
+
+class PublicS3SingleDriverLogStoreSuite extends LogStoreSuiteBase {
+  override def logStoreClassName: Option[String] =
+    Some(classOf[io.delta.storage.S3SingleDriverLogStore].getName)
+  override protected def shouldUseRenameToWriteCheckpoint: Boolean = false
+}
+
+class PublicAzureLogStoreSuite extends LogStoreSuiteBase {
+  override def logStoreClassName: Option[String] =
+    Some(classOf[io.delta.storage.AzureLogStore].getName)
+  override protected def shouldUseRenameToWriteCheckpoint: Boolean = true
+}
+
+class PublicLocalLogStoreSuite extends LogStoreSuiteBase {
+  override def logStoreClassName: Option[String] =
+    Some(classOf[io.delta.storage.LocalLogStore].getName)
+  override protected def shouldUseRenameToWriteCheckpoint: Boolean = true
+}
+
+class PublicGCSLogStoreSuite extends LogStoreSuiteBase {
+  override def logStoreClassName: Option[String] =
+    Some(classOf[io.delta.storage.GCSLogStore].getName)
+  override protected def shouldUseRenameToWriteCheckpoint: Boolean = false
 }
 
 /**
@@ -212,15 +247,10 @@ class UserDefinedLogStoreSuite extends LogStoreSuiteBase {
 class UserDefinedLogStore(override val initHadoopConf: Configuration)
   extends LogStore(initHadoopConf) {
 
-  private val mockImpl = new HDFSLogStore(initHadoopConf)
+  private val logStoreInternal = new HDFSLogStore(initHadoopConf)
 
-  override def read(path: Path, hadoopConf: Configuration): CloseableIteratorJ[String] = {
-    val iter = mockImpl.read(path, hadoopConf)
-    new CloseableIteratorJ[String] {
-      override def close(): Unit = iter.close()
-      override def hasNext: Boolean = iter.hasNext
-      override def next(): String = iter.next
-    }
+  override def read(path: Path, hadoopConf: Configuration): CloseableIterator[String] = {
+    logStoreInternal.read(path, hadoopConf)
   }
 
   override def write(
@@ -228,15 +258,15 @@ class UserDefinedLogStore(override val initHadoopConf: Configuration)
       actions: java.util.Iterator[String],
       overwrite: java.lang.Boolean,
       hadoopConf: Configuration): Unit = {
-    mockImpl.write(path, actions, overwrite, hadoopConf)
+    logStoreInternal.write(path, actions, overwrite, hadoopConf)
   }
 
   override def listFrom(path: Path, hadoopConf: Configuration): java.util.Iterator[FileStatus] = {
-    mockImpl.listFrom(path, hadoopConf)
+    logStoreInternal.listFrom(path, hadoopConf)
   }
 
   override def resolvePathOnPhysicalStorage(path: Path, hadoopConf: Configuration): Path = {
-    mockImpl.resolvePathOnPhysicalStorage(path, hadoopConf)
+    logStoreInternal.resolvePathOnPhysicalStorage(path, hadoopConf)
   }
 
   override def isPartialWriteVisible(path: Path, hadoopConf: Configuration): java.lang.Boolean = {

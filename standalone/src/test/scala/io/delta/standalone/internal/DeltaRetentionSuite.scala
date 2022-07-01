@@ -42,7 +42,7 @@ class DeltaRetentionSuite extends DeltaRetentionSuiteBase {
         val txn = if (i == 1) startTxnWithManualLogCleanup(log) else log.startTransaction()
         val file = AddFile(i.toString, Map.empty, 1, 1, true) :: Nil
         val delete: Seq[Action] = if (i > 1) {
-          RemoveFile(i - 1 toString, Some(System.currentTimeMillis()), true) :: Nil
+          RemoveFile((i - 1).toString, Some(System.currentTimeMillis()), true) :: Nil
         } else {
           Nil
         }
@@ -133,20 +133,20 @@ class DeltaRetentionSuite extends DeltaRetentionSuiteBase {
     withTempDir { tempDir =>
       val log = DeltaLogImpl.forTable(hadoopConf, tempDir.getCanonicalPath)
       log.startTransaction().commit(
-          Metadata(configuration = Map(
-            DeltaConfigs.ENABLE_EXPIRED_LOG_CLEANUP.key ->"true"
-          )) :: Nil,
-          manualUpdate, writerId)
+        metadata.copy(
+          configuration = Map(DeltaConfigs.ENABLE_EXPIRED_LOG_CLEANUP.key -> "true")
+        ) :: Nil,
+        manualUpdate, writerId)
       assert(log.enableExpiredLogCleanup)
 
       log.startTransaction().commit(
-        Metadata(configuration = Map(
-          DeltaConfigs.ENABLE_EXPIRED_LOG_CLEANUP.key -> "false"
-        )) :: Nil,
+        metadata.copy(
+          configuration = Map(DeltaConfigs.ENABLE_EXPIRED_LOG_CLEANUP.key -> "false")
+        ) :: Nil,
         manualUpdate, writerId)
       assert(!log.enableExpiredLogCleanup)
 
-      log.startTransaction().commit(Metadata() :: Nil, manualUpdate, writerId)
+      log.startTransaction().commit(metadata :: Nil, manualUpdate, writerId)
       assert(log.enableExpiredLogCleanup)
     }
   }

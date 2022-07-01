@@ -127,7 +127,7 @@ class OSSCompatibilitySuite extends OssCompatibilitySuiteBase with ComparisonUti
         assert(ossLog.snapshot.allFiles.count() == ss.addFiles.size)
 
         compareAddFiles(
-          standaloneLog.update().getAllFiles.asScala, ossLog.update().allFiles.collect())
+          standaloneLog.update().getAllFiles.asScala.toSeq, ossLog.update().allFiles.collect())
         compareAddFiles(scanFiles, ossLog.update().allFiles.collect())
       }
 
@@ -429,7 +429,7 @@ class OSSCompatibilitySuite extends OssCompatibilitySuiteBase with ComparisonUti
   checkStandalone(
     "taint whole table + concurrent remove",
     conflicts = true,
-    setup = Seq(ss.conflict.metadata_colX, ss.conflict.addA),
+    setup = Seq(ss.conflict.metadata_colXY, ss.conflict.addA),
     reads = Seq(
       // `readWholeTable` should disallow any concurrent `RemoveFile`s.
       t => t.readWholeTable()
