@@ -19,6 +19,9 @@
 package io.delta.flink.sink;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -27,9 +30,11 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import io.delta.flink.sink.utils.CheckpointCountingSource;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
@@ -62,6 +67,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -130,12 +137,53 @@ public class DeltaSinkStreamingExecutionITCase {
         runDeltaSinkTest(deltaTablePath, triggerFailover, isPartitioned);
     }
 
+    /**
+     * This test verifies if Flink Delta Source created Delta checkpoint after 10 commits.
+     * This tests produces records using {@link CheckpointCountingSource} until at most 12 Flink
+     * checkpoints will be created.
+     * For every Flink checkpoint the {@link CheckpointCountingSource} produces new batch of
+     * records.
+     * After approximately 10 Flink checkpoints there should be a Delta checkpoint created.
+     */
     @Test
-    public void testSinkDeltaCheckpoint() throws IOException {
+    public void testSinkDeltaCheckpoint() throws Exception {
 
         DeltaTestUtils.initTestForNonPartitionedTable(deltaTablePath);
-        DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
 
+        StreamExecutionEnvironment env = getTestStreamEnv(false); // no failover
+        env.addSource(new CheckpointCountingSource(1_000, 12))
+            .setParallelism(1)
+            .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, false)) // not partitioned
+            .setParallelism(3);
+
+        StreamGraph streamGraph = env.getStreamGraph();
+        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
+            miniCluster.start();
+            miniCluster.executeJobBlocking(streamGraph.getJobGraph());
+        }
+
+        // Now there should be a Delta Checkpoint under _delta_log folder.
+        List<String> deltaCheckpointFiles = getDeltaCheckpointFiles(deltaTablePath);
+        assertThat(
+            "Missing Delta's last checkpoint file",
+            deltaCheckpointFiles.contains("_last_checkpoint"),
+            equalTo(true)
+        );
+        assertThat(
+            "Missing Delta's checkpoint file",
+            deltaCheckpointFiles.contains("00000000000000000010.checkpoint.parquet"),
+            equalTo(true)
+        );
+    }
+
+    private List<String> getDeltaCheckpointFiles(String deltaTablePath) throws IOException {
+        try (Stream<Path> stream = Files.list(Paths.get(deltaTablePath + "/_delta_log/"))) {
+            return stream
+                .filter(file -> !Files.isDirectory(file))
+                .map(file -> file.getFileName().toString())
+                .filter(fileName -> !fileName.endsWith(".json"))
+                .collect(Collectors.toList());
+        }
     }
 
     public void runDeltaSinkTest(
@@ -214,7 +262,7 @@ public class DeltaSinkStreamingExecutionITCase {
         Configuration config = new Configuration();
         config.set(ExecutionOptions.RUNTIME_MODE, RuntimeExecutionMode.STREAMING);
         env.configure(config, getClass().getClassLoader());
-        env.enableCheckpointing(10, CheckpointingMode.EXACTLY_ONCE);
+        env.enableCheckpointing(1000, CheckpointingMode.EXACTLY_ONCE);
 
         if (triggerFailover) {
             env.setRestartStrategy(RestartStrategies.fixedDelayRestart(1, Time.milliseconds(100)));
