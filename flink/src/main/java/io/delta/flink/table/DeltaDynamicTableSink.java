@@ -17,13 +17,13 @@
  */
 package io.delta.flink.table;
 
-import io.delta.flink.sink.internal.DeltaBucketAssigner;
-import io.delta.flink.sink.internal.DeltaPartitionComputer.DeltaRowDataPartitionComputer;
-import io.delta.flink.sink.internal.DeltaSinkBuilder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.delta.flink.sink.DeltaSink;
+import io.delta.flink.sink.internal.DeltaBucketAssigner;
+import io.delta.flink.sink.internal.DeltaPartitionComputer.DeltaRowDataPartitionComputer;
+import io.delta.flink.sink.internal.DeltaSinkBuilder;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.row.ParquetRowDataBuilder;
 import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.BasePathBucketAssigner;
@@ -36,6 +36,7 @@ import org.apache.flink.table.connector.sink.abilities.SupportsPartitioning;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
+
 
 /**
  * Sink of a dynamic Flink table to a Delta lake table.
