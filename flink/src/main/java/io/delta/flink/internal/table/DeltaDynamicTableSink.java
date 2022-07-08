@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.delta.flink.table;
+package io.delta.flink.internal.table;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -42,9 +42,9 @@ import org.apache.hadoop.conf.Configuration;
  * Sink of a dynamic Flink table to a Delta lake table.
  *
  * <p>
- * It utilizes new Flink Sink API (available for Flink >= 1.12) and interfaces (available for
- * Flink >= 1.13) provided for interoperability between this new Sink API and Table API. It also
- * supports static partitioning.
+ * It utilizes new Flink Sink API (available for Flink >= 1.12) and interfaces (available for Flink
+ * >= 1.13) provided for interoperability between this new Sink API and Table API. It also supports
+ * static partitioning.
  *
  * <p>
  * For regular batch scenarios, the sink can solely accept insert-only rows and write out bounded
@@ -103,8 +103,8 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     /**
      * Utility method for transitions between Flink's DataStream and Table API.
      *
-     * @param context Context for creating runtime implementation via a
-     *                {@link SinkRuntimeProvider}.
+     * @param context Context for creating runtime implementation via a {@link
+     *                SinkRuntimeProvider}.
      * @return provider representing {@link DeltaSink} implementation for writing the data to a
      * Delta table.
      */

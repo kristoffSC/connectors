@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.delta.flink.table;
+package io.delta.flink.internal.table;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -41,9 +41,8 @@ import org.apache.hadoop.conf.Configuration;
  * Creates a {@link DynamicTableSource} instance representing DeltaLake table.
  *
  * <p>
- * This implementation automatically resolves all necessary object for creating instance of
- * {@link io.delta.flink.sink.DeltaSink} except Delta table's path that needs to be provided
- * explicitly.
+ * This implementation automatically resolves all necessary object for creating instance of {@link
+ * io.delta.flink.sink.DeltaSink} except Delta table's path that needs to be provided explicitly.
  */
 public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
 
@@ -139,7 +138,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
                 "yarn-site.xml",
                 "mapred-site.xml"
             );
-            for (String confPath: possibleConfigs) {
+            for (String confPath : possibleConfigs) {
                 File confFile = new File(hadoopConfDir, confPath);
                 if (confFile.exists()) {
                     possibleConfFiles.add(confFile);
