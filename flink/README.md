@@ -46,7 +46,9 @@ See the [Java API docs](https://delta-io.github.io/connectors/latest/delta-flink
 
 - The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in the next releases.
 - The current version only provides Delta Lake's transactional guarantees for tables stored on HDFS and Microsoft Azure Storage.
-
+- The current version only supports reading from GCP Object Storage. Writing to GCP Object Storage is not supported.
+- For AWS S3 storage, in order to ensure concurrent transactional writes use [multiclass configuration guidelines](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup).
+  Please see [example](#3-sink-creation-with-multi-cluster-support-for-delta-standalone) how to use this configuration in Flink Delta Sink. 
 ## Delta Sink
 
 <div id='delta-sink-metrics'></div>
@@ -115,6 +117,41 @@ public DataStream<RowData> createDeltaSink(
         .forRowData(
             new Path(deltaTablePath),
             new Configuration(),
+            rowType)
+        .withPartitionColumns(partitionCols)
+        .build();
+    stream.sinkTo(deltaSink);
+    return stream;
+}
+```
+#### 3. Sink creation with multi cluster support for Delta standalone
+In this example we will show how to create `DeltaSink` with [multi-cluster configuration](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup).
+
+```java
+import io.delta.flink.sink.DeltaBucketAssigner;
+import io.delta.flink.sink.DeltaSinkBuilder;
+
+public static final RowType ROW_TYPE = new RowType(Arrays.asList(
+    new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
+    new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
+    new RowType.RowField("age", new IntType())
+));
+
+public DataStream<RowData> createDeltaSink(
+        DataStream<RowData> stream,
+        String deltaTablePath) {
+    String[] partitionCols = { "surname" };
+
+    Configuration configuration = new Configuration();
+    configuration.set("spark.hadoop.fs.s3a.access.key", "USE_YOUR_S3_ACCESS_KEY_HERE");
+    configuration.set("spark.hadoop.fs.s3a.secret.key", "USE_YOUR_S3_SECRET_KEY_HERE");
+    configuration.set("spark.delta.logStore.s3a.impl", "io.delta.storage.S3DynamoDBLogStore");
+    configuration.set("spark.io.delta.storage.S3DynamoDBLogStore.ddb.region", "eu-central-1");
+        
+    DeltaSink<RowData> deltaSink = DeltaSink
+        .forRowData(
+            new Path(deltaTablePath),
+            configuration,
             rowType)
         .withPartitionColumns(partitionCols)
         .build();
