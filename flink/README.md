@@ -47,8 +47,8 @@ See the [Java API docs](https://delta-io.github.io/connectors/latest/delta-flink
 - The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in the next releases.
 - The current version only provides Delta Lake's transactional guarantees for tables stored on HDFS and Microsoft Azure Storage.
 - The current version only supports reading from GCP Object Storage. Writing to GCP Object Storage is not supported.
-- For AWS S3 storage, in order to ensure concurrent transactional writes use [multiclass configuration guidelines](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup).
-  Please see [example](#3-sink-creation-with-multi-cluster-support-for-delta-standalone) how to use this configuration in Flink Delta Sink. 
+- For AWS S3 storage, in order to ensure concurrent transactional writes from different clusters, use [multiclass configuration guidelines](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup).
+  Please see [example](#3-sink-creation-with-multi-cluster-support-for-delta-standalone) for how to use this configuration in Flink Delta Sink. 
 ## Delta Sink
 
 <div id='delta-sink-metrics'></div>
@@ -128,15 +128,6 @@ public DataStream<RowData> createDeltaSink(
 In this example we will show how to create `DeltaSink` with [multi-cluster configuration](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup).
 
 ```java
-import io.delta.flink.sink.DeltaBucketAssigner;
-import io.delta.flink.sink.DeltaSinkBuilder;
-
-public static final RowType ROW_TYPE = new RowType(Arrays.asList(
-    new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
-    new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
-    new RowType.RowField("age", new IntType())
-));
-
 public DataStream<RowData> createDeltaSink(
         DataStream<RowData> stream,
         String deltaTablePath) {
@@ -153,7 +144,6 @@ public DataStream<RowData> createDeltaSink(
             new Path(deltaTablePath),
             configuration,
             rowType)
-        .withPartitionColumns(partitionCols)
         .build();
     stream.sinkTo(deltaSink);
     return stream;
