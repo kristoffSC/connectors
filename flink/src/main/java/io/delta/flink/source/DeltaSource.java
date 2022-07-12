@@ -53,8 +53,8 @@ import io.delta.standalone.actions.AddFile;
  * <pre>
  *     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
  *     ...
- *     // {@link org.apache.flink.api.connector.source.Boundedness#BOUNDED} mode.
- *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.boundedRowDataSourceBuilder(
+ *     // Bounded mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forBoundedRowData(
  *                new Path("s3://some/path"),
  *                new Configuration()
  *             )
@@ -65,8 +65,8 @@ import io.delta.standalone.actions.AddFile;
  *     env.fromSource(source, WatermarkStrategy.noWatermarks(), "delta-source")
  *
  *     ..........
- *     // {@link org.apache.flink.api.connector.source.Boundedness#CONTINUOUS_UNBOUNDED} mode.
- *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.continuousRowDataSourceBuilder(
+ *     // Continuous mode.
+ *     DeltaSource&lt;RowData&gt; deltaSink = DeltaSource.forContinuousRowData(
  *                new Path("s3://some/path"),
  *                new Configuration()
  *               )
