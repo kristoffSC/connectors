@@ -44,12 +44,10 @@ See the [Java API docs](https://delta-io.github.io/connectors/latest/delta-flink
 
 ### Known limitations
 
-- The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in the next releases.
-- The current version only provides Delta Lake's transactional guarantees for tables stored on HDFS and Microsoft Azure Storage.
-- The current version only supports reading from GCP Object Storage. Writing to GCP Object Storage is not supported.
-  This is caused by Flink not able to support recoverable writes to GCS, which was added in Flink [1.15](https://issues.apache.org/jira/browse/FLINK-11838)
-- For AWS S3 storage, in order to ensure concurrent transactional writes from different clusters, use [multiclass configuration guidelines](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup).
-  Please see [example](#3-sink-creation-with-multi-cluster-support-for-delta-standalone) for how to use this configuration in Flink Delta Sink. 
+- The current version only supports Flink `Datastream` API. Support for Flink Table API / SQL, along with Flink Catalog's implementation for storing Delta table's metadata in an external metastore, are planned to be added in a future release.
+- For GCP Object Storage, the current version only supports reading. Writing to GCP Object Storage is not supported. This is due to Flink not supporting recoverable writes to GCS, which was added in Flink [1.15](https://issues.apache.org/jira/browse/FLINK-11838).
+- For AWS S3 storage, in order to ensure concurrent transactional writes from different clusters, use [multiclass configuration guidelines](https://docs.delta.io/latest/delta-storage.html#multi-cluster-setup). Please see [example](#3-sink-creation-with-multi-cluster-support-for-delta-standalone) for how to use this configuration in Flink Delta Sink. 
+
 ## Delta Sink
 
 <div id='delta-sink-metrics'></div>
