@@ -642,7 +642,7 @@ def flinkScalaVersion(scalaBinaryVersion: String): String = {
   }
 }
 
-val flinkVersion = "1.13.0"
+val flinkVersion = "1.14.0"
 lazy val flink = (project in file("flink"))
   .dependsOn(standaloneCosmetic % "provided")
   .enablePlugins(GenJavadocPlugin, JavaUnidocPlugin)
