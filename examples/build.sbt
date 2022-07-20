@@ -77,6 +77,6 @@ lazy val flinkExample = (project in file("flink-example")) settings (
 
     // Below dependencies are needed only to run the example project in memory
     "org.apache.flink" %% "flink-clients" % flinkVersion,
-    "org.apache.flink" %% "flink-table-runtime-blink" % flinkVersion
+    "org.apache.flink" %% "flink-table-runtime" % flinkVersion
   )
 )
