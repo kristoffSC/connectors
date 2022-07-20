@@ -42,9 +42,9 @@ import org.apache.hadoop.conf.Configuration;
  * Sink of a dynamic Flink table to a Delta lake table.
  *
  * <p>
- * It utilizes new Flink Sink API (available for Flink >= 1.12) and interfaces (available for Flink
- * >= 1.13) provided for interoperability between this new Sink API and Table API. It also supports
- * static partitioning.
+ * It utilizes new Flink Sink API (available for {@code Flink >= 1.12}) and interfaces
+ * (available for {@code Flink >= 1.13}) provided for interoperability between this new Sink API
+ * and Table API. It also supports static partitioning.
  *
  * <p>
  * For regular batch scenarios, the sink can solely accept insert-only rows and write out bounded
