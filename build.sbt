@@ -44,7 +44,7 @@ val sparkVersion = "2.4.3"
 val hiveDeltaVersion = "0.5.0"
 val parquet4sVersion = "1.9.4"
 val scalaTestVersion = "3.0.8"
-val deltaStorageVersion = "1.2.1"
+val deltaStorageVersion = "2.0.0"
 // Versions for Hive 3
 val hadoopVersion = "3.1.0"
 val hiveVersion = "3.1.2"
@@ -377,9 +377,10 @@ lazy val standaloneCosmetic = project
     commonSettings,
     releaseSettings,
     exportJars := true,
-    Compile / packageBin := (standalone / assembly).value,
+    Compile / packageBin := (standaloneParquet / assembly).value,
     libraryDependencies ++= scalaCollectionPar(scalaVersion.value) ++ Seq(
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided",
+      "org.apache.parquet" % "parquet-hadoop" % "1.12.0" % "provided",
       "io.delta" % "delta-storage" % deltaStorageVersion,
       // parquet4s-core dependencies that are not shaded are added with compile scope.
       "com.chuusai" %% "shapeless" % "2.3.4",
@@ -393,7 +394,25 @@ lazy val testStandaloneCosmetic = project.dependsOn(standaloneCosmetic)
     commonSettings,
     skipReleaseSettings,
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+    )
+  )
+
+/**
+ * A test project to verify `ParquetSchemaConverter` APIs are working after the user provides
+ * `parquet-hadoop`. We use a separate project because we want to test whether Delta Standlone APIs
+ * except `ParquetSchemaConverter` are working without `parquet-hadoop` in testStandaloneCosmetic`.
+ */
+lazy val testParquetUtilsWithStandaloneCosmetic = project.dependsOn(standaloneCosmetic)
+  .settings(
+    name := "test-parquet-utils-with-standalone-cosmetic",
+    commonSettings,
+    skipReleaseSettings,
+    libraryDependencies ++= Seq(
+      "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
+      "org.apache.parquet" % "parquet-hadoop" % "1.12.0" % "provided",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
     )
   )
 
@@ -403,13 +422,41 @@ def scalaCollectionPar(version: String) = version match {
     case _ => Seq()
 }
 
+/**
+ * The public API ParquetSchemaConverter exposes Parquet classes in its methods so we cannot apply
+ * shading rules on it. However, sbt-assembly doesn't allow excluding a single file. Hence, we
+ * create a separate project to skip the shading.
+ */
+lazy val standaloneParquet = (project in file("standalone-parquet"))
+  .dependsOn(standaloneWithoutParquetUtils)
+  .settings(
+    name := "delta-standalone-parquet",
+    commonSettings,
+    skipReleaseSettings,
+    libraryDependencies ++= Seq(
+      "org.apache.parquet" % "parquet-hadoop" % "1.12.0" % "provided",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+    ),
+    assemblyPackageScala / assembleArtifact := false
+  )
+
+/** A dummy project to allow `standaloneParquet` depending on the shaded standalone jar. */
+lazy val standaloneWithoutParquetUtils = project
+  .settings(
+    name := "delta-standalone-without-parquet-utils",
+    commonSettings,
+    skipReleaseSettings,
+    exportJars := true,
+    Compile / packageBin := (standalone / assembly).value
+  )
+
 lazy val standalone = (project in file("standalone"))
   .enablePlugins(GenJavadocPlugin, JavaUnidocPlugin)
   .settings(
     name := "delta-standalone-original",
     commonSettings,
     skipReleaseSettings,
-    mimaSettings,
+    mimaSettings, // TODO(scott): move this to standaloneCosmetic
     // When updating any dependency here, we should also review `pomPostProcess` in project
     // `standaloneCosmetic` and update it accordingly.
     libraryDependencies ++= scalaCollectionPar(scalaVersion.value) ++ Seq(
@@ -423,8 +470,6 @@ lazy val standalone = (project in file("standalone"))
         ExclusionRule("com.fasterxml.jackson.module")
       ),
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "org.slf4j" % "slf4j-api" % "1.7.25",
-      "org.slf4j" % "slf4j-log4j12" % "1.7.25",
       "io.delta" % "delta-storage" % deltaStorageVersion,
 
       // Compiler plugins
@@ -476,14 +521,21 @@ lazy val standalone = (project in file("standalone"))
       ShadeRule.rename("com.fasterxml.jackson.**" -> "shadedelta.@0").inAll,
       ShadeRule.rename("com.thoughtworks.paranamer.**" -> "shadedelta.@0").inAll,
       ShadeRule.rename("org.json4s.**" -> "shadedelta.@0").inAll,
+      ShadeRule.rename("com.github.mjakubowski84.parquet4s.**" -> "shadedelta.@0").inAll,
       ShadeRule.rename("org.apache.commons.pool.**" -> "shadedelta.@0").inAll,
       ShadeRule.rename("org.apache.parquet.**" -> "shadedelta.@0").inAll,
+      ShadeRule.rename("shaded.parquet.**" -> "shadedelta.@0").inAll,
       ShadeRule.rename("org.apache.yetus.audience.**" -> "shadedelta.@0").inAll
     ),
     assembly / assemblyMergeStrategy := {
       // Discard `module-info.class` to fix the `different file contents found` error.
       // TODO Upgrade SBT to 1.5 which will do this automatically
       case "module-info.class" => MergeStrategy.discard
+      // Discard unused `parquet.thrift` so that we don't conflict the file used by the user
+      case "parquet.thrift" => MergeStrategy.discard
+      // Discard the jackson service configs that we don't need. These files are not shaded so
+      // adding them may conflict with other jackson version used by the user.
+      case PathList("META-INF", "services", xs @ _*) => MergeStrategy.discard
       case x =>
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
