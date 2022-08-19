@@ -37,10 +37,10 @@ public class DeltaTableConnectorOptions {
     /**
      * Path to folder with Hadoop Conf containing files such as:
      * <ul>
-     *     <li>core-site.xml</li
-     *     <li>hdfs-site.xml</li
-     *     <li>yarn-site.xml</li
-     *     <li>mapred-site.xml</li
+     *     <li>core-site.xml</li>
+     *     <li>hdfs-site.xml</li>
+     *     <li>yarn-site.xml</li>
+     *     <li>mapred-site.xml</li>
      * </ul>
      */
     public static final ConfigOption<String> HADOOP_CONF_DIR =
