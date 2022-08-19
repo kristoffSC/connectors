@@ -29,7 +29,7 @@ limitations under the License.-->
         <staging.repo.url>""</staging.repo.url>
         <scala.main.version>2.12</scala.main.version>
         <connectors.version>0.5.0-SNAPSHOT</connectors.version>
-        <flink-version>1.13.0</flink-version>
+        <flink-version>1.14.0</flink-version>
         <hadoop-version>3.1.0</hadoop-version>
         <log4j.version>2.12.1</log4j.version>
     </properties>
@@ -75,7 +75,7 @@ limitations under the License.-->
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-runtime-blink_${scala.main.version}</artifactId>
+            <artifactId>flink-table-runtime_${scala.main.version}</artifactId>
             <version>${flink-version}</version>
             <scope>${flink.scope}</scope>
         </dependency>

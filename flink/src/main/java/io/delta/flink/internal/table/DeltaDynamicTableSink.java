@@ -42,9 +42,9 @@ import org.apache.hadoop.conf.Configuration;
  * Sink of a dynamic Flink table to a Delta lake table.
  *
  * <p>
- * It utilizes new Flink Sink API (available for Flink >= 1.12) and interfaces (available for Flink
- * >= 1.13) provided for interoperability between this new Sink API and Table API. It also supports
- * static partitioning.
+ * It utilizes new Flink Sink API (available for {@code Flink >= 1.12}) and interfaces (available
+ * for {@code Flink >= 1.13}) provided for interoperability between this new Sink API and Table API.
+ * It also supports static partitioning.
  *
  * <p>
  * For regular batch scenarios, the sink can solely accept insert-only rows and write out bounded
@@ -56,12 +56,25 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitioning {
 
-    Path basePath;
-    Configuration conf;
-    RowType rowType;
-    boolean shouldTryUpdateSchema;
-    CatalogTable catalogTable;
-    private LinkedHashMap<String, String> staticPartitionSpec = new LinkedHashMap<>();
+    private final Path basePath;
+
+    private final Configuration conf;
+
+    private final RowType rowType;
+
+    private final CatalogTable catalogTable;
+
+    /**
+     * Flink is providing the connector with the partition values derived from the PARTITION
+     * clause, e.g.
+     * <pre></pre>
+     * INSERT INTO x PARTITION(col1='val1") ...
+     * </pre>
+     * Those partition values will be populated to this map via {@link #applyStaticPartition(Map)}
+     */
+    private final LinkedHashMap<String, String> staticPartitionSpec;
+
+    private final boolean mergeSchema;
 
     /**
      * Constructor for creating sink of Flink dynamic table to Delta table.
@@ -70,23 +83,35 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
      * @param conf                  Hadoop's configuration
      * @param rowType               Flink's logical type with the structure of the events in the
      *                              stream
-     * @param shouldTryUpdateSchema whether we should try to update table's schema with stream's
+     * @param mergeSchema whether we should try to update table's schema with stream's
      *                              schema in case those will not match
      * @param catalogTable          represents the unresolved metadata of derived by Flink framework
      *                              from table's DDL
      */
     public DeltaDynamicTableSink(
-        final Path basePath,
+            Path basePath,
+            Configuration conf,
+            RowType rowType,
+            boolean mergeSchema,
+            CatalogTable catalogTable) {
+
+        this(basePath, conf, rowType, mergeSchema, catalogTable, new LinkedHashMap<>());
+    }
+
+    private DeltaDynamicTableSink(
+        Path basePath,
         Configuration conf,
-        final RowType rowType,
-        boolean shouldTryUpdateSchema,
-        CatalogTable catalogTable
-    ) {
+        RowType rowType,
+        boolean mergeSchema,
+        CatalogTable catalogTable,
+        LinkedHashMap<String, String> staticPartitionSpec) {
+
         this.basePath = basePath;
         this.rowType = rowType;
         this.conf = conf;
         this.catalogTable = catalogTable;
-        this.shouldTryUpdateSchema = shouldTryUpdateSchema;
+        this.mergeSchema = mergeSchema;
+        this.staticPartitionSpec = staticPartitionSpec;
     }
 
     /**
@@ -123,14 +148,16 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
                 this.rowType,
-                shouldTryUpdateSchema // mergeSchema
+                mergeSchema // mergeSchema
             );
 
         if (catalogTable.isPartitioned()) {
             DeltaRowDataPartitionComputer partitionComputer =
                 new DeltaRowDataPartitionComputer(
-                    rowType, catalogTable.getPartitionKeys().toArray(new String[0]),
-                    staticPartitionSpec);
+                    rowType,
+                    catalogTable.getPartitionKeys().toArray(new String[0]),
+                    staticPartitionSpec
+                );
             DeltaBucketAssigner<RowData> partitionAssigner =
                 new DeltaBucketAssigner<>(partitionComputer);
 
@@ -142,10 +169,13 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
 
     @Override
     public DynamicTableSink copy() {
-        DeltaDynamicTableSink sink =
-            new DeltaDynamicTableSink(basePath, conf, rowType, shouldTryUpdateSchema, catalogTable);
-        sink.staticPartitionSpec = staticPartitionSpec;
-        return sink;
+        return new DeltaDynamicTableSink(
+            this.basePath,
+            this.conf,
+            this.rowType,
+            this.mergeSchema,
+            this.catalogTable,
+            new LinkedHashMap<>(this.staticPartitionSpec));
     }
 
     @Override
@@ -153,10 +183,37 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
         return "DeltaSink";
     }
 
+    /**
+     * Static values for partitions that should set explicitly instead of being derived from the
+     * content of the records.
+     *
+     * <p>If all partition keys get a value assigned in the {@code PARTITION} clause, the operation
+     * is
+     * considered an "insertion into a static partition". In the below example, the query result
+     * should be written into the static partition {@code region='europe', month='2020-01'} which
+     * will be passed by the planner into {@code applyStaticPartition(Map)}.
+     *
+     * <pre>
+     * INSERT INTO t PARTITION (region='europe', month='2020-01') SELECT a, b, c FROM my_view;
+     * </pre>
+     *
+     * <p>If only a subset of all partition keys get a static value assigned in the {@code
+     * PARTITION} clause or with a constant part in a {@code SELECT} clause, the operation is
+     * considered an "insertion into a dynamic partition". In the below example, the static
+     * partition part is {@code region='europe'} which will be passed by the planner into {@code
+     * #applyStaticPartition(Map)}. The remaining values for partition keys should be obtained from
+     * each individual record by the sink during runtime.
+     *
+     * <pre>
+     * INSERT INTO t PARTITION (region='europe') SELECT a, b, c, month FROM another_view;
+     * </pre>
+     *
+     * @param partition map of static partitions and their values.
+     */
     @Override
     public void applyStaticPartition(Map<String, String> partition) {
         // make it a LinkedHashMap to maintain partition column order
-        staticPartitionSpec = new LinkedHashMap<>();
+        this.staticPartitionSpec.clear();
         for (String partitionCol : catalogTable.getPartitionKeys()) {
             if (partition.containsKey(partitionCol)) {
                 staticPartitionSpec.put(partitionCol, partition.get(partitionCol));

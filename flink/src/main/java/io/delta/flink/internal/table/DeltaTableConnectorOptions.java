@@ -26,24 +26,35 @@ import org.apache.flink.configuration.ConfigOptions;
  */
 public class DeltaTableConnectorOptions {
 
+    /**
+     * Root path of the DeltaLake's table.
+     */
     public static final ConfigOption<String> TABLE_PATH =
         ConfigOptions.key("table-path")
             .stringType()
-            .noDefaultValue()
-            .withDescription("Root path of the DeltaLake's table");
+            .noDefaultValue();
 
+    /**
+     * Path to folder with Hadoop Conf containing files such as:
+     * <ul>
+     *     <li>core-site.xml</li
+     *     <li>hdfs-site.xml</li
+     *     <li>yarn-site.xml</li
+     *     <li>mapred-site.xml</li
+     * </ul>
+     */
     public static final ConfigOption<String> HADOOP_CONF_DIR =
         ConfigOptions.key("hadoop-conf-dir")
             .stringType()
-            .noDefaultValue()
-            .withDescription("Hadoop's conf object");
+            .noDefaultValue();
 
-    public static final ConfigOption<Boolean> SHOULD_TRY_UPDATE_SCHEMA =
-        ConfigOptions.key("should-try-update-schema")
+    /**
+     * Indicator whether we should try to update table's schema with stream's schema in case
+     * those will not match. The update is not guaranteed as there will be still some checks
+     * performed whether the updates to the schema are compatible.
+     */
+    public static final ConfigOption<Boolean> MERGE_SCHEMA =
+        ConfigOptions.key("mergeSchema")
             .booleanType()
-            .defaultValue(false)
-            .withDescription("Indicator whether we should try to update table's schema with " +
-                "stream's schema in case those will not match. The update is not guaranteed as " +
-                "there will be still some checks performed whether the updates to the schema are" +
-                " compatible.");
+            .defaultValue(false);
 }
