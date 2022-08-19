@@ -65,8 +65,8 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
         RowType rowType = (RowType) tableSchema.toSinkRowDataType().getLogicalType();
 
         Boolean shouldTryUpdateSchema = tableOptions
-            .getOptional(DeltaTableConnectorOptions.SHOULD_TRY_UPDATE_SCHEMA)
-            .orElse(DeltaTableConnectorOptions.SHOULD_TRY_UPDATE_SCHEMA.defaultValue());
+            .getOptional(DeltaTableConnectorOptions.MERGE_SCHEMA)
+            .orElse(DeltaTableConnectorOptions.MERGE_SCHEMA.defaultValue());
 
         return new DeltaDynamicTableSink(
             new Path(tableOptions.get(DeltaTableConnectorOptions.TABLE_PATH)),
@@ -88,7 +88,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
     public Set<ConfigOption<?>> optionalOptions() {
         final Set<ConfigOption<?>> options = new HashSet<>();
         options.add(DeltaTableConnectorOptions.HADOOP_CONF_DIR);
-        options.add(DeltaTableConnectorOptions.SHOULD_TRY_UPDATE_SCHEMA);
+        options.add(DeltaTableConnectorOptions.MERGE_SCHEMA);
         return options;
     }
 

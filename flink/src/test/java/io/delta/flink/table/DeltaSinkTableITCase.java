@@ -295,7 +295,7 @@ public class DeltaSinkTableITCase {
         String resourcesDirectory = new File("src/test/resources").getAbsolutePath();
         String optionalTableOptions = (includeOptionalOptions ?
             String.format(
-                " 'hadoop-conf-dir' = '%s', 'should-try-update-schema' = 'true', ",
+                " 'hadoop-conf-dir' = '%s', 'mergeSchema' = 'true', ",
                 resourcesDirectory)
             : ""
         );
