@@ -35,6 +35,7 @@ import io.delta.flink.sink.internal.writer.DeltaWriterBucketStateSerializer;
 import org.apache.flink.api.connector.sink.Committer;
 import org.apache.flink.api.connector.sink.GlobalCommitter;
 import org.apache.flink.api.connector.sink.Sink;
+import org.apache.flink.api.connector.sink.Sink.InitContext;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
@@ -301,10 +302,10 @@ public class DeltaSinkBuilder<IN> implements Serializable {
         return new DeltaSinkInternal<IN>(this);
     }
 
-    DeltaWriter<IN> createWriter(Sink.InitContext context,
+    DeltaWriter<IN> createWriter(InitContext context,
                                          String appId,
                                          long nextCheckpointId) throws IOException {
-        return new DeltaWriter<IN>(
+        return new DeltaWriter<>(
             tableBasePath,
             bucketAssigner,
             createBucketWriter(),
