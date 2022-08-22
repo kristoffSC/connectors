@@ -191,11 +191,11 @@ public class DeltaSinkTableITCase {
      * tries to reuse.
      */
     private void runFlinkJobInBackground(
-        String deltaTablePath,
-        boolean useBoundedMode,
-        boolean includeOptionalOptions,
-        boolean useStaticPartition,
-        boolean isPartitioned) {
+            String deltaTablePath,
+            boolean useBoundedMode,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            boolean isPartitioned) {
         new Thread(() -> {
             try {
                 runFlinkJob(
