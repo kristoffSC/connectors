@@ -367,7 +367,7 @@ Scala 2.12:
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-table-runtime-blink_${scala.main.version}</artifactId>
+            <artifactId>flink-table-runtime_${scala.main.version}</artifactId>
             <version>${flink-version}</version>
             <scope>provided</scope>
         </dependency>
