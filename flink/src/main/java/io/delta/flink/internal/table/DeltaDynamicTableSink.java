@@ -67,7 +67,7 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     /**
      * Flink is providing the connector with the partition values derived from the PARTITION
      * clause, e.g.
-     * <pre></pre>
+     * <pre>
      * INSERT INTO x PARTITION(col1='val1") ...
      * </pre>
      * Those partition values will be populated to this map via {@link #applyStaticPartition(Map)}
@@ -126,7 +126,7 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     }
 
     /**
-     * Utility method for transitions between Flink's DataStream and Table API.
+     * Utility method for transition from Flink's DataStream to Table API.
      *
      * @param context Context for creating runtime implementation via a {@link
      *                SinkRuntimeProvider}.
@@ -148,7 +148,7 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
                 this.rowType,
-                mergeSchema // mergeSchema
+                mergeSchema
             );
 
         if (catalogTable.isPartitioned()) {

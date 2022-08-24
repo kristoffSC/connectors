@@ -31,14 +31,13 @@ import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
-import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Creates a {@link DynamicTableSource} instance representing DeltaLake table.
+ * Creates a {@link DynamicTableSink} instance representing DeltaLake table.
  *
  * <p>
  * This implementation automatically resolves all necessary object for creating instance of {@link

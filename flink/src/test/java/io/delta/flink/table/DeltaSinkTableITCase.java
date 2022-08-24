@@ -212,11 +212,11 @@ public class DeltaSinkTableITCase {
     }
 
     private void runFlinkJob(
-        String deltaTablePath,
-        boolean useBoundedMode,
-        boolean includeOptionalOptions,
-        boolean useStaticPartition,
-        boolean isPartitioned) throws ExecutionException, InterruptedException {
+            String deltaTablePath,
+            boolean useBoundedMode,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            boolean isPartitioned) throws ExecutionException, InterruptedException {
 
         TableEnvironment tableEnv;
         if (useBoundedMode) {
@@ -267,10 +267,10 @@ public class DeltaSinkTableITCase {
     }
 
     private String buildSourceTableSql(
-        String testSourceTableName,
-        int rows,
-        boolean includeOptionalOptions,
-        boolean useBoundedMode) {
+            String testSourceTableName,
+            int rows,
+            boolean includeOptionalOptions,
+            boolean useBoundedMode) {
         String additionalCol = includeOptionalOptions ? ", col4 INT " : "";
         String rowLimit = useBoundedMode ? "'number-of-rows' = '1'," : "";
         return String.format(
@@ -288,10 +288,10 @@ public class DeltaSinkTableITCase {
     }
 
     private String buildSinkTableSql(
-        String tableName,
-        String tablePath,
-        boolean includeOptionalOptions,
-        boolean isPartitioned) {
+            String tableName,
+            String tablePath,
+            boolean includeOptionalOptions,
+            boolean isPartitioned) {
         String resourcesDirectory = new File("src/test/resources").getAbsolutePath();
         String optionalTableOptions = (includeOptionalOptions ?
             String.format(
@@ -320,9 +320,9 @@ public class DeltaSinkTableITCase {
     }
 
     private String buildInsertIntoSql(
-        String sinkTable,
-        String sourceTable,
-        boolean useStaticPartition) {
+            String sinkTable,
+            String sourceTable,
+            boolean useStaticPartition) {
         if (useStaticPartition) {
             return String.format(
                 "INSERT INTO %s PARTITION(col1='val1') " +
