@@ -29,6 +29,7 @@ import java.util.Set;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.runtime.util.HadoopUtils;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
@@ -47,6 +48,9 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
 
     public static final String IDENTIFIER = "delta";
 
+    public final org.apache.flink.configuration.Configuration emptyClusterConfig =
+        new org.apache.flink.configuration.Configuration();
+
     @Override
     public String factoryIdentifier() {
         return IDENTIFIER;
@@ -54,13 +58,14 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
 
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
-        final FactoryUtil.TableFactoryHelper helper =
+        FactoryUtil.TableFactoryHelper helper =
             FactoryUtil.createTableFactoryHelper(this, context);
 
-        final ReadableConfig tableOptions = helper.getOptions();
+        ReadableConfig tableOptions = helper.getOptions();
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
 
         Configuration conf = resolveHadoopConf(tableOptions);
+
         RowType rowType = (RowType) tableSchema.toSinkRowDataType().getLogicalType();
 
         Boolean shouldTryUpdateSchema = tableOptions
@@ -92,41 +97,55 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
     }
 
     /**
-     * Tries to resolve Hadoop conf either from conf dir provided as table option or from env
-     * variable.
+     * Tries to resolve Hadoop conf from conf dir provided as table option or from environment
+     * variable HADOOP_HOME and HADOOP_CONF_DIR.
+     * <p>
+     * The configuration will be resolved in below order, where every next element will override
+     * configuration loaded from previous one.
+     * <ul>
+     *     <li>HADOOP_HOME environment variable</li>
+     *     <li>HADOOP_CONF_DIR environment variable</li>
+     *     <li>"hadoop-conf-dir" table property</li>
+     * </ul>
      *
      * @param tableOptions Flink Table's options resolved for given table
      * @return {@link Configuration} object
      */
     private Configuration resolveHadoopConf(ReadableConfig tableOptions) {
-        Configuration conf = null;
+
+        Configuration userHadoopConf = null;
         Optional<String> hadoopConfDirOptional =
             tableOptions.getOptional(DeltaTableConnectorOptions.HADOOP_CONF_DIR);
+
         if (hadoopConfDirOptional.isPresent()) {
-            conf = getHadoopConfiguration(hadoopConfDirOptional.get());
-            if (conf == null) {
+            userHadoopConf = getHadoopConfiguration(hadoopConfDirOptional.get());
+            if (userHadoopConf == null) {
                 throw new RuntimeException(
-                    "Failed to resolve Hadoop conf file from given path",
+                    "Failed to resolve Hadoop userHadoopConf file from given path",
                     new FileNotFoundException(
-                        "Couldn't resolve Hadoop conf at given path: " +
+                        "Couldn't resolve Hadoop userHadoopConf at given path: " +
                             hadoopConfDirOptional.get()));
             }
-        } else if (System.getenv("HADOOP_CONF_DIR") != null) {
-            conf = getHadoopConfiguration(System.getenv("HADOOP_CONF_DIR"));
         }
 
-        if (conf == null) {
-            conf = new Configuration();
+        // We are using FLink's helper method HadoopUtils.getHadoopConfiguration to resolve
+        // cluster's Hadoop configuration. This method looks for Hadoop config in env variables and
+        // Flink cluster configuration files. For this moment DynamicTableSinkFactory does not have
+        // access to FLink's configuration that is why we are passing "dummy" config as an argument.
+        Configuration hadoopConfiguration = HadoopUtils.getHadoopConfiguration(emptyClusterConfig);
+        if (userHadoopConf != null) {
+            hadoopConfiguration.addResource(userHadoopConf);
         }
-        conf.set("parquet.compression", "SNAPPY");
-        return conf;
+
+        return hadoopConfiguration;
     }
 
     /**
-     * Returns a new Hadoop Configuration object using the path to the hadoop conf configured.
+     * Returns a new Hadoop Configuration object using the path to the hadoop conf configured or
+     * null if path does not exist.
      *
      * @param hadoopConfDir Hadoop conf directory path.
-     * @return A Hadoop configuration instance.
+     * @return A Hadoop configuration instance or null if path does not exist.
      */
     private Configuration getHadoopConfiguration(String hadoopConfDir) {
         if (new File(hadoopConfDir).exists()) {
