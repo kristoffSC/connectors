@@ -24,6 +24,7 @@ import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.internal.DeltaBucketAssigner;
 import io.delta.flink.sink.internal.DeltaPartitionComputer.DeltaRowDataPartitionComputer;
 import io.delta.flink.sink.internal.DeltaSinkBuilder;
+import io.delta.flink.source.internal.builder.RowDataFormat;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.row.ParquetRowDataBuilder;
 import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.BasePathBucketAssigner;
@@ -56,6 +57,11 @@ import org.apache.hadoop.conf.Configuration;
  */
 public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitioning {
 
+    /**
+     * Hardcoded option for {@link RowDataFormat} to threat timestamps as a UTC timestamps.
+     */
+    private static final boolean PARQUET_UTC_TIMESTAMP = true;
+
     private final Path basePath;
 
     private final Configuration conf;
@@ -63,6 +69,8 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     private final RowType rowType;
 
     private final CatalogTable catalogTable;
+
+    private final boolean mergeSchema;
 
     /**
      * Flink is providing the connector with the partition values derived from the PARTITION
@@ -72,9 +80,7 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
      * </pre>
      * Those partition values will be populated to this map via {@link #applyStaticPartition(Map)}
      */
-    private final LinkedHashMap<String, String> staticPartitionSpec;
-
-    private final boolean mergeSchema;
+    private LinkedHashMap<String, String> staticPartitionSpec;
 
     /**
      * Constructor for creating sink of Flink dynamic table to Delta table.
@@ -143,7 +149,7 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
                 ParquetRowDataBuilder.createWriterFactory(
                     this.rowType,
                     this.conf,
-                    true // utcTimestamp
+                    PARQUET_UTC_TIMESTAMP
                 ),
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
@@ -187,9 +193,9 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
      * Static values for partitions that should set explicitly instead of being derived from the
      * content of the records.
      *
-     * <p>If all partition keys get a value assigned in the {@code PARTITION} clause, the operation
-     * is
-     * considered an "insertion into a static partition". In the below example, the query result
+     * <p>
+     * If all partition keys get a value assigned in the {@code PARTITION} clause, the operation
+     * is considered an "insertion into a static partition". In the below example, the query result
      * should be written into the static partition {@code region='europe', month='2020-01'} which
      * will be passed by the planner into {@code applyStaticPartition(Map)}.
      *
@@ -213,11 +219,14 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     @Override
     public void applyStaticPartition(Map<String, String> partition) {
         // make it a LinkedHashMap to maintain partition column order
-        this.staticPartitionSpec.clear();
+        LinkedHashMap<String, String> staticPartitions = new LinkedHashMap<>();
+
         for (String partitionCol : catalogTable.getPartitionKeys()) {
             if (partition.containsKey(partitionCol)) {
-                staticPartitionSpec.put(partitionCol, partition.get(partitionCol));
+                staticPartitions.put(partitionCol, partition.get(partitionCol));
             }
         }
+
+        this.staticPartitionSpec = staticPartitions;
     }
 }
