@@ -38,6 +38,7 @@ import io.delta.flink.sink.utils.CheckpointCountingSource;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
+import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.CheckpointListener;
@@ -63,7 +64,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
@@ -128,7 +128,9 @@ public class DeltaSinkStreamingExecutionITCase {
         );
     }
 
-    @ParameterizedTest(name = "triggerFailover = {0}, isPartitioned = {1}")
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L, repeats = 3,
+        name = "triggerFailover = {0}, isPartitioned = {1}")
     @MethodSource("deltaSinkArguments")
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
 

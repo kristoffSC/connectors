@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
+import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.streaming.api.CheckpointingMode;
@@ -43,7 +44,6 @@ import org.apache.flink.table.types.utils.TypeConversions;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
@@ -78,9 +78,10 @@ public class DeltaSinkTableITCase {
     /**
      * @return Stream of test {@link Arguments} elements. Arguments are in order:
      * <ul>
-     *     <li>Snapshot version used as a value of "versionAsOf" option.</li>
-     *     <li>Expected number of record for version defined by versionAsOf</li>
-     *     <li>Highest value of col1 column for version defined by versionAsOf</li>
+     *     <li>isPartitioned</li>
+     *     <li>includeOptionalOptions</li>
+     *     <li>useStaticPartition</li>
+     *     <li>useBoundedMode</li>
      * </ul>
      */
     private static Stream<Arguments> tableArguments() {
@@ -88,23 +89,24 @@ public class DeltaSinkTableITCase {
             Arguments.of(false, false, false, false),
             Arguments.of(false, true, false, false),
             Arguments.of(true, false, false, false),
-            Arguments.of(true, false, true, false)
-        // can uncomment below line only when connector is updated to Flink >= 1.14
-        // Arguments.of(false, false, false, true)
+            Arguments.of(true, false, true, false),
+            Arguments.of(false, false, false, true)
         );
     }
 
     @SuppressWarnings("unchecked")
-    @ParameterizedTest(name = "isPartitioned = {0}, " +
-        "includeOptionalOptions = {1}, " +
-        "useStaticPartition = {2}, " +
-        "useBoundedMode = {3}")
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L, repeats = 3,
+        name = "isPartitioned = {0}, " +
+            "includeOptionalOptions = {1}, " +
+            "useStaticPartition = {2}, " +
+            "useBoundedMode = {3}")
     @MethodSource("tableArguments")
     public void testTableApi(
-        boolean isPartitioned,
-        boolean includeOptionalOptions,
-        boolean useStaticPartition,
-        boolean useBoundedMode) throws Exception {
+            boolean isPartitioned,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            boolean useBoundedMode) throws Exception {
 
         String deltaTablePath = setup(includeOptionalOptions);
 

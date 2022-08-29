@@ -139,7 +139,7 @@ public class DeltaTestUtils {
     }
 
     /**
-     * In this method we check in short time intervals for the total time of 10 seconds whether
+     * In this method we check in short time intervals for the total time of 20 seconds whether
      * the DeltaLog for the table has been already created by the Flink job running in the deamon
      * thread and whether the table version is equal or higher than specified.
      *
