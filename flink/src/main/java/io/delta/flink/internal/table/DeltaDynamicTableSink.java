@@ -25,6 +25,7 @@ import io.delta.flink.sink.internal.DeltaBucketAssigner;
 import io.delta.flink.sink.internal.DeltaPartitionComputer.DeltaRowDataPartitionComputer;
 import io.delta.flink.sink.internal.DeltaSinkBuilder;
 import io.delta.flink.source.internal.builder.RowDataFormat;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.formats.parquet.row.ParquetRowDataBuilder;
 import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.BasePathBucketAssigner;
@@ -228,5 +229,10 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
         }
 
         this.staticPartitionSpec = staticPartitions;
+    }
+
+    @VisibleForTesting
+    Configuration getConf() {
+        return new Configuration(conf);
     }
 }

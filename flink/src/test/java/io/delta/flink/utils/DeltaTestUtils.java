@@ -3,8 +3,10 @@ package io.delta.flink.utils;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -22,6 +24,13 @@ import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
+import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.ObjectIdentifier;
+import org.apache.flink.table.catalog.ResolvedCatalogTable;
+import org.apache.flink.table.catalog.ResolvedSchema;
+import org.apache.flink.table.factories.DynamicTableFactory;
+import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
@@ -467,5 +476,21 @@ public class DeltaTestUtils {
             testDescriptor.add(rowType, newRows);
         }
         return testDescriptor;
+    }
+
+    public static DynamicTableFactory.Context createTableContext(
+            ResolvedSchema schema, Map<String, String> options) {
+        return new FactoryUtil.DefaultDynamicTableContext(
+            ObjectIdentifier.of("default", "default", "context_1"),
+            new ResolvedCatalogTable(
+                CatalogTable.of(
+                    Schema.newBuilder().fromResolvedSchema(schema).build(),
+                    "mock context",
+                    Collections.emptyList(),
+                    options),
+                schema),
+            new Configuration(),
+            DeltaTestUtils.class.getClassLoader(),
+            false);
     }
 }

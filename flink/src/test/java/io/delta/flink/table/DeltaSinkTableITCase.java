@@ -294,7 +294,7 @@ public class DeltaSinkTableITCase {
             String tablePath,
             boolean includeOptionalOptions,
             boolean isPartitioned) {
-        String resourcesDirectory = new File("src/test/resources").getAbsolutePath();
+        String resourcesDirectory = new File("src/test/resources/hadoop-conf").getAbsolutePath();
         String optionalTableOptions = (includeOptionalOptions ?
             String.format(
                 " 'hadoop-conf-dir' = '%s', 'mergeSchema' = 'true', ",
