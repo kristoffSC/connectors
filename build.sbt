@@ -728,6 +728,7 @@ lazy val flink = (project in file("flink"))
       "org.apache.flink" % "flink-parquet" % flinkVersion % "provided",
       "org.apache.flink" % "flink-table-common" % flinkVersion % "provided",
       "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided",
+      "org.apache.flink" % "flink-connector-files" % flinkVersion % "provided",
       "org.apache.flink" % "flink-connector-files" % flinkVersion % "test" classifier "tests",
       "org.apache.flink" % "flink-table-runtime" % flinkVersion % "provided",
       "org.apache.flink" % "flink-connector-test-utils" % flinkVersion % "test",

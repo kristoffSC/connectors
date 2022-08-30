@@ -21,6 +21,7 @@ package org.apache.flink.streaming.api.functions.sink.filesystem;
 import java.io.IOException;
 
 import org.apache.flink.api.common.serialization.BulkWriter;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.RecoverableFsDataOutputStream;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
@@ -78,10 +79,10 @@ public class DeltaBulkPartWriter<IN, BucketID>
     private boolean closed = false;
 
     public DeltaBulkPartWriter(
-        final BucketID bucketId,
-        final RecoverableFsDataOutputStream currentPartStream,
-        final BulkWriter<IN> writer,
-        final long creationTime) {
+            BucketID bucketId,
+            RecoverableFsDataOutputStream currentPartStream,
+            BulkWriter<IN> writer,
+            long creationTime) {
         super(bucketId, creationTime);
         this.currentPartStream = currentPartStream;
         this.writer = Preconditions.checkNotNull(writer);
