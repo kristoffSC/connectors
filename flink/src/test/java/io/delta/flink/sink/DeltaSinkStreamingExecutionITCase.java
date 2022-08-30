@@ -130,7 +130,7 @@ public class DeltaSinkStreamingExecutionITCase {
 
     @ParameterizedRepeatedIfExceptionsTest(
         suspend = 2000L, repeats = 3,
-        name = "triggerFailover = {0}, isPartitioned = {1}")
+        name = "isPartitioned = {0}, triggerFailover = {1}")
     @MethodSource("deltaSinkArguments")
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
 

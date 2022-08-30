@@ -119,7 +119,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
             tableOptions.getOptional(DeltaTableConnectorOptions.HADOOP_CONF_DIR);
 
         if (hadoopConfDirOptional.isPresent()) {
-            userHadoopConf = getHadoopConfiguration(hadoopConfDirOptional.get());
+            userHadoopConf = loadHadoopConfFromFolder(hadoopConfDirOptional.get());
             if (userHadoopConf == null) {
                 throw new RuntimeException(
                     "Failed to resolve Hadoop userHadoopConf file from given path",
@@ -148,7 +148,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
      * @param hadoopConfDir Hadoop conf directory path.
      * @return A Hadoop configuration instance or null if path does not exist.
      */
-    private Configuration getHadoopConfiguration(String hadoopConfDir) {
+    private Configuration loadHadoopConfFromFolder(String hadoopConfDir) {
         if (new File(hadoopConfDir).exists()) {
             List<File> possibleConfFiles = new ArrayList<>();
             List<String> possibleConfigs = Arrays.asList(
