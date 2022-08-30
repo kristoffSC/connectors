@@ -119,6 +119,14 @@ public class DeltaSinkStreamingExecutionITCase {
         LATCH_MAP.remove(latchId);
     }
 
+    /**
+     * Arguments for parametrized Delta Sink test.
+     * Parameters are:
+     * <ul>
+     *     <li>isPartitioned</li>
+     *     <li>triggerFailover</li>
+     * </ul>
+     */
     private static Stream<Arguments> deltaSinkArguments() {
         return Stream.of(
             Arguments.of(false, false),
@@ -128,7 +136,7 @@ public class DeltaSinkStreamingExecutionITCase {
         );
     }
 
-    @ParameterizedTest(name = "triggerFailover = {0}, isPartitioned = {1}")
+    @ParameterizedTest(name = "isPartitioned = {0}, triggerFailover = {1}")
     @MethodSource("deltaSinkArguments")
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
 
@@ -190,6 +198,7 @@ public class DeltaSinkStreamingExecutionITCase {
             String deltaTablePath,
             boolean triggerFailover,
             boolean isPartitioned) throws Exception {
+
         // GIVEN
         DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
         List<AddFile> initialDeltaFiles = deltaLog.snapshot().getAllFiles();
@@ -245,6 +254,7 @@ public class DeltaSinkStreamingExecutionITCase {
             String deltaTablePath,
             boolean triggerFailover,
             boolean isPartitioned) {
+
         StreamExecutionEnvironment env = getTestStreamEnv(triggerFailover);
 
         env.addSource(new DeltaStreamingExecutionTestSource(latchId, NUM_RECORDS, triggerFailover))

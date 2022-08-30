@@ -98,8 +98,7 @@ public class DeltaCommitter implements Committer<DeltaCommittable> {
      * @throws IOException if committing files (e.g. I/O errors occurs)
      */
     @Override
-    public List<DeltaCommittable> commit(
-        List<DeltaCommittable> committables) throws IOException {
+    public List<DeltaCommittable> commit(List<DeltaCommittable> committables) throws IOException {
         for (DeltaCommittable committable : committables) {
             LOG.info("Committing delta committable locally: " +
                 "appId=" + committable.getAppId() +
