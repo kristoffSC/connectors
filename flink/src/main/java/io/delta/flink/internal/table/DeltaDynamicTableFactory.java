@@ -129,7 +129,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
             }
         }
 
-        // We are using FLink's helper method HadoopUtils.getHadoopConfiguration to resolve
+        // We are using Flink's helper method HadoopUtils.getHadoopConfiguration to resolve
         // cluster's Hadoop configuration. This method looks for Hadoop config in env variables and
         // Flink cluster configuration files. For this moment DynamicTableSinkFactory does not have
         // access to FLink's configuration that is why we are passing "dummy" config as an argument.
