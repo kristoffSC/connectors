@@ -231,7 +231,7 @@ public class DeltaSinkTableITCase {
             tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
         }
 
-        final String testSourceTableName = "test_source_table";
+        String testSourceTableName = "test_source_table";
         String sourceSql = buildSourceTableSql(
             testSourceTableName,
             10,
@@ -239,7 +239,7 @@ public class DeltaSinkTableITCase {
             useBoundedMode);
         tableEnv.executeSql(sourceSql);
 
-        final String testCompactSinkTableName = "test_compact_sink_table";
+        String testCompactSinkTableName = "test_compact_sink_table";
         String sinkSql = buildSinkTableSql(
             testCompactSinkTableName,
             deltaTablePath,
@@ -247,7 +247,7 @@ public class DeltaSinkTableITCase {
             isPartitioned);
         tableEnv.executeSql(sinkSql);
 
-        final String sql1 = buildInsertIntoSql(
+        String sql1 = buildInsertIntoSql(
             testCompactSinkTableName,
             testSourceTableName,
             useStaticPartition);

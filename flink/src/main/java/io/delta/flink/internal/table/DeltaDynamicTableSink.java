@@ -106,12 +106,12 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
     }
 
     private DeltaDynamicTableSink(
-        Path basePath,
-        Configuration conf,
-        RowType rowType,
-        boolean mergeSchema,
-        CatalogTable catalogTable,
-        LinkedHashMap<String, String> staticPartitionSpec) {
+            Path basePath,
+            Configuration conf,
+            RowType rowType,
+            boolean mergeSchema,
+            CatalogTable catalogTable,
+            LinkedHashMap<String, String> staticPartitionSpec) {
 
         this.basePath = basePath;
         this.rowType = rowType;
