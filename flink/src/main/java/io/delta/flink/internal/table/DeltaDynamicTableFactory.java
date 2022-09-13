@@ -29,7 +29,6 @@ import java.util.Set;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.runtime.util.HadoopUtils;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
@@ -130,9 +129,9 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
             }
         }
 
-        // We are using Flink's helper method HadoopUtils.getHadoopConfiguration to resolve
+        // We are using helper method HadoopUtils.getHadoopConfiguration to resolve
         // cluster's Hadoop configuration. This method looks for Hadoop config in env variables and
-        // Flink cluster configuration files. For this moment DynamicTableSinkFactory does not have
+        // Flink cluster configuration. For this moment DynamicTableSinkFactory does not have
         // access to Flink's configuration that is why we are passing "dummy" config as an argument.
         Configuration hadoopConfiguration = HadoopUtils.getHadoopConfiguration(emptyClusterConfig);
         if (userHadoopConf != null) {
