@@ -22,7 +22,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
@@ -47,15 +48,24 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
+import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.core.IsNull.notNullValue;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.data.CloseableIterator;
+import io.delta.standalone.data.RowRecord;
 
 public class DeltaSinkTableITCase {
 
-    public static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
+    private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
+
+    private static final String TEST_SINK_TABLE_NAME = "test_compact_sink_table";
+
+    private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
     public static final RowType TEST_ROW_TYPE = new RowType(Arrays.asList(
         new RowType.RowField("col1", new VarCharType(VarCharType.MAX_LENGTH)),
@@ -63,15 +73,19 @@ public class DeltaSinkTableITCase {
         new RowType.RowField("col3", new IntType())
     ));
 
+    private static ExecutorService testWorkers;
+
     protected RowType testRowType;
 
     @BeforeAll
     public static void beforeAll() throws IOException {
+        testWorkers = Executors.newCachedThreadPool();
         TEMPORARY_FOLDER.create();
     }
 
     @AfterAll
     public static void afterAll() {
+        testWorkers.shutdownNow();
         TEMPORARY_FOLDER.delete();
     }
 
@@ -94,7 +108,6 @@ public class DeltaSinkTableITCase {
         );
     }
 
-    @SuppressWarnings("unchecked")
     @ParameterizedRepeatedIfExceptionsTest(
         suspend = 2000L, repeats = 3,
         name = "isPartitioned = {0}, " +
@@ -102,46 +115,244 @@ public class DeltaSinkTableITCase {
             "useStaticPartition = {2}, " +
             "useBoundedMode = {3}")
     @MethodSource("tableArguments")
-    public void testTableApi(
+    public void testInsertQueryWithAllFields(
             boolean isPartitioned,
             boolean includeOptionalOptions,
             boolean useStaticPartition,
             boolean useBoundedMode) throws Exception {
 
-        String deltaTablePath = setup(includeOptionalOptions);
+        String deltaTablePath = setupTestFolders(includeOptionalOptions);
+
+        // Column `col1` would be a partition column if isPartitioned or useStaticPartition
+        // set to true.
+        // Column `col3` would be a partition column if isPartitioned is set to true.
+        String insertSql = buildInsertAllFieldsSql(useStaticPartition);
+
+        DeltaLog deltaLog =
+            testTableJob(
+                deltaTablePath,
+                isPartitioned,
+                includeOptionalOptions,
+                useStaticPartition,
+                useBoundedMode,
+                insertSql
+            );
+
+        Snapshot snapshot = deltaLog.update();
+
+        // Validate that every inserted column has non value.
+        try (CloseableIterator<RowRecord> open = snapshot.open()) {
+            while (open.hasNext()) {
+                RowRecord record = open.next();
+                assertThat(record.getString("col1"), notNullValue());
+                assertThat(record.getString("col2"), notNullValue());
+                assertThat(record.getInt("col3"), notNullValue());
+            }
+        }
+    }
+
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L, repeats = 3,
+        name = "isPartitioned = {0}, " +
+            "includeOptionalOptions = {1}, " +
+            "useStaticPartition = {2}, " +
+            "useBoundedMode = {3}")
+    @MethodSource("tableArguments")
+    public void testInsertQueryWithOneFiled(
+            boolean isPartitioned,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            boolean useBoundedMode) throws Exception {
+
+        // Column `col1` would be a partition column if isPartitioned or useStaticPartition
+        // set to true.
+        // Column `col3` would be a partition column if isPartitioned is set to true.
+        String insertSql = buildInsertOneFieldSql(useStaticPartition);
+
+        DeltaLog deltaLog =
+            testTableJob(
+                TEMPORARY_FOLDER.newFolder().getAbsolutePath(),
+                isPartitioned,
+                includeOptionalOptions,
+                useStaticPartition,
+                useBoundedMode,
+                insertSql
+            );
+
+        // Validate that every inserted column has null or not null value depends on the settings
+        try (CloseableIterator<RowRecord> open = deltaLog.update().open()) {
+            while (open.hasNext()) {
+                RowRecord record = open.next();
+                assertThat(record.getString("col1"), notNullValue());
+                assertThat(
+                    record.getString("col2"),
+                    (useStaticPartition) ? notNullValue() : nullValue()
+                );
+                assertThat(
+                    record.isNullAt("col3"),
+                    (isPartitioned) ? equalTo(false) : equalTo(true)
+                );
+            }
+        }
+    }
+
+    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L, repeats = 3,
+        name = "isPartitioned = {0}, " +
+            "includeOptionalOptions = {1}, " +
+            "useStaticPartition = {2}, " +
+            "useBoundedMode = {3}")
+    @MethodSource("tableArguments")
+    public void testInsertQueryWithOneFiledWithNullCasts(
+            boolean isPartitioned,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            boolean useBoundedMode) throws Exception {
+
+        // Column `col1` would be a partition column if isPartitioned or useStaticPartition
+        // set to true.
+        // Column `col3` would be a partition column if isPartitioned is set to true.
+        String insertSql = buildInsertOneFieldSqlNullCasts(
+            useStaticPartition,
+            includeOptionalOptions
+        );
+
+        DeltaLog deltaLog =
+            testTableJob(
+                TEMPORARY_FOLDER.newFolder().getAbsolutePath(),
+                isPartitioned,
+                includeOptionalOptions,
+                useStaticPartition,
+                useBoundedMode,
+                insertSql
+            );
+
+        // Validate that every inserted column has null or not null value depends on the settings
+        try (CloseableIterator<RowRecord> open = deltaLog.update().open()) {
+            while (open.hasNext()) {
+                RowRecord record = open.next();
+                assertThat(record.getString("col1"), notNullValue());
+                assertThat(
+                    record.getString("col2"),
+                    (useStaticPartition) ? notNullValue() : nullValue()
+                );
+                assertThat(
+                    record.isNullAt("col3"),
+                    (isPartitioned) ? equalTo(false) : equalTo(true)
+                );
+            }
+        }
+    }
+
+    private String buildInsertAllFieldsSql(boolean useStaticPartition) {
+
+        if (useStaticPartition) {
+            return String.format(
+                "INSERT INTO %s PARTITION(col1='val1') SELECT col2, col3 FROM %s",
+                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
+                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            );
+        }
+
+        return String.format(
+            "INSERT INTO %s SELECT * FROM %s",
+            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
+            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+        );
+    }
+
+    private String buildInsertOneFieldSql(boolean useStaticPartition) {
+
+        if (useStaticPartition) {
+            return String.format(
+                "INSERT INTO %s PARTITION(col1='val1') (col2) (SELECT col2 FROM %s)",
+                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
+                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            );
+        }
+
+        return String.format(
+            "INSERT INTO %s (col1) (SELECT col1 FROM %s)",
+            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
+            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+        );
+    }
+
+    private String buildInsertOneFieldSqlNullCasts(
+        boolean useStaticPartition,
+        boolean includeOptionalOptions) {
+
+        if (useStaticPartition) {
+            return String.format(
+                "INSERT INTO %s PARTITION(col1='val1') (SELECT col2, cast(null as INT)"
+                    + ((includeOptionalOptions) ? ", cast(null as INT) " : "")
+                    + " FROM %s)",
+                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
+                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            );
+        }
+
+        return String.format(
+            "INSERT INTO %s (SELECT col1, cast(null as VARCHAR), cast(null as INT) "
+                + ((includeOptionalOptions) ? ", cast(null as INT) " : "")
+                + "FROM %s)",
+            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
+            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+        );
+    }
+
+    private DeltaLog testTableJob(
+            String deltaTablePath,
+            boolean isPartitioned,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            boolean useBoundedMode,
+            String insertSql) throws Exception {
 
         // GIVEN
         DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
         List<AddFile> initialDeltaFiles = deltaLog.snapshot().getAllFiles();
 
         // WHEN
-        if (useBoundedMode) {
-            runFlinkJob(
-                deltaTablePath,
-                useBoundedMode,
-                includeOptionalOptions,
-                useStaticPartition,
-                isPartitioned);
-        } else {
-            runFlinkJobInBackground(
-                deltaTablePath,
-                useBoundedMode,
-                includeOptionalOptions,
-                useStaticPartition,
-                isPartitioned
-            );
-        }
+        setupAndRunFLinkJob(
+            isPartitioned,
+            includeOptionalOptions,
+            useBoundedMode,
+            deltaTablePath,
+            insertSql);
+
         DeltaTestUtils.waitUntilDeltaLogExists(deltaLog, deltaLog.snapshot().getVersion() + 1);
 
         // THEN
-        deltaLog.update();
+        validateTargetTable(
+            isPartitioned,
+            includeOptionalOptions,
+            useStaticPartition,
+            deltaLog,
+            initialDeltaFiles
+        );
+
+        return deltaLog;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void validateTargetTable(
+            boolean isPartitioned,
+            boolean includeOptionalOptions,
+            boolean useStaticPartition,
+            DeltaLog deltaLog,
+            List<AddFile> initialDeltaFiles) throws IOException {
+
         int tableRecordsCount =
             TestParquetReader.readAndValidateAllTableRecords(
                 deltaLog,
                 TEST_ROW_TYPE,
                 DataFormatConverters.getConverterForDataType(
-                    TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE)));
-        List<AddFile> files = deltaLog.update().getAllFiles();
+                    TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE))
+            );
+
+        Snapshot snapshot = deltaLog.update();
+        List<AddFile> files = snapshot.getAllFiles();
         assertThat(files.size() > initialDeltaFiles.size(), equalTo(true));
         assertThat(tableRecordsCount > 0, equalTo(true));
 
@@ -167,7 +378,32 @@ public class DeltaSinkTableITCase {
         }
     }
 
-    public String setup(boolean includeOptionalOptions) {
+    private void setupAndRunFLinkJob(
+                boolean isPartitioned,
+                boolean includeOptionalOptions,
+                boolean useBoundedMode,
+                String deltaTablePath,
+                String insertSql) throws Exception {
+
+        if (useBoundedMode) {
+            runFlinkJob(
+                deltaTablePath,
+                useBoundedMode,
+                includeOptionalOptions,
+                isPartitioned,
+                insertSql);
+        } else {
+            runFlinkJobInBackground(
+                deltaTablePath,
+                useBoundedMode,
+                includeOptionalOptions,
+                isPartitioned,
+                insertSql
+            );
+        }
+    }
+
+    public String setupTestFolders(boolean includeOptionalOptions) {
         try {
             String deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             // one of the optional options is whether the sink should try to update the table's
@@ -196,29 +432,32 @@ public class DeltaSinkTableITCase {
             String deltaTablePath,
             boolean useBoundedMode,
             boolean includeOptionalOptions,
-            boolean useStaticPartition,
-            boolean isPartitioned) {
-        new Thread(() -> {
+            boolean isPartitioned,
+            String insertSql) {
+
+        testWorkers.submit(() -> {
             try {
                 runFlinkJob(
                     deltaTablePath,
                     useBoundedMode,
                     includeOptionalOptions,
-                    useStaticPartition,
-                    isPartitioned
-                );
-            } catch (ExecutionException | InterruptedException e) {
-                e.printStackTrace();
+                    isPartitioned,
+                    insertSql);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-        }).start();
+        });
     }
 
+    /**
+     * Run Flink Job and block current thread until job finishes.
+     */
     private void runFlinkJob(
             String deltaTablePath,
             boolean useBoundedMode,
             boolean includeOptionalOptions,
-            boolean useStaticPartition,
-            boolean isPartitioned) throws ExecutionException, InterruptedException {
+            boolean isPartitioned,
+            String insertSql) throws Exception {
 
         TableEnvironment tableEnv;
         if (useBoundedMode) {
@@ -231,28 +470,21 @@ public class DeltaSinkTableITCase {
             tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
         }
 
-        String testSourceTableName = "test_source_table";
         String sourceSql = buildSourceTableSql(
-            testSourceTableName,
             10,
             includeOptionalOptions,
             useBoundedMode);
         tableEnv.executeSql(sourceSql);
 
-        String testCompactSinkTableName = "test_compact_sink_table";
         String sinkSql = buildSinkTableSql(
-            testCompactSinkTableName,
             deltaTablePath,
             includeOptionalOptions,
             isPartitioned);
+
         tableEnv.executeSql(sinkSql);
 
-        String sql1 = buildInsertIntoSql(
-            testCompactSinkTableName,
-            testSourceTableName,
-            useStaticPartition);
         try {
-            tableEnv.executeSql(sql1).await();
+            tableEnv.executeSql(insertSql).await();
         } catch (Exception exception) {
             if (!exception.getMessage().contains("Failed to wait job finish")) {
                 throw exception;
@@ -269,10 +501,10 @@ public class DeltaSinkTableITCase {
     }
 
     private String buildSourceTableSql(
-            String testSourceTableName,
             int rows,
             boolean includeOptionalOptions,
             boolean useBoundedMode) {
+
         String additionalCol = includeOptionalOptions ? ", col4 INT " : "";
         String rowLimit = useBoundedMode ? "'number-of-rows' = '1'," : "";
         return String.format(
@@ -286,14 +518,14 @@ public class DeltaSinkTableITCase {
                 + rowLimit
                 + " 'rows-per-second' = '20'"
                 + ")",
-            testSourceTableName, rows);
+            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME, rows);
     }
 
     private String buildSinkTableSql(
-            String tableName,
             String tablePath,
             boolean includeOptionalOptions,
             boolean isPartitioned) {
+
         String resourcesDirectory = new File("src/test/resources/hadoop-conf").getAbsolutePath();
         String optionalTableOptions = (includeOptionalOptions ?
             String.format(
@@ -318,18 +550,6 @@ public class DeltaSinkTableITCase {
                 + optionalTableOptions
                 + " 'table-path' = '%s'"
                 + ")",
-            tableName, tablePath);
-    }
-
-    private String buildInsertIntoSql(
-            String sinkTable,
-            String sourceTable,
-            boolean useStaticPartition) {
-        if (useStaticPartition) {
-            return String.format(
-                "INSERT INTO %s PARTITION(col1='val1') " +
-                    "SELECT col2, col3 FROM %s", sinkTable, sourceTable);
-        }
-        return String.format("INSERT INTO %s SELECT * FROM %s", sinkTable, sourceTable);
+            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME, tablePath);
     }
 }
