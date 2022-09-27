@@ -17,8 +17,16 @@
  */
 package org.utils;
 
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Collections;
+import java.util.Iterator;
 
+import org.apache.flink.api.common.state.ListState;
+import org.apache.flink.api.common.state.ListStateDescriptor;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.runtime.state.FunctionInitializationContext;
+import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.util.DataFormatConverters;
@@ -32,9 +40,14 @@ import org.apache.flink.types.Row;
  * interval of {@link DeltaExampleSourceFunction#NEXT_ROW_INTERVAL_MILLIS} that will be further
  * fed to the Flink job until the parent process is stopped.
  */
-public class DeltaExampleSourceFunction extends RichParallelSourceFunction<RowData> {
+public class DeltaExampleSourceFunction extends RichParallelSourceFunction<RowData> implements
+    CheckpointedFunction {
 
     static int NEXT_ROW_INTERVAL_MILLIS = 800;
+
+    private transient ListState<Integer> checkpointedState;
+
+    private int bufferedElements;
 
     public static final DataFormatConverters.DataFormatConverter<RowData, Row> CONVERTER =
             DataFormatConverters.getConverterForDataType(
@@ -45,14 +58,15 @@ public class DeltaExampleSourceFunction extends RichParallelSourceFunction<RowDa
 
     @Override
     public void run(SourceContext<RowData> ctx) throws InterruptedException {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
         while (!cancelled) {
 
+            int currentVal = this.bufferedElements;
+            this.bufferedElements = this.bufferedElements + 1;
             RowData row = CONVERTER.toInternal(
-                    Row.of(
-                            String.valueOf(random.nextInt(0, 10)),
-                            String.valueOf(random.nextInt(0, 100)),
-                            random.nextInt(0, 30))
+                Row.of(
+                    String.valueOf(currentVal),
+                    String.valueOf(currentVal),
+                    currentVal)
             );
             ctx.collect(row);
             Thread.sleep(NEXT_ROW_INTERVAL_MILLIS);
@@ -62,5 +76,27 @@ public class DeltaExampleSourceFunction extends RichParallelSourceFunction<RowDa
     @Override
     public void cancel() {
         cancelled = true;
+    }
+
+    @Override
+    public void snapshotState(FunctionSnapshotContext context) throws Exception {
+        this.checkpointedState.update(Collections.singletonList(bufferedElements));
+    }
+
+    @Override
+    public void initializeState(FunctionInitializationContext context) throws Exception {
+        ListStateDescriptor<Integer> descriptor =
+            new ListStateDescriptor<>(
+                    "buffered-elements",
+                TypeInformation.of(new TypeHint<Integer>() {}));
+
+        checkpointedState = context.getOperatorStateStore().getListState(descriptor);
+
+        if (context.isRestored()) {
+            Iterator<Integer> integers = checkpointedState.get().iterator();
+            if (integers.hasNext()) {
+                this.bufferedElements = integers.next();
+            }
+        }
     }
 }

@@ -36,7 +36,7 @@ public abstract class DeltaSinkLocalJobExampleBase implements DeltaExampleLocalJ
         System.out.println("Will use table path: " + tablePath);
 
         Utils.prepareDirs(tablePath);
-        StreamExecutionEnvironment env = createPipeline(tablePath, 2, 3);
+        StreamExecutionEnvironment env = createPipeline(tablePath, 1, 3);
         runFlinkJobInBackground(env);
         printDeltaTableRows(tablePath);
     }
