@@ -130,9 +130,11 @@ public class DeltaSinkStreamingExecutionITCase {
     private static Stream<Arguments> deltaSinkArguments() {
         return Stream.of(
             Arguments.of(false, false),
-            Arguments.of(false, true),
-            Arguments.of(true, false),
-            Arguments.of(true, true)
+            Arguments.of(true, false)
+        // TODO Flink_1.15 this should be uncomment when Flink 1.15.3 will be released.
+        //  When Flink 1.15.3 will be released whe should use this version in connector.
+        // Arguments.of(false, true),
+        // Arguments.of(true, true)
         );
     }
 

@@ -694,7 +694,7 @@ def flinkScalaVersion(scalaBinaryVersion: String): String = {
   }
 }
 
-val flinkVersion = "1.15.0"
+val flinkVersion = "1.15.2"
 lazy val flink = (project in file("flink"))
   .dependsOn(standaloneCosmetic % "provided")
   .enablePlugins(GenJavadocPlugin, JavaUnidocPlugin)
@@ -731,6 +731,8 @@ lazy val flink = (project in file("flink"))
       "org.apache.flink" % "flink-connector-files" % flinkVersion % "provided",
       "org.apache.flink" % "flink-connector-files" % flinkVersion % "test" classifier "tests",
       "org.apache.flink" % "flink-table-runtime" % flinkVersion % "provided",
+      "org.apache.flink" % "flink-scala_2.12" % flinkVersion % "provided",
+      "org.apache.flink" % "flink-runtime-web" % flinkVersion % "test",
       "org.apache.flink" % "flink-connector-test-utils" % flinkVersion % "test",
       "org.apache.flink" % "flink-clients" % flinkVersion % "test",
       "org.apache.flink" % "flink-test-utils" % flinkVersion % "test",

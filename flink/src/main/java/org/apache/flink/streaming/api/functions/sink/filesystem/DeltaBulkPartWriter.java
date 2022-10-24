@@ -21,7 +21,6 @@ package org.apache.flink.streaming.api.functions.sink.filesystem;
 import java.io.IOException;
 
 import org.apache.flink.api.common.serialization.BulkWriter;
-import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.RecoverableFsDataOutputStream;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
@@ -52,7 +51,7 @@ import org.apache.flink.util.Preconditions;
  *     <li>Since it's a class member of {@link DeltaInProgressPart} it shares its life span as
  *         well</li>
  *     <li>Instances of this class are being created inside
- *         {@link io.delta.flink.sink.internal.writer.DeltaWriterBucket#rollPartFile}
+ *         {@link io.delta.flink.sink.internal.writer.DeltaWriterBucket}
  *         method every time a bucket processes the first event or if the previously opened file
  *         met conditions for rolling (e.g. size threshold)</li>
  *     <li>Its life span holds as long as the underlying file stays in an in-progress state (so
