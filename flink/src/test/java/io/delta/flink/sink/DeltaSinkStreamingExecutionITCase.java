@@ -132,7 +132,7 @@ public class DeltaSinkStreamingExecutionITCase {
             Arguments.of(false, false),
             Arguments.of(true, false)
         // TODO Flink_1.15 this should be uncomment when Flink 1.15.3 will be released.
-        //  When Flink 1.15.3 will be released whe should use this version in connector.
+        //  When Flink 1.15.3 will be released whe should use it in connector's dependencies.
         // Arguments.of(false, true),
         // Arguments.of(true, true)
         );
