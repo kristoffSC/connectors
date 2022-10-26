@@ -217,10 +217,13 @@ public class DeltaGlobalCommitter
             DeltaLog deltaLog = DeltaLog.forTable(conf,
                     new org.apache.hadoop.fs.Path(basePath.toUri()));
 
+            LOG.info("Start Looping through committablesPerCheckpoint");
             for (long checkpointId : committablesPerCheckpoint.keySet()) {
                 OptimisticTransaction transaction = deltaLog.startTransaction();
                 long lastCommittedVersion = transaction.txnVersion(appId);
+                LOG.info("AAAAAAAAA: " + checkpointId);
                 if (checkpointId > lastCommittedVersion) {
+                    LOG.info("Delta Log commit for checkpointID " + checkpointId);
                     doCommit(
                         transaction,
                         committablesPerCheckpoint.get(checkpointId),
@@ -231,6 +234,7 @@ public class DeltaGlobalCommitter
                         appId, checkpointId));
                 }
             }
+            LOG.info("End Looping through committablesPerCheckpoint");
         }
         return Collections.emptyList();
     }
