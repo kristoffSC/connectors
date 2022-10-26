@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.StringJoiner;
 import java.util.TreeMap;
 import javax.annotation.Nullable;
 
@@ -54,14 +55,13 @@ import io.delta.standalone.actions.SetTransaction;
 import io.delta.standalone.types.StructType;
 
 /**
- * A {@link GlobalCommitter} implementation for
- * {@link io.delta.flink.sink.DeltaSink}.
+ * A {@link GlobalCommitter} implementation for {@link io.delta.flink.sink.DeltaSink}.
  * <p>
  * It commits written files to the DeltaLog and provides exactly once semantics by guaranteeing
- * idempotence behaviour of the commit phase. It means that when given the same set of
- * {@link DeltaCommittable} objects (that contain metadata about written files along with unique
- * identifier of the given Flink's job and checkpoint id) it will never commit them multiple times.
- * Such behaviour is achieved by constructing transactional id using mentioned app identifier and
+ * idempotence behaviour of the commit phase. It means that when given the same set of {@link
+ * DeltaCommittable} objects (that contain metadata about written files along with unique identifier
+ * of the given Flink's job and checkpoint id) it will never commit them multiple times. Such
+ * behaviour is achieved by constructing transactional id using mentioned app identifier and
  * checkpointId.
  * <p>
  * Lifecycle of instances of this class is as follows:
@@ -83,7 +83,8 @@ public class DeltaGlobalCommitter
     private static final String APPEND_MODE = "Append";
     private static final String ENGINE_INFO =
         "flink-engine/" + io.delta.flink.sink.internal.committer.Meta.FLINK_VERSION +
-        " flink-delta-connector/" + io.delta.flink.sink.internal.committer.Meta.CONNECTOR_VERSION;
+            " flink-delta-connector/"
+            + io.delta.flink.sink.internal.committer.Meta.CONNECTOR_VERSION;
 
     /**
      * Hadoop configuration that is passed to {@link DeltaLog} instance when creating it
@@ -106,10 +107,10 @@ public class DeltaGlobalCommitter
     private final boolean mergeSchema;
 
     public DeltaGlobalCommitter(
-            Configuration conf,
-            Path basePath,
-            RowType rowType,
-            boolean mergeSchema) {
+        Configuration conf,
+        Path basePath,
+        RowType rowType,
+        boolean mergeSchema) {
 
         this.conf = conf;
         this.basePath = basePath;
@@ -120,28 +121,28 @@ public class DeltaGlobalCommitter
     /**
      * Filters committables that will be provided to {@link GlobalCommitter#commit} method.
      * <p>
-     * We are always returning all the committables as we do not implement any retry behaviour
-     * in {@link GlobalCommitter#commit} method and always want to try to commit all the received
+     * We are always returning all the committables as we do not implement any retry behaviour in
+     * {@link GlobalCommitter#commit} method and always want to try to commit all the received
      * committables.
      * <p>
      * If there will be any previous committables from checkpoint intervals other than the most
-     * recent one then we will try to commit them in an idempotent manner during
-     * {@link DeltaGlobalCommitter#commit} method and not by filtering them.
+     * recent one then we will try to commit them in an idempotent manner during {@link
+     * DeltaGlobalCommitter#commit} method and not by filtering them.
      *
      * @param globalCommittables list of combined committables objects
      * @return same as input
      */
     @Override
     public List<DeltaGlobalCommittable> filterRecoveredCommittables(
-            List<DeltaGlobalCommittable> globalCommittables) {
+        List<DeltaGlobalCommittable> globalCommittables) {
         return globalCommittables;
     }
 
     /**
      * Compute an aggregated committable from a list of committables.
      * <p>
-     * We just wrap received list of committables inside a {@link DeltaGlobalCommitter} instance
-     * as we will do all of the processing in {@link GlobalCommitter#commit} method.
+     * We just wrap received list of committables inside a {@link DeltaGlobalCommitter} instance as
+     * we will do all of the processing in {@link GlobalCommitter#commit} method.
      *
      * @param committables list of committables object that may be coming from multiple checkpoint
      *                     intervals
@@ -215,23 +216,37 @@ public class DeltaGlobalCommitter
             SortedMap<Long, List<DeltaCommittable>> committablesPerCheckpoint =
                 groupCommittablesByCheckpointInterval(globalCommittables);
             DeltaLog deltaLog = DeltaLog.forTable(conf,
-                    new org.apache.hadoop.fs.Path(basePath.toUri()));
+                new org.apache.hadoop.fs.Path(basePath.toUri()));
 
             LOG.info("Start Looping through committablesPerCheckpoint");
             for (long checkpointId : committablesPerCheckpoint.keySet()) {
                 OptimisticTransaction transaction = deltaLog.startTransaction();
                 long lastCommittedVersion = transaction.txnVersion(appId);
-                LOG.info("AAAAAAAAA: " + checkpointId);
+
+                List<DeltaCommittable> committables =
+                    committablesPerCheckpoint.get(checkpointId);
+
                 if (checkpointId > lastCommittedVersion) {
-                    LOG.info("Delta Log commit for checkpointID " + checkpointId);
+                    LOG.info(String.format("About to commit checkpointId {%s} data to Delta Table",
+                        checkpointId));
                     doCommit(
                         transaction,
-                        committablesPerCheckpoint.get(checkpointId),
+                        committables,
                         deltaLog.tableExists());
                 } else {
                     LOG.info(String.format(
                         "Skipping already committed transaction (appId='%s', checkpointId='%s')",
                         appId, checkpointId));
+
+                    StringJoiner stringJoiner = new StringJoiner(", ");
+                    for (DeltaCommittable deltaCommittable : committables) {
+                        stringJoiner.add(deltaCommittable.getDeltaPendingFile().getFileName());
+                    }
+                    LOG.info("Files to be skipped " +
+                        "appId=" + appId +
+                        " checkpointId=" + checkpointId +
+                        " files:" + stringJoiner
+                    );
                 }
             }
             LOG.info("End Looping through committablesPerCheckpoint");
@@ -245,20 +260,20 @@ public class DeltaGlobalCommitter
      * <p>
      * During this process we map single committables to {@link AddFile} objects. Additionally,
      * during the iteration process we also validate whether the committables for the same
-     * checkpoint interval have the same set of partition columns and throw a
-     * {@link RuntimeException} when this condition is not met. At the final stage we handle the
-     * metadata update along with preparing the final set of metrics and perform the actual commit
-     * to the {@link DeltaLog}.
+     * checkpoint interval have the same set of partition columns and throw a {@link
+     * RuntimeException} when this condition is not met. At the final stage we handle the metadata
+     * update along with preparing the final set of metrics and perform the actual commit to the
+     * {@link DeltaLog}.
      *
-     * @param transaction  {@link OptimisticTransaction} instance that will be used for
-     *                     committing given checkpoint interval
+     * @param transaction  {@link OptimisticTransaction} instance that will be used for committing
+     *                     given checkpoint interval
      * @param committables list of committables for particular checkpoint interval
      * @param tableExists  indicator whether table already exists or will be created with the next
      *                     commit
      */
     private void doCommit(OptimisticTransaction transaction,
-                          List<DeltaCommittable> committables,
-                          boolean tableExists) {
+        List<DeltaCommittable> committables,
+        boolean tableExists) {
         String appId = committables.get(0).getAppId();
         long checkpointId = committables.get(0).getCheckpointId();
 
@@ -353,8 +368,8 @@ public class DeltaGlobalCommitter
      * @param partitionColumns list of partitions for the current data stream
      */
     private void handleMetadataUpdate(boolean tableExists,
-                                      OptimisticTransaction transaction,
-                                      List<String> partitionColumns) {
+        OptimisticTransaction transaction,
+        List<String> partitionColumns) {
         Metadata currentMetadata = transaction.metadata();
         if (tableExists && (!partitionColumns.equals(currentMetadata.getPartitionColumns()))) {
             throw new RuntimeException(
@@ -386,7 +401,7 @@ public class DeltaGlobalCommitter
     }
 
     private boolean areSchemasEqual(@Nullable StructType first,
-                                    @Nullable StructType second) {
+        @Nullable StructType second) {
         if (first == null || second == null) {
             return false;
         }
@@ -402,8 +417,8 @@ public class DeltaGlobalCommitter
      * @return list of {@link Action} objects that will be committed to the DeltaLog
      */
     private List<Action> prepareActionsForTransaction(String appId,
-                                                      long checkpointId,
-                                                      List<AddFile> addFileActions) {
+        long checkpointId,
+        List<AddFile> addFileActions) {
         List<Action> actions = new ArrayList<>();
         SetTransaction setTransaction = new SetTransaction(
             appId, checkpointId, Optional.of(System.currentTimeMillis()));
@@ -420,7 +435,7 @@ public class DeltaGlobalCommitter
      * @return {@link Operation} object for current transaction
      */
     private Operation prepareDeltaLogOperation(List<String> partitionColumns,
-                                               Map<String, String> operationMetrics) {
+        Map<String, String> operationMetrics) {
         Map<String, String> operationParameters = new HashMap<>();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -474,8 +489,8 @@ public class DeltaGlobalCommitter
      * @return resolved operation metrics for current transaction
      */
     private Map<String, String> prepareOperationMetrics(int numAddedFiles,
-                                                        long numOutputRows,
-                                                        long numOutputBytes) {
+        long numOutputRows,
+        long numOutputBytes) {
         Map<String, String> operationMetrics = new HashMap<>();
         // number of removed files will be supported for different operation modes
         operationMetrics.put(Operation.Metrics.numRemovedFiles, "0");
