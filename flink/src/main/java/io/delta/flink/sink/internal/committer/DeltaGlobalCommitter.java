@@ -212,6 +212,9 @@ public class DeltaGlobalCommitter
     @Override
     public List<DeltaGlobalCommittable> commit(List<DeltaGlobalCommittable> globalCommittables) {
         String appId = resolveAppId(globalCommittables);
+
+        //slowDownGlobalCommitter(globalCommittables);
+
         if (appId != null) { // means there are committables to process
             SortedMap<Long, List<DeltaCommittable>> committablesPerCheckpoint =
                 groupCommittablesByCheckpointInterval(globalCommittables);
@@ -251,7 +254,26 @@ public class DeltaGlobalCommitter
             }
             LOG.info("End Looping through committablesPerCheckpoint");
         }
+        slowDownGlobalCommitter(globalCommittables);
         return Collections.emptyList();
+    }
+
+    private void slowDownGlobalCommitter(List<DeltaGlobalCommittable> globalCommittables) {
+        if (globalCommittables.size() > 0
+            && globalCommittables.get(0).getDeltaCommittables().size() > 0
+            && globalCommittables.get(0).getDeltaCommittables().get(0).getCheckpointId() > 2) {
+
+            int counter = 0;
+            while (counter++ < 10) {
+
+                LOG.info("Slowing down Global Committer " + counter);
+                try {
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    //
+                }
+            }
+        }
     }
 
     /**
