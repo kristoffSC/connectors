@@ -694,13 +694,15 @@ def flinkScalaVersion(scalaBinaryVersion: String): String = {
   }
 }
 
-val flinkVersion = "1.15.2"
+val flinkVersion = "1.15-SNAPSHOT"
 lazy val flink = (project in file("flink"))
   .dependsOn(standaloneCosmetic % "provided")
   .enablePlugins(GenJavadocPlugin, JavaUnidocPlugin)
   .settings (
     name := "delta-flink",
     commonSettings,
+    resolvers += Resolver.mavenLocal,
+    resolvers += "Flink Snapshot" at "https://repository.apache.org/content/groups/snapshots",
     releaseSettings,
     publishArtifact := scalaBinaryVersion.value == "2.12", // only publish once
     autoScalaLibrary := false, // exclude scala-library from dependencies

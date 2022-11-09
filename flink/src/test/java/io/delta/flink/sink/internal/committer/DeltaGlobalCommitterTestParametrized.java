@@ -136,7 +136,9 @@ public class DeltaGlobalCommitterTestParametrized {
 
         // pattern to match for instance: "flink-engine/1.14.0-flink-delta-connector/0.3.0"
         String expectedEngineInfoPattern =
-            "flink-engine/[0-9]+\\.[0-9]+\\.[0-9]+-flink-delta-connector/[0-9]+\\.[0-9]+\\.[0-9]+";
+            "flink-engine/[0-9]+\\.[0-9]+\\.[0-9]+-flink-delta-connector/[0-9]+\\.[0-9]+\\.[0-9]+|"
+                + "flink-engine/[0-9]+\\.[0-9]+-SNAPSHOT-flink-delta-connector/[0-9]+\\.[0-9]+\\"
+                + ".[0-9]+";
         assertTrue(Pattern.compile(expectedEngineInfoPattern).matcher(engineInfo).find());
     }
 

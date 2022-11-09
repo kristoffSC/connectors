@@ -142,12 +142,9 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
     @ParameterizedTest(name = "isPartitioned = {0}, triggerFailover = {1}")
     @CsvSource({
         "false, false",
-        "true, false"
-        // TODO Flink_1.15 this should be uncomment when Flink 1.15.3 will be released.
-        //  This comment out variations run test for failover scenarios.
-        //  When Flink 1.15.3 will be released whe should use it in connector's dependencies.
-        // "false, true",
-        // "true, true"
+        "true, false",
+        "false, true",
+        "true, true"
     })
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
 
@@ -169,9 +166,6 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
      *
      * @param exceptionMode whether to throw an exception before or after Delta log commit.
      */
-    // TODO Flink_1.15 this should be re-enabled when Flink 1.15.3 will be released.
-    //  This test executes failover scenarios.
-    //  When Flink 1.15.3 will be released whe should use it in connector's dependencies.
     @ResourceLock("StreamingFailoverDeltaGlobalCommitter")
     @ParameterizedTest(name = "GlobalCommitter exception mode = {0}")
     @EnumSource(
@@ -202,7 +196,7 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
         Set<Integer> checkpointsToFailOn = new HashSet<>(Arrays.asList(5, 10, 11, 14));
 
-        int recordsPerCheckpoint = 100;
+        int recordsPerCheckpoint = 10;
         int totalNumberOfCheckpoints = 15;
         JobGraph jobGraph = createJobGraphWithFailoverGlobalCommitter(
             deltaTablePath,
