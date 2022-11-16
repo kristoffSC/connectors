@@ -240,7 +240,52 @@ public class DeltaGlobalCommitter
         }
 
         this.firstCommit = false;
+        //slowDownGlobalCommitterWithBusySpin(globalCommittables);
+        slowDownGlobalCommitterWithThreadSleep(globalCommittables);
         return Collections.emptyList();
+    }
+
+    private void slowDownGlobalCommitterWithThreadSleep(
+            List<DeltaGlobalCommittable> globalCommittables) {
+
+        if (globalCommittables.size() > 0
+            && globalCommittables.get(0).getDeltaCommittables().size() > 0
+            && globalCommittables.get(0).getDeltaCommittables().get(0).getCheckpointId() > 2) {
+
+            int counter = 0;
+            while (counter++ < 10) {
+
+                LOG.info("Slowing down Global Committer " + counter);
+                try {
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    LOG.info("Exception in sleep: " + e);
+                }
+            }
+        }
+    }
+
+    private void slowDownGlobalCommitterWithBusySpin(
+        List<DeltaGlobalCommittable> globalCommittables) {
+
+        if (globalCommittables.size() > 0
+            && globalCommittables.get(0).getDeltaCommittables().size() > 0
+            && globalCommittables.get(0).getDeltaCommittables().get(0).getCheckpointId() > 2) {
+
+            long startTime = System.currentTimeMillis();
+            long i = 0;
+            int count = 0;
+            while (i++ < 11000000000L) {
+                if (i % 10_00_000_000 == 0) {
+                    long now = System.currentTimeMillis();
+                    LOG.info(
+                        "Slow down count: " + ++count + " - " + i + " - " + ((now - startTime))
+                            + "ms.");
+                    startTime = now;
+                }
+            }
+
+        }
     }
 
     /**
