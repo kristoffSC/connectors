@@ -130,20 +130,20 @@ main() {
     exit 1
   fi
 
-  if ! create_terraform_infrastructure; then
-    echo "[ERROR] Failed to create test infrastructure."
-    exit 1
-  fi
+  #if ! create_terraform_infrastructure; then
+  #  echo "[ERROR] Failed to create test infrastructure."
+  #  exit 1
+  #fi
 
-  if ! export_terraform_outputs; then
-    echo "[ERROR] Failed to extract variables."
-    exit 1
-  fi
+  #if ! export_terraform_outputs; then
+  #  echo "[ERROR] Failed to extract variables."
+  #  exit 1
+  #fi
 
-  if ! create_kubernetes_infrastructure; then
-    echo "[ERROR] Failed to create kubernetes infrastructure."
-    exit 1
-  fi
+  #if ! create_kubernetes_infrastructure; then
+  #  echo "[ERROR] Failed to create kubernetes infrastructure."
+  #  exit 1
+  #fi
 
   if ! jobmanager_port_forward; then
     echo "[ERROR] Failed to extract Flink JobManager address."
