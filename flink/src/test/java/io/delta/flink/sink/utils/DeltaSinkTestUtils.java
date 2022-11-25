@@ -74,6 +74,12 @@ public class DeltaSinkTestUtils {
         new RowType.RowField("age", new IntType())
     ));
 
+    public static final RowType TEST_ROW_TYPE2 = new RowType(Arrays.asList(
+        new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("age", new VarCharType(VarCharType.MAX_LENGTH))
+    ));
+
     public static final RowType TEST_PARTITIONED_ROW_TYPE = new RowType(Arrays.asList(
         new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
         new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
@@ -87,6 +93,12 @@ public class DeltaSinkTestUtils {
         TEST_ROW_TYPE_CONVERTER = DataFormatConverters.getConverterForDataType(
             TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE)
         );
+
+    @SuppressWarnings("unchecked")
+    public static final DataFormatConverters.DataFormatConverter<RowData, Row>
+        TEST_ROW_TYPE_CONVERTER2 = DataFormatConverters.getConverterForDataType(
+        TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE2)
+    );
 
     @SuppressWarnings("unchecked")
     public static final DataFormatConverters.DataFormatConverter<RowData, Row>

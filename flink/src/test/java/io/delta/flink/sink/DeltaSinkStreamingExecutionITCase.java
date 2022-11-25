@@ -46,7 +46,9 @@ import io.delta.flink.sink.utils.CheckpointCountingSource;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
+import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.api.common.RuntimeExecutionMode;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.CheckpointListener;
 import org.apache.flink.api.common.state.ListState;
@@ -57,7 +59,11 @@ import org.apache.flink.api.connector.sink.Sink;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.connector.file.sink.StreamingExecutionFileSinkITCase;
+import org.apache.flink.core.execution.JobClient;
+import org.apache.flink.core.execution.SavepointFormatType;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.SavepointConfigOptions;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
@@ -69,6 +75,7 @@ import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.StringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,6 +86,8 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,10 +97,14 @@ import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.actions.CommitInfo;
 
+
 /**
  * Tests the functionality of the {@link DeltaSink} in STREAMING mode.
  */
 public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseBase {
+
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DeltaSinkStreamingExecutionITCase.class);
 
     private static final int NUM_SOURCES = 4;
 
@@ -266,6 +279,114 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
             deltaCheckpointFiles.contains("00000000000000000010.checkpoint.parquet"),
             equalTo(true)
         );
+    }
+
+    @Disabled
+    @Test
+    public void testSavepointRecovery() throws Exception {
+
+        DeltaTestUtils.initTestForNonPartitionedTable(deltaTablePath);
+
+        StreamExecutionEnvironment env = getTestStreamEnv(false); // no failover
+        env.addSource(new CheckpointCountingSource(1_000, 12))
+            //env.addSource(new DeltaStreamingExecutionTestSource("latch", 100, false))
+            .setParallelism(1)
+            .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, false)) // not partitioned
+            .setParallelism(3);
+
+        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
+            miniCluster.start();
+
+            StreamGraph streamGraph = env.getStreamGraph();
+            JobGraph jobGraph = streamGraph.getJobGraph();
+            miniCluster.submitJob(jobGraph);
+
+            // sleep for around 5 checkpoints
+            Thread.sleep(5 * 1000);
+            assertThat(miniCluster.getJobStatus(jobGraph.getJobID()).get(),
+                equalTo(JobStatus.RUNNING));
+
+            String savepoint = miniCluster.stopWithSavepoint(
+                jobGraph.getJobID(),
+                "src/test/resources/checkpoints/",
+                true,
+                SavepointFormatType.CANONICAL).get();
+
+            LOG.info("Savepoint path - " + savepoint);
+            JobGraph jobFromSavePoint = streamGraph.getJobGraph();
+            jobFromSavePoint.setSavepointRestoreSettings(
+                SavepointRestoreSettings.forPath(savepoint));
+
+            miniCluster.executeJobBlocking(jobFromSavePoint);
+        }
+    }
+
+    @Disabled
+    @Test
+    public void testSavepointRecoverySequenceSource() throws Exception {
+
+        DeltaTestUtils.initTestForNonPartitionedTable(deltaTablePath);
+        MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster();
+        miniCluster.start();
+
+        StreamExecutionEnvironment env = buildJob("");
+
+        JobClient jobClient = env.executeAsync();
+
+        Thread.sleep(2000);
+        assertThat(
+            miniCluster.getJobStatus(jobClient.getJobID()).get(),
+            equalTo(JobStatus.RUNNING)
+        );
+
+        String savepoint = jobClient.stopWithSavepoint(
+            true, "src/test/resources/checkpoints/", SavepointFormatType.CANONICAL).get();
+
+        StreamExecutionEnvironment envFromSavepoint = buildJob(savepoint);
+        envFromSavepoint.execute();
+
+        miniCluster.close();
+    }
+
+    private StreamExecutionEnvironment buildJob(String savepointPath) {
+
+        Configuration config = new Configuration();
+        if (!StringUtils.isNullOrWhitespaceOnly(savepointPath)) {
+            config.set(SavepointConfigOptions.SAVEPOINT_PATH, savepointPath);
+        }
+        config.set(ExecutionOptions.RUNTIME_MODE, RuntimeExecutionMode.STREAMING);
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+        env.configure(config, getClass().getClassLoader());
+        env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE);
+        env.setRestartStrategy(RestartStrategies.noRestart());
+
+        DeltaSink<RowData> sink = DeltaSink
+            .forRowData(
+                new org.apache.flink.core.fs.Path(deltaTablePath),
+                DeltaTestUtils.getHadoopConf(),
+                DeltaSinkTestUtils.TEST_ROW_TYPE2).build();
+
+        env.fromSequence(1, Long.MAX_VALUE)
+            .setParallelism(1)
+            .disableChaining()
+            .map((MapFunction<Long, RowData>) aLong -> {
+                // Throttle the execution to prevent writing to many records
+                Thread.sleep(1000);
+                return DeltaSinkTestUtils.TEST_ROW_TYPE_CONVERTER2.toInternal(
+                    Row.of(
+                        String.valueOf(aLong),
+                        String.valueOf(aLong),
+                        String.valueOf(aLong)
+                    )
+                );
+            })
+            .setParallelism(3)
+            .disableChaining()
+            .sinkTo(sink) // not partitioned
+            .disableChaining()
+            .setParallelism(3);
+        return env;
     }
 
     private List<String> getDeltaCheckpointFiles(String deltaTablePath) throws IOException {
