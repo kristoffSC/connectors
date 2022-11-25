@@ -29,43 +29,39 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import static io.delta.flink.e2e.assertions.DeltaLogAssertions.assertThat;
-import static io.delta.flink.e2e.data.UserBuilder.anUser;
 
 @RunWith(Parameterized.class)
 @DisplayNameGeneration(DisplayNameGenerator.IndicativeSentences.class)
-class DeltaSinkBatchEndToEndTest extends DeltaConnectorEndToEndTestBase {
+class DeltaSinkStreamingStressEndToEndTest extends DeltaConnectorEndToEndTestBase {
 
     private static final int INPUT_RECORDS = 10_000;
-    private static final int PARALLELISM = 3;
-    private static final String JOB_MAIN_CLASS = "io.delta.flink.e2e.sink.DeltaSinkBatchJob";
 
+    private static final String JOB_MAIN_CLASS =
+        "io.delta.flink.e2e.sink.DeltaSinkStreamingRandomFailoverJob";
 
-    @DisplayName("Connector in batch mode should add new records to the Delta Table")
-    @ParameterizedTest(name = "partitioned table: {0}; failover: {1}")
-    @CsvSource(value = {"false,false", "true,false", "false,true", "true,true"})
-    void shouldAddNewRecords(boolean isPartitioned, boolean triggerFailover) throws Exception {
+    @DisplayName(
+        "Sink Stress test - Connector in streaming mode should add new records to the Delta Table"
+    )
+    @ParameterizedTest(name = "partitioned table: {0}")
+    @ValueSource(booleans = {false})
+    void shouldAddNewRecords_StressTest(boolean isPartitioned) throws Exception {
+
         // GIVEN
         UserDeltaTable userTable = isPartitioned
             ? UserDeltaTable.partitionedByCountryAndBirthYear(deltaTableLocation)
             : UserDeltaTable.nonPartitioned(deltaTableLocation);
         userTable.initializeTable();
-        userTable.add(
-            anUser().name("Jan").surname("Kowalski").country("PL").birthYear(1974).build(),
-            anUser().name("Anna").surname("Nowak").country("PL").birthYear(1973).build(),
-            anUser().name("John").surname("Smith").country("US").birthYear(1975).build(),
-            anUser().name("Mary").surname("Johnson").country("US").birthYear(1975).build()
-        );
-        long initialDeltaVersion = userTable.getDeltaLog().snapshot().getVersion();
         // AND
-        JobParameters jobParameters = batchJobParameters()
-            .withDeltaTablePath(userTable.getTablePath())
+        long initialDeltaVersion = userTable.getDeltaLog().snapshot().getVersion();
+        int initialRecordCount = parquetFileReader.readRecursively(deltaTableLocation).size();
+        // AND
+        JobParameters jobParameters = streamingJobParameters()
+            .withDeltaTablePath(deltaTableLocation)
             .withTablePartitioned(isPartitioned)
-            .withTriggerFailover(triggerFailover)
-            .withParallelism(PARALLELISM)
             .withInputRecords(INPUT_RECORDS)
             .build();
 
@@ -76,7 +72,7 @@ class DeltaSinkBatchEndToEndTest extends DeltaConnectorEndToEndTestBase {
         // THEN
         assertThat(userTable.getDeltaLog())
             .sinceVersion(initialDeltaVersion)
-            .hasRecordCountInParquetFiles(4 + INPUT_RECORDS)
+            .hasRecordCountInParquetFiles(initialRecordCount + INPUT_RECORDS)
             .hasNewRecordCountInOperationMetrics(INPUT_RECORDS)
             .metricsNewFileCountMatchesSnapshotNewFileCount()
             .hasPositiveNumOutputBytesInEachVersion();
@@ -84,13 +80,14 @@ class DeltaSinkBatchEndToEndTest extends DeltaConnectorEndToEndTestBase {
 
     protected void initializeTestDataLocation() {
         testDataLocationPrefix = "flink-connector-e2e-tests/" + UUID.randomUUID();
-        deltaTableLocation = String.format("s3a://%s/%s/", bucketName, testDataLocationPrefix);
+        deltaTableLocation = "delta/" + testDataLocationPrefix;
     }
 
-    private JobParametersBuilder batchJobParameters() {
+    private JobParametersBuilder streamingJobParameters() {
         return JobParametersBuilder.builder()
             .withName(getTestDisplayName())
             .withJarId(jarId)
             .withEntryPointClassName(JOB_MAIN_CLASS);
     }
+
 }

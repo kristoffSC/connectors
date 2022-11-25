@@ -21,7 +21,6 @@ package io.delta.flink.e2e;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
 
 import io.delta.flink.e2e.client.FlinkClient;
 import io.delta.flink.e2e.client.FlinkClientFactory;
@@ -49,11 +48,15 @@ public abstract class DeltaConnectorEndToEndTestBase {
         LoggerFactory.getLogger(DeltaConnectorEndToEndTestBase.class);
 
     protected static FlinkClient flinkClient;
+
     protected static String jarId;
+
     protected static String bucketName;
 
     protected String testDataLocationPrefix;
+
     protected String deltaTableLocation;
+
     protected JobID jobID;
 
     protected TestInfo testInfo;
@@ -76,10 +79,7 @@ public abstract class DeltaConnectorEndToEndTestBase {
         initializeTestDataLocation();
     }
 
-    private void initializeTestDataLocation() {
-        testDataLocationPrefix = "flink-connector-e2e-tests/" + UUID.randomUUID();
-        deltaTableLocation = String.format("s3a://%s/%s/", bucketName, testDataLocationPrefix);
-    }
+    protected abstract void initializeTestDataLocation();
 
     @AfterEach
     void cleanUp() throws Exception {

@@ -19,6 +19,7 @@
 package io.delta.flink.e2e.sink;
 
 import java.time.Duration;
+import java.util.UUID;
 
 import io.delta.flink.e2e.DeltaConnectorEndToEndTestBase;
 import io.delta.flink.e2e.client.parameters.JobParameters;
@@ -106,6 +107,11 @@ class DeltaSinkStreamingEndToEndTest extends DeltaConnectorEndToEndTestBase {
             .sinceVersion(initialDeltaVersion)
             .hasCheckpointsCount(2)
             .hasLastCheckpointFile();
+    }
+
+    protected void initializeTestDataLocation() {
+        testDataLocationPrefix = "flink-connector-e2e-tests/" + UUID.randomUUID();
+        deltaTableLocation = String.format("s3a://%s/%s/", bucketName, testDataLocationPrefix);
     }
 
     private JobParametersBuilder streamingJobParameters() {

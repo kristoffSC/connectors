@@ -42,21 +42,30 @@ class CheckpointCountingSource
     extends RichParallelSourceFunction<RowData>
     implements CheckpointListener, CheckpointedFunction {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CheckpointCountingSource.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CheckpointCountingSource.class);
 
     private final int numberOfCheckpoints;
+
     private final int recordsPerCheckpoint;
+
     private final boolean isFailoverScenario;
+
     private final TestDataGenerator testDataGenerator;
+
     private ListState<Integer> nextValueState;
+
     private int nextValue;
+
     private volatile boolean isCanceled;
+
     private volatile boolean waitingForCheckpoint;
 
-    CheckpointCountingSource(int numberOfRecords,
-                             int numberOfCheckpoints,
-                             boolean isFailoverScenario,
-                             TestDataGenerator testDataGenerator) {
+    CheckpointCountingSource(
+            int numberOfRecords,
+            int numberOfCheckpoints,
+            boolean isFailoverScenario,
+            TestDataGenerator testDataGenerator) {
+
         this.numberOfCheckpoints = numberOfCheckpoints;
         this.recordsPerCheckpoint = numberOfRecords / numberOfCheckpoints;
         this.isFailoverScenario = isFailoverScenario;
@@ -83,24 +92,24 @@ class CheckpointCountingSource
         } else {
             runWithoutFailover(ctx);
         }
-        LOGGER.info("Source task done; subtask={}.", getRuntimeContext().getIndexOfThisSubtask());
+        LOG.info("Source task done; subtask={}.", getRuntimeContext().getIndexOfThisSubtask());
     }
 
     private void runWithFailover(SourceContext<RowData> ctx) throws InterruptedException {
-        LOGGER.info("Run with failover; subtask={}; attempt={}.",
+        LOG.info("Run with failover; subtask={}; attempt={}.",
             getRuntimeContext().getIndexOfThisSubtask(),
             getRuntimeContext().getAttemptNumber());
         sendRecordsUntil((int) (numberOfCheckpoints * 0.5), ctx);
         synchronized (ctx.getCheckpointLock()) {
             // Let's ensure that the records emitted below are not committed.
             emitRecordsBatch(123, ctx);
-            LOGGER.info("Throwing exception to cause job restart.");
+            LOG.info("Throwing exception to cause job restart.");
             throw new RuntimeException("Designated Exception");
         }
     }
 
     private void runWithoutFailover(SourceContext<RowData> ctx) throws InterruptedException {
-        LOGGER.info("Run without failover; subtask={}; attempt={}.",
+        LOG.info("Run without failover; subtask={}; attempt={}.",
             getRuntimeContext().getIndexOfThisSubtask(),
             getRuntimeContext().getAttemptNumber());
         sendRecordsUntil(numberOfCheckpoints, ctx);
@@ -114,7 +123,7 @@ class CheckpointCountingSource
                 emitRecordsBatch(recordsPerCheckpoint, ctx);
                 waitingForCheckpoint = true;
             }
-            LOGGER.debug("Waiting for checkpoint to complete; subtask={}.",
+            LOG.debug("Waiting for checkpoint to complete; subtask={}.",
                 getRuntimeContext().getIndexOfThisSubtask());
             while (waitingForCheckpoint) {
                 Thread.sleep(1);
@@ -128,14 +137,14 @@ class CheckpointCountingSource
             ctx.collect(row);
             nextValue++;
         }
-        LOGGER.debug("Emitted {} records (total {}); subtask={}.", batchSize, nextValue,
+        LOG.debug("Emitted {} records (total {}); subtask={}.", batchSize, nextValue,
             getRuntimeContext().getIndexOfThisSubtask());
     }
 
     private void idleUntilNextCheckpoint(SourceContext<RowData> ctx) throws InterruptedException {
         // Idle until the next checkpoint completes to avoid any premature job termination and
         // race conditions.
-        LOGGER.info("Waiting for an additional checkpoint to complete; subtask={}.",
+        LOG.info("Waiting for an additional checkpoint to complete; subtask={}.",
             getRuntimeContext().getIndexOfThisSubtask());
         synchronized (ctx.getCheckpointLock()) {
             waitingForCheckpoint = true;
@@ -148,7 +157,7 @@ class CheckpointCountingSource
     @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
         nextValueState.update(Collections.singletonList(nextValue));
-        LOGGER.debug("state snapshot done; checkpointId={}; subtask={}.",
+        LOG.debug("state snapshot done; checkpointId={}; subtask={}.",
             context.getCheckpointId(),
             getRuntimeContext().getIndexOfThisSubtask());
     }
@@ -156,13 +165,13 @@ class CheckpointCountingSource
     @Override
     public void notifyCheckpointComplete(long checkpointId) {
         waitingForCheckpoint = false;
-        LOGGER.debug("Checkpoint {} complete; subtask={}.", checkpointId,
+        LOG.debug("Checkpoint {} complete; subtask={}.", checkpointId,
             getRuntimeContext().getIndexOfThisSubtask());
     }
 
     @Override
     public void notifyCheckpointAborted(long checkpointId) throws Exception {
-        LOGGER.debug("Checkpoint {} aborted; subtask={}.", checkpointId,
+        LOG.debug("Checkpoint {} aborted; subtask={}.", checkpointId,
             getRuntimeContext().getIndexOfThisSubtask());
         CheckpointListener.super.notifyCheckpointAborted(checkpointId);
     }

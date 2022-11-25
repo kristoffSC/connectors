@@ -26,8 +26,10 @@ import org.apache.flink.table.data.RowData;
 
 class DeltaSinkFactory {
 
-    static DeltaSinkInternal<RowData> createDeltaSink(String deltaTablePath,
-                                                      boolean isTablePartitioned) {
+    static DeltaSinkInternal<RowData> createDeltaSink(
+            String deltaTablePath,
+            boolean isTablePartitioned) {
+
         if (isTablePartitioned) {
             return DeltaSink.forRowData(
                     new Path(deltaTablePath),

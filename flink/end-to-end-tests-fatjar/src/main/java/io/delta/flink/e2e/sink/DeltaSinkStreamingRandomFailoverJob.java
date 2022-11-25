@@ -28,7 +28,7 @@ import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import static io.delta.flink.e2e.sink.DeltaSinkFactory.createDeltaSink;
 
-public class DeltaSinkStreamingJob {
+public class DeltaSinkStreamingRandomFailoverJob {
 
     private static final int EXPECTED_CHECKPOINTS = 25;
 
@@ -37,28 +37,31 @@ public class DeltaSinkStreamingJob {
         ParameterTool parameters = ParameterTool.fromArgs(args);
         int inputRecordsCount = parameters.getInt("input-records");
         boolean isTablePartitioned = parameters.getBoolean("is-table-partitioned");
-        boolean triggerFailover = parameters.getBoolean("trigger-failover");
         String tablePath = parameters.get("delta-table-path");
         String testName = parameters.get("test-name");
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        initPipeline(env, tablePath, isTablePartitioned, triggerFailover, inputRecordsCount);
+        initPipeline(
+            env,
+            tablePath,
+            isTablePartitioned,
+            inputRecordsCount,
+            6,
+            6);
         env.execute(testName);
     }
 
     public static void initPipeline(
-            StreamExecutionEnvironment env,
-            String deltaTablePath,
-            boolean isTablePartitioned,
-            boolean triggerFailover,
-            int inputRecordsCount) {
+        StreamExecutionEnvironment env,
+        String deltaTablePath,
+        boolean isTablePartitioned,
+        int inputRecordsCount, int failoverProcessParallelismLevel, int sinkParallelismLevel) {
 
-        RestartStrategyConfiguration restartStrategyConfiguration = triggerFailover
-            ? RestartStrategies.fixedDelayRestart(1, Time.seconds(10))
-            : RestartStrategies.noRestart();
+        RestartStrategyConfiguration restartStrategyConfiguration =
+            RestartStrategies.fixedDelayRestart(1, Time.seconds(10));
 
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
-        env.enableCheckpointing(1000L, CheckpointingMode.EXACTLY_ONCE);
+        env.enableCheckpointing(5000L, CheckpointingMode.EXACTLY_ONCE);
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(1000L);
         env.getCheckpointConfig().setCheckpointTimeout(15_000L);
         env.setRestartStrategy(restartStrategyConfiguration);
@@ -67,8 +70,12 @@ public class DeltaSinkStreamingJob {
         TestDataGenerator testDataGenerator = new TestDataGenerator();
 
         env.addSource(new CheckpointCountingSource(inputRecordsCount, EXPECTED_CHECKPOINTS,
-                triggerFailover, testDataGenerator))
-            .sinkTo(createDeltaSink(deltaTablePath, isTablePartitioned));
+                false, testDataGenerator))
+            .setParallelism(1)
+            .process(new RandomFailoverProcess())
+            .setParallelism(failoverProcessParallelismLevel)
+            .sinkTo(createDeltaSink(deltaTablePath, isTablePartitioned))
+            .setParallelism(sinkParallelismLevel);
     }
 
 }
