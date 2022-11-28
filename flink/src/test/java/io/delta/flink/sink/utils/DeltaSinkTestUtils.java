@@ -412,8 +412,8 @@ public class DeltaSinkTestUtils {
         config.setString(RestOptions.BIND_PORT, "18081-19000");
         final MiniClusterConfiguration cfg =
             new MiniClusterConfiguration.Builder()
-                .setNumTaskManagers(1)
-                .setNumSlotsPerTaskManager(4)
+                .setNumTaskManagers(4)
+                .setNumSlotsPerTaskManager(2)
                 .setConfiguration(config)
                 .build();
         return new MiniCluster(cfg);

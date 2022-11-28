@@ -18,6 +18,7 @@
 
 package io.delta.flink.sink;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -69,6 +71,8 @@ import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
+import org.apache.flink.streaming.api.environment.CheckpointConfig.ExternalizedCheckpointCleanup;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 import org.apache.flink.streaming.api.graph.StreamGraph;
@@ -76,6 +80,7 @@ import org.apache.flink.table.data.RowData;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -323,6 +328,70 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
     @Disabled
     @Test
+    public void testCheckpointLikeASavepointRecovery() throws Exception {
+
+        File savepointPath = new File("src/test/resources/checkpoints/");
+
+        StreamExecutionEnvironment env = setupEnvAndJob(savepointPath, 3);
+
+        try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
+            miniCluster.start();
+
+            StreamGraph streamGraph = env.getStreamGraph();
+            JobGraph jobGraph = streamGraph.getJobGraph();
+            miniCluster.submitJob(jobGraph);
+
+            // sleep for around 5 checkpoints
+            Thread.sleep(5 * 1000);
+            assertThat(miniCluster.getJobStatus(jobGraph.getJobID()).get(),
+                equalTo(JobStatus.RUNNING));
+
+            miniCluster.cancelJob(jobGraph.getJobID()).get(5, TimeUnit.SECONDS);
+
+            Optional<Path> newestFolder = findNewestFolder(savepointPath.getAbsolutePath());
+            Path checkpointDir =
+                newestFolder.orElseThrow(() -> new RuntimeException("Missing Checkpoint folder."));
+
+            Optional<Path> checkpointData = Files.list(checkpointDir)
+                .filter(Files::isDirectory)
+                .filter(f -> f.getFileName().toString().startsWith("chk"))
+                .findFirst();
+
+            Path checkpointDataFolder = checkpointData.orElseThrow(
+                () -> new RuntimeException("Missing Checkpoint data folder."));
+
+            LOG.info("Resuming from path - " + checkpointDataFolder.toUri());
+            StreamExecutionEnvironment resumedEnv = setupEnvAndJob(savepointPath, 8);
+
+            JobGraph jobFromSavePoint = resumedEnv.getStreamGraph().getJobGraph();
+
+            jobFromSavePoint.setSavepointRestoreSettings(
+                SavepointRestoreSettings.forPath(checkpointDataFolder.toUri().toString())
+            );
+
+            miniCluster.executeJobBlocking(jobFromSavePoint);
+
+            System.out.println(deltaTablePath);
+        }
+    }
+
+    @NotNull
+    private StreamExecutionEnvironment setupEnvAndJob(File savepointPath, int sinkParallelism) {
+        StreamExecutionEnvironment env = getTestStreamEnv(false); // no failover
+        CheckpointConfig config = env.getCheckpointConfig();
+        config
+            .setExternalizedCheckpointCleanup(ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
+        config.setCheckpointStorage(savepointPath.toURI());
+
+        env.addSource(new CheckpointCountingSource(1_000, 24))
+            .setParallelism(1)
+            .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, false)) // not partitioned
+            .setParallelism(sinkParallelism);
+        return env;
+    }
+
+    @Disabled
+    @Test
     public void testSavepointRecoverySequenceSource() throws Exception {
 
         DeltaTestUtils.initTestForNonPartitionedTable(deltaTablePath);
@@ -527,6 +596,18 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         }
 
         return env;
+    }
+
+    public static Optional<Path> findNewestFolder(String sdir) throws IOException {
+        Path dir = Paths.get(sdir);
+        if (Files.isDirectory(dir)) {
+            return Files.list(dir)
+                .filter(Files::isDirectory)
+                .min((p1, p2) -> Long.compare(p2.toFile().lastModified(),
+                    p1.toFile().lastModified()));
+        }
+
+        return Optional.empty();
     }
 
     ///////////////////////////////////////////////////////////////////////////
