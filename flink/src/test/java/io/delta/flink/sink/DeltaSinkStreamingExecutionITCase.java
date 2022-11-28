@@ -46,6 +46,7 @@ import io.delta.flink.sink.internal.committer.DeltaGlobalCommitter;
 import io.delta.flink.sink.internal.writer.DeltaWriterBucketState;
 import io.delta.flink.sink.utils.CheckpointCountingSource;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
+import io.delta.flink.utils.DeltaTableAsserts;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
 import org.apache.flink.api.common.JobStatus;
@@ -160,12 +161,9 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
     @ParameterizedTest(name = "isPartitioned = {0}, triggerFailover = {1}")
     @CsvSource({
         "false, false",
-        "true, false"
-        // TODO Flink_1.15 this should be uncomment when Flink 1.15.3 will be released.
-        //  This comment out variations run test for failover scenarios.
-        //  When Flink 1.15.3 will be released whe should use it in connector's dependencies.
-        // "false, true",
-        // "true, true"
+        "true, false",
+        "false, true",
+        "true, true"
     })
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
 
@@ -180,17 +178,6 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         runDeltaSinkTest(deltaTablePath, jobGraph, NUM_RECORDS);
     }
 
-    /**
-     * This test executes simple source -> sink job with multiple Flink cluster failures caused by
-     * an Exception thrown from {@link GlobalCommitter}. Depending on value of exceptionMode
-     * parameter, exception will be thrown before or after committing data to the Delta log.
-     *
-     * @param exceptionMode whether to throw an exception before or after Delta log commit.
-     */
-    // TODO Flink_1.15 this should be re-enabled when Flink 1.15.3 will be released.
-    //  This test executes failover scenarios.
-    //  When Flink 1.15.3 will be released whe should use it in connector's dependencies.
-    @Disabled
     @ResourceLock("StreamingFailoverDeltaGlobalCommitter")
     @ParameterizedTest(name = "isPartitioned = {0}, exceptionMode = {1}")
     @CsvSource({
@@ -286,7 +273,6 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         );
     }
 
-    @Disabled
     @Test
     public void testSavepointRecovery() throws Exception {
 
@@ -294,7 +280,6 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
         StreamExecutionEnvironment env = getTestStreamEnv(false); // no failover
         env.addSource(new CheckpointCountingSource(1_000, 12))
-            //env.addSource(new DeltaStreamingExecutionTestSource("latch", 100, false))
             .setParallelism(1)
             .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, false)) // not partitioned
             .setParallelism(3);
@@ -320,19 +305,36 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
             LOG.info("Savepoint path - " + savepoint);
             JobGraph jobFromSavePoint = streamGraph.getJobGraph();
             jobFromSavePoint.setSavepointRestoreSettings(
-                SavepointRestoreSettings.forPath(savepoint));
+                SavepointRestoreSettings.forPath(savepoint)
+            );
 
-            miniCluster.executeJobBlocking(jobFromSavePoint);
+            boolean clusterResumedAfterSavepoint = true;
+            try {
+                miniCluster.executeJobBlocking(jobFromSavePoint);
+            } catch (Exception e) {
+                clusterResumedAfterSavepoint = false;
+            }
+
+            assertThat(
+                "There is Flink 1.15 Sink issue for processing savepoint on sources."
+                    + " This test should fail after fixing Flink Bug.",
+                clusterResumedAfterSavepoint,
+                equalTo(false)
+            );
         }
     }
 
-    @Disabled
-    @Test
-    public void testCheckpointLikeASavepointRecovery() throws Exception {
+    //@Disabled
+    @ParameterizedTest(
+        name = "init parallelism level = {0}, parallelism level after resuming job = {1}")
+    @CsvSource({"3, 3", "3, 8", "8, 3"})
+    public void testCheckpointLikeASavepointRecovery(
+            int initSinkParallelismLevel,
+            int resumeSinkParallelismLevel) throws Exception {
 
         File savepointPath = new File("src/test/resources/checkpoints/");
 
-        StreamExecutionEnvironment env = setupEnvAndJob(savepointPath, 3);
+        StreamExecutionEnvironment env = setupEnvAndJob(savepointPath, initSinkParallelismLevel);
 
         try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
             miniCluster.start();
@@ -361,7 +363,8 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
                 () -> new RuntimeException("Missing Checkpoint data folder."));
 
             LOG.info("Resuming from path - " + checkpointDataFolder.toUri());
-            StreamExecutionEnvironment resumedEnv = setupEnvAndJob(savepointPath, 8);
+            StreamExecutionEnvironment resumedEnv =
+                setupEnvAndJob(savepointPath, resumeSinkParallelismLevel);
 
             JobGraph jobFromSavePoint = resumedEnv.getStreamGraph().getJobGraph();
 
@@ -371,7 +374,12 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
             miniCluster.executeJobBlocking(jobFromSavePoint);
 
-            System.out.println(deltaTablePath);
+            DeltaLog targetDeltaTable =
+                DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
+
+            DeltaTableAsserts.assertThat(targetDeltaTable)
+                .hasNoDataLoss("name")
+                .hasNoDuplicateAddFiles();
         }
     }
 
