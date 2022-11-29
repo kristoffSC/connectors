@@ -327,7 +327,7 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
     //@Disabled
     @ParameterizedTest(
         name = "init parallelism level = {0}, parallelism level after resuming job = {1}")
-    @CsvSource({"3, 3", "3, 8", "8, 3"})
+    @CsvSource({"3, 3", "3, 6", "6, 3"})
     public void testCheckpointLikeASavepointRecovery(
             int initSinkParallelismLevel,
             int resumeSinkParallelismLevel) throws Exception {

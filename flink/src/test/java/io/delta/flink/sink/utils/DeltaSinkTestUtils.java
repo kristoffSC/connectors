@@ -37,7 +37,9 @@ import io.delta.flink.sink.internal.committables.DeltaGlobalCommittable;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.connector.file.sink.utils.FileSinkTestUtils;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
@@ -410,9 +412,11 @@ public class DeltaSinkTestUtils {
     public static MiniCluster getMiniCluster() {
         final Configuration config = new Configuration();
         config.setString(RestOptions.BIND_PORT, "18081-19000");
+        config.set(TaskManagerOptions.FRAMEWORK_OFF_HEAP_MEMORY, MemorySize.parse("128mb"));
+        config.set(TaskManagerOptions.TASK_OFF_HEAP_MEMORY, MemorySize.parse("128mb"));
         final MiniClusterConfiguration cfg =
             new MiniClusterConfiguration.Builder()
-                .setNumTaskManagers(4)
+                .setNumTaskManagers(3)
                 .setNumSlotsPerTaskManager(2)
                 .setConfiguration(config)
                 .build();
