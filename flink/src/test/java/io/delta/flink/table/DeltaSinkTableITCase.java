@@ -20,10 +20,14 @@ package io.delta.flink.table;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
@@ -43,11 +47,14 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.table.types.utils.TypeConversions;
 import org.hamcrest.CoreMatchers;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -60,6 +67,8 @@ import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
 public class DeltaSinkTableITCase {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DeltaSinkTableITCase.class);
 
     private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
 
@@ -79,7 +88,20 @@ public class DeltaSinkTableITCase {
 
     @BeforeAll
     public static void beforeAll() throws IOException {
-        testWorkers = Executors.newCachedThreadPool();
+        testWorkers = Executors.newCachedThreadPool(new ThreadFactory() {
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                final Thread thread = new Thread(r);
+                thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+                    @Override
+                    public void uncaughtException(Thread t, Throwable e) {
+                        t.interrupt();
+                        throw new RuntimeException(e);
+                    }
+                });
+                return thread;
+            }
+        });
         TEMPORARY_FOLDER.create();
     }
 
@@ -435,16 +457,19 @@ public class DeltaSinkTableITCase {
             boolean isPartitioned,
             String insertSql) {
 
-        testWorkers.submit(() -> {
-            try {
-                runFlinkJob(
-                    deltaTablePath,
-                    useBoundedMode,
-                    includeOptionalOptions,
-                    isPartitioned,
-                    insertSql);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+        CompletableFuture.runAsync(
+            () -> runFlinkJob(
+                deltaTablePath,
+                useBoundedMode,
+                includeOptionalOptions,
+                isPartitioned,
+                insertSql),
+            testWorkers
+        ).exceptionally(new Function<Throwable, Void>() {
+            @Override
+            public Void apply(Throwable throwable) {
+                LOG.error("Error while running Flink job in background.", throwable);
+                return null;
             }
         });
     }
@@ -457,7 +482,7 @@ public class DeltaSinkTableITCase {
             boolean useBoundedMode,
             boolean includeOptionalOptions,
             boolean isPartitioned,
-            String insertSql) throws Exception {
+            String insertSql) {
 
         TableEnvironment tableEnv;
         if (useBoundedMode) {
@@ -485,9 +510,9 @@ public class DeltaSinkTableITCase {
 
         try {
             tableEnv.executeSql(insertSql).await();
-        } catch (Exception exception) {
-            if (!exception.getMessage().contains("Failed to wait job finish")) {
-                throw exception;
+        } catch (Exception e) {
+            if (!e.getMessage().contains("Failed to wait job finish")) {
+                throw new RuntimeException(e);
             }
         }
     }

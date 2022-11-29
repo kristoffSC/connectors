@@ -155,7 +155,8 @@ public class DeltaDynamicTableSink implements DynamicTableSink, SupportsPartitio
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
                 this.rowType,
-                mergeSchema
+                mergeSchema,
+                null // sinkConfiguration ???
             );
 
         if (catalogTable.isPartitioned()) {

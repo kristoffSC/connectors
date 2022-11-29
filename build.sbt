@@ -731,7 +731,7 @@ lazy val flink = (project in file("flink"))
       "org.apache.flink" % "flink-connector-files" % flinkVersion % "provided",
       "org.apache.flink" % "flink-connector-files" % flinkVersion % "test" classifier "tests",
       "org.apache.flink" % "flink-table-runtime" % flinkVersion % "provided",
-      "org.apache.flink" % ("flink-table-planner_" + flinkScalaVersion(scalaBinaryVersion.value)) % flinkVersion % "test",
+      "org.apache.flink" % "flink-table-planner_2.12" % flinkVersion % "test",
       "org.apache.flink" % "flink-scala_2.12" % flinkVersion % "provided",
       "org.apache.flink" % "flink-runtime-web" % flinkVersion % "test",
       "org.apache.flink" % "flink-connector-test-utils" % flinkVersion % "test",

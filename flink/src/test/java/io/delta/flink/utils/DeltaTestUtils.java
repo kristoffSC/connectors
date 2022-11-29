@@ -507,6 +507,7 @@ public class DeltaTestUtils {
 
     public static DynamicTableFactory.Context createTableContext(
         ResolvedSchema schema, Map<String, String> options) {
+
         return new FactoryUtil.DefaultDynamicTableContext(
             ObjectIdentifier.of("default", "default", "context_1"),
             new ResolvedCatalogTable(
@@ -514,10 +515,14 @@ public class DeltaTestUtils {
                     Schema.newBuilder().fromResolvedSchema(schema).build(),
                     "mock context",
                     Collections.emptyList(),
-                    options),
-                schema),
+                    options
+                ),
+                schema
+            ),
+            Collections.emptyMap(),
             new Configuration(),
             DeltaTestUtils.class.getClassLoader(),
-            false);
+            false
+        );
     }
 }
