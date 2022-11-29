@@ -2,6 +2,8 @@ package io.delta.flink.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -11,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import org.apache.commons.io.FileUtils;
@@ -38,6 +41,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 import io.delta.standalone.DeltaLog;
 
@@ -203,7 +208,9 @@ public class DeltaTestUtils {
 
     public static MiniClusterWithClientResource buildCluster(int parallelismLevel) {
         Configuration configuration = new Configuration();
-        configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, false);
+
+        // By default, let's check for leaked classes in tests.
+        configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, true);
 
         return new MiniClusterWithClientResource(
             new MiniClusterResourceConfiguration.Builder()
@@ -478,8 +485,28 @@ public class DeltaTestUtils {
         return testDescriptor;
     }
 
+    /**
+     * Reset Delta log file last modify timestamp value to current timestamp.
+     * @param sourceTablePath table root folder
+     * @throws IOException if the file could not otherwise be opened because it is not a directory.
+     */
+    public static void resetDeltaLogLastModifyTimestamp(String sourceTablePath) throws IOException {
+
+        List<java.nio.file.Path> sortedLogFiles =
+            Files.list(Paths.get(sourceTablePath + "/_delta_log"))
+                .filter(file -> file.getFileName().toUri().toString().endsWith(".json"))
+                .sorted()
+                .collect(Collectors.toList());
+
+        for (java.nio.file.Path logFile : sortedLogFiles) {
+            assertThat(
+                "Unable to modify " + logFile + " last modified timestamp.",
+                logFile.toFile().setLastModified(System.currentTimeMillis()), equalTo(true));
+        }
+    }
+
     public static DynamicTableFactory.Context createTableContext(
-            ResolvedSchema schema, Map<String, String> options) {
+        ResolvedSchema schema, Map<String, String> options) {
         return new FactoryUtil.DefaultDynamicTableContext(
             ObjectIdentifier.of("default", "default", "context_1"),
             new ResolvedCatalogTable(

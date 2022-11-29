@@ -26,6 +26,7 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import io.delta.flink.internal.options.DeltaConnectorConfiguration;
 import io.delta.flink.sink.DeltaSink;
 import io.delta.flink.sink.internal.DeltaBucketAssigner;
 import io.delta.flink.sink.internal.DeltaPartitionComputer;
@@ -109,9 +110,7 @@ public class DeltaSinkTestUtils {
         return rows;
     }
 
-    public static RowData getTestRowDataEvent(String name,
-                                              String surname,
-                                              Integer age) {
+    public static RowData getTestRowDataEvent(String name, String surname, Integer age) {
         return TEST_ROW_TYPE_CONVERTER.toInternal(Row.of(name, surname, age));
     }
 
@@ -152,10 +151,39 @@ public class DeltaSinkTestUtils {
     }
 
     public static DeltaPendingFile getTestDeltaPendingFile(
-        LinkedHashMap<String, String> partitionSpec) {
+            LinkedHashMap<String, String> partitionSpec) {
         return new DeltaPendingFile(
             partitionSpec,
             "file_name-" + UUID.randomUUID(),
+            new FileSinkTestUtils.TestPendingFileRecoverable(),
+            new Random().nextInt(30000),
+            new Random().nextInt(500000),
+            System.currentTimeMillis()
+        );
+    }
+
+    public static DeltaPendingFile getTestDeltaPendingFileWithAbsolutePath(
+            org.apache.hadoop.fs.Path basePath,
+            LinkedHashMap<String, String> partitionSpec) {
+
+        return new DeltaPendingFile(
+            partitionSpec,
+            ((basePath.toString().endsWith("/")) ? basePath.toString() : basePath + "/")
+            + "file_name-" + UUID.randomUUID(),
+            new FileSinkTestUtils.TestPendingFileRecoverable(),
+            new Random().nextInt(30000),
+            new Random().nextInt(500000),
+            System.currentTimeMillis()
+        );
+    }
+
+    public static DeltaPendingFile getTestDeltaPendingFileForFileName(
+        String fileName,
+        LinkedHashMap<String, String> partitionSpec) {
+
+        return new DeltaPendingFile(
+            partitionSpec,
+            fileName,
             new FileSinkTestUtils.TestPendingFileRecoverable(),
             new Random().nextInt(30000),
             new Random().nextInt(500000),
@@ -328,8 +356,10 @@ public class DeltaSinkTestUtils {
     // IT case utils
     ///////////////////////////////////////////////////////////////////////////
 
-    public static DeltaSinkInternal<RowData> createDeltaSink(String deltaTablePath,
-        boolean isTablePartitioned) {
+    public static DeltaSinkInternal<RowData> createDeltaSink(
+            String deltaTablePath,
+            boolean isTablePartitioned) {
+
         if (isTablePartitioned) {
             DeltaSinkBuilder<RowData> builder = new DeltaSinkBuilder.DefaultDeltaFormatBuilder<>(
                 new Path(deltaTablePath),
@@ -342,7 +372,8 @@ public class DeltaSinkTestUtils {
                 new BasePathBucketAssigner<>(),
                 OnCheckpointRollingPolicy.build(),
                 DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE,
-                false // mergeSchema
+                false, // mergeSchema
+                new DeltaConnectorConfiguration()
             );
             return builder
                 .withBucketAssigner(getTestPartitionAssigner())

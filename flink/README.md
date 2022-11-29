@@ -35,10 +35,11 @@ Flink/Delta Connector includes:
 
 Depending on the version of the connector you can use it with following Apache Flink versions:
   
-| Connector's version | Flink's version |
-|:-------------------:|:---------------:|
-|  0.4.x (Sink Only)  |    1.12.0 <= X <= 1.14.5    |
-|        0.5.x        |    1.13.0 <= X <= 1.14.5    |
+| Connector's version |    Flink's version    |
+|:-------------------:|:---------------------:|
+|  0.4.x (Sink Only)  | 1.12.0 <= X <= 1.14.5 |
+|        0.5.0        | 1.13.0 <= X <= 1.13.6 |
+|   0.5.1-SNAPSHOT    |      X >= 1.15.0      |
 
 ### APIs
 
@@ -406,11 +407,6 @@ The project is compiled using [SBT](https://www.scala-sbt.org/1.x/docs/Command-L
 - To publish the JAR, run `build/sbt flink/publishM2`
 
 ## Frequently asked questions (FAQ)
-
-#### Can I use this connector to read data from a Delta table?
-
-No, currently we are supporting only writing to a Delta table. A `DeltaSource` API with the support for reading data from
-Delta tables will be added in future releases.
 
 #### Can I use this connector to append data to a Delta table?
 
