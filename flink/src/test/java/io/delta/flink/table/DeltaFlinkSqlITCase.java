@@ -20,13 +20,13 @@ package io.delta.flink.table;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -40,25 +40,36 @@ import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableResult;
+import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.data.util.DataFormatConverters;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.table.types.utils.TypeConversions;
+import org.apache.flink.test.util.MiniClusterWithClientResource;
+import org.apache.flink.types.Row;
+import org.apache.flink.types.RowKind;
 import org.hamcrest.CoreMatchers;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNull.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Snapshot;
@@ -66,9 +77,11 @@ import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
-public class DeltaSinkTableITCase {
+public class DeltaFlinkSqlITCase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeltaSinkTableITCase.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DeltaFlinkSqlITCase.class);
+
+    private static final int PARALLELISM = 4;
 
     private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
 
@@ -84,23 +97,19 @@ public class DeltaSinkTableITCase {
 
     private static ExecutorService testWorkers;
 
+    private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
+
     protected RowType testRowType;
 
     @BeforeAll
     public static void beforeAll() throws IOException {
-        testWorkers = Executors.newCachedThreadPool(new ThreadFactory() {
-            @Override
-            public Thread newThread(@NotNull Runnable r) {
-                final Thread thread = new Thread(r);
-                thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-                    @Override
-                    public void uncaughtException(Thread t, Throwable e) {
-                        t.interrupt();
-                        throw new RuntimeException(e);
-                    }
-                });
-                return thread;
-            }
+        testWorkers = Executors.newCachedThreadPool(r -> {
+            Thread thread = new Thread(r);
+            thread.setUncaughtExceptionHandler((t, e) -> {
+                t.interrupt();
+                throw new RuntimeException(e);
+            });
+            return thread;
         });
         TEMPORARY_FOLDER.create();
     }
@@ -109,6 +118,226 @@ public class DeltaSinkTableITCase {
     public static void afterAll() {
         testWorkers.shutdownNow();
         TEMPORARY_FOLDER.delete();
+    }
+
+    @BeforeEach
+    public void setUp() {
+        try {
+            miniClusterResource.before();
+        } catch (Exception e) {
+            throw new RuntimeException("Weren't able to setup the test dependencies", e);
+        }
+    }
+
+    @AfterEach
+    public void afterEach() {
+        miniClusterResource.after();
+    }
+
+    @Test
+    public void testPipelineWithoutDeltaTables_1() throws Exception {
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+        tableEnv.executeSql(catalogSQL);
+
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+        tableEnv.executeSql(useDeltaCatalog);
+
+        String sourceTableSql = "CREATE TABLE sourceTable ("
+            + " col1 VARCHAR,"
+            + " col2 VARCHAR,"
+            + " col3 INT"
+            + ") WITH ("
+            + "'connector' = 'datagen',"
+            + "'rows-per-second' = '1',"
+            + "'fields.col3.kind' = 'sequence',"
+            + "'fields.col3.start' = '1',"
+            + "'fields.col3.end' = '5'"
+            + ")";
+
+        tableEnv.executeSql(sourceTableSql);
+
+        String sinkTableSql = "CREATE TABLE sinkTable ("
+            + " col1 VARCHAR,"
+            + " col2 VARCHAR,"
+            + " col3 INT"
+            + ") WITH ("
+            + "  'connector' = 'blackhole'"
+            + ");";
+
+        tableEnv.executeSql(sinkTableSql);
+
+        String querySql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
+        TableResult result = tableEnv.executeSql(querySql);
+
+        List<Row> results = new ArrayList<>();
+        try (org.apache.flink.util.CloseableIterator<Row> collect = result.collect()) {
+            collect.forEachRemaining(results::add);
+        }
+
+        assertThat(results.size(), equalTo(1));
+        assertThat(results.get(0).getKind(), equalTo(RowKind.INSERT));
+    }
+
+    @Test
+    public void testPipelineWithoutDeltaTables_2() throws Exception {
+
+        String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+        tableEnv.executeSql(catalogSQL);
+
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+        tableEnv.executeSql(useDeltaCatalog);
+
+        String sourceTableSql = "CREATE TABLE sourceTable ("
+            + " col1 VARCHAR,"
+            + " col2 VARCHAR,"
+            + " col3 INT"
+            + ") WITH ("
+            + "'connector' = 'datagen',"
+            + "'rows-per-second' = '1',"
+            + "'fields.col3.kind' = 'sequence',"
+            + "'fields.col3.start' = '1',"
+            + "'fields.col3.end' = '5'"
+            + ")";
+
+        tableEnv.executeSql(sourceTableSql);
+
+        String sinkTableSql = String.format(
+            "CREATE TABLE sinkTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") WITH ("
+                + " 'connector' = 'filesystem',"
+                + " 'path' = '%s',"
+                + " 'auto-compaction' = 'false',"
+                + " 'format' = 'parquet',"
+                + " 'sink.parallelism' = '3'"
+                + ")",
+            targetTablePath);
+
+        tableEnv.executeSql(sinkTableSql);
+
+        String insertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
+        tableEnv.executeSql(insertSql).await(5, TimeUnit.SECONDS);
+
+        String selectSql = "SELECT * FROM sinkTable";
+        TableResult selectResult = tableEnv.executeSql(selectSql);
+
+        List<Row> sinkRows = new ArrayList<>();
+        try (org.apache.flink.util.CloseableIterator<Row> collect = selectResult.collect()) {
+            collect.forEachRemaining(sinkRows::add);
+        }
+
+        long uniqueValues =
+            sinkRows.stream()
+                .map((Function<Row, Integer>) row -> row.getFieldAs("col3"))
+                .distinct().count();
+
+        assertThat(sinkRows.size(), equalTo(5));
+        assertThat(uniqueValues, equalTo(5L));
+    }
+
+    @Test
+    public void testInsertIntoDeltaTableWithoutDeltaCatalog() throws Exception {
+
+        // GIVEN
+        String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+
+        String sourceTableSql = "CREATE TABLE sourceTable ("
+            + " col1 VARCHAR,"
+            + " col2 VARCHAR,"
+            + " col3 INT"
+            + ") WITH ("
+            + "'connector' = 'datagen',"
+            + "'rows-per-second' = '1',"
+            + "'fields.col3.kind' = 'sequence',"
+            + "'fields.col3.start' = '1',"
+            + "'fields.col3.end' = '5'"
+            + ")";
+
+        tableEnv.executeSql(sourceTableSql);
+
+        String sinkTableSql = String.format(
+            "CREATE TABLE sinkTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") "
+                + "WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            targetTablePath);
+
+        tableEnv.executeSql(sinkTableSql);
+
+        // WHEN
+        String insertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
+
+        // THEN
+        ValidationException validationException =
+            assertThrows(ValidationException.class, () -> tableEnv.executeSql(insertSql));
+
+        assertThat(
+            "Query Delta table should not be possible without Delta catalog.",
+            validationException.getCause().getMessage(),
+            containsString("Cannot discover a connector using option: 'connector'='delta'")
+        );
+    }
+
+    @Disabled
+    @Test
+    public void testUsingTwoCatalogs() throws Exception {
+
+        // GIVEN
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+
+        String deltaCatalogSql = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        String defaultCatalogSql = "CREATE CATALOG flinkDefaultCatalog WITH"
+            + " ('type' = 'generic_in_memory');";
+
+        tableEnv.executeSql(deltaCatalogSql);
+        tableEnv.executeSql(defaultCatalogSql);
+
+        String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+
+        String sourceTableSql = "CREATE TABLE `flinkDefaultCatalog`.`default`.`sourceTable ("
+            + " col1 VARCHAR,"
+            + " col2 VARCHAR,"
+            + " col3 INT"
+            + ") WITH ("
+            + "'connector' = 'datagen',"
+            + "'rows-per-second' = '1',"
+            + "'fields.col3.kind' = 'sequence',"
+            + "'fields.col3.start' = '1',"
+            + "'fields.col3.end' = '5'"
+            + ")";
+
+        tableEnv.executeSql(sourceTableSql);
+
+
+        String sinkTableSql = String.format(
+            "CREATE TABLE `myDeltaCatalog`.`default`.`sinkTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") "
+                + "WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            targetTablePath);
+
+        tableEnv.executeSql(sinkTableSql);
     }
 
     /**
@@ -137,7 +366,7 @@ public class DeltaSinkTableITCase {
             "useStaticPartition = {2}, " +
             "useBoundedMode = {3}")
     @MethodSource("tableArguments")
-    public void testInsertQueryWithAllFields(
+    public void testInsertIntoDeltaTableWithAllFields(
             boolean isPartitioned,
             boolean includeOptionalOptions,
             boolean useStaticPartition,
@@ -271,15 +500,15 @@ public class DeltaSinkTableITCase {
         if (useStaticPartition) {
             return String.format(
                 "INSERT INTO %s PARTITION(col1='val1') SELECT col2, col3 FROM %s",
-                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+                DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
+                DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
             );
         }
 
         return String.format(
             "INSERT INTO %s SELECT * FROM %s",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
+            DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
         );
     }
 
@@ -288,15 +517,15 @@ public class DeltaSinkTableITCase {
         if (useStaticPartition) {
             return String.format(
                 "INSERT INTO %s PARTITION(col1='val1') (col2) (SELECT col2 FROM %s)",
-                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+                DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
+                DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
             );
         }
 
         return String.format(
             "INSERT INTO %s (col1) (SELECT col1 FROM %s)",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
+            DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
         );
     }
 
@@ -309,8 +538,8 @@ public class DeltaSinkTableITCase {
                 "INSERT INTO %s PARTITION(col1='val1') (SELECT col2, cast(null as INT)"
                     + ((includeOptionalOptions) ? ", cast(null as INT) " : "")
                     + " FROM %s)",
-                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+                DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
+                DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
             );
         }
 
@@ -318,8 +547,8 @@ public class DeltaSinkTableITCase {
             "INSERT INTO %s (SELECT col1, cast(null as VARCHAR), cast(null as INT) "
                 + ((includeOptionalOptions) ? ", cast(null as INT) " : "")
                 + "FROM %s)",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
+            DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
         );
     }
 
@@ -465,12 +694,9 @@ public class DeltaSinkTableITCase {
                 isPartitioned,
                 insertSql),
             testWorkers
-        ).exceptionally(new Function<Throwable, Void>() {
-            @Override
-            public Void apply(Throwable throwable) {
-                LOG.error("Error while running Flink job in background.", throwable);
-                return null;
-            }
+        ).exceptionally(throwable -> {
+            LOG.error("Error while running Flink job in background.", throwable);
+            return null;
         });
     }
 
@@ -494,6 +720,12 @@ public class DeltaSinkTableITCase {
         } else {
             tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
         }
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        tableEnv.executeSql(catalogSQL);
+
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+        tableEnv.executeSql(useDeltaCatalog);
 
         String sourceSql = buildSourceTableSql(
             10,
@@ -543,7 +775,7 @@ public class DeltaSinkTableITCase {
                 + rowLimit
                 + " 'rows-per-second' = '20'"
                 + ")",
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME, rows);
+            DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME, rows);
     }
 
     private String buildSinkTableSql(
@@ -575,6 +807,6 @@ public class DeltaSinkTableITCase {
                 + optionalTableOptions
                 + " 'table-path' = '%s'"
                 + ")",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME, tablePath);
+            DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME, tablePath);
     }
 }

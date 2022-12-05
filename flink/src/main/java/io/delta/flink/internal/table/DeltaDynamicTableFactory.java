@@ -50,6 +50,12 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
     public final org.apache.flink.configuration.Configuration emptyClusterConfig =
         new org.apache.flink.configuration.Configuration();
 
+    DeltaDynamicTableFactory() {}
+
+    /*public DeltaDynamicTableFactory(boolean createdViaDeltaCatalog) {
+        this.createdViaDeltaCatalog = createdViaDeltaCatalog;
+    }*/
+
     @Override
     public String factoryIdentifier() {
         return IDENTIFIER;
@@ -58,9 +64,21 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
 
+        // Check if requested table is Delta or not.
         FactoryUtil.TableFactoryHelper helper =
             FactoryUtil.createTableFactoryHelper(this, context);
-        helper.validate();
+        String connectorType = helper.getOptions().get(FactoryUtil.CONNECTOR);
+        if (!"delta".equals(connectorType)) {
+
+            // Look for Table factory proper fort this table type.
+            DynamicTableSinkFactory sinkFactory =
+                FactoryUtil.discoverFactory(this.getClass().getClassLoader(),
+                    DynamicTableSinkFactory.class, connectorType);
+            return sinkFactory.createDynamicTableSink(context);
+        }
+
+        // This must have been a Delta Table, so continue with this factory
+        helper.validateExcept("table.");
 
         ReadableConfig tableOptions = helper.getOptions();
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
