@@ -46,15 +46,20 @@ import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.table.types.utils.TypeConversions;
+import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.hamcrest.CoreMatchers;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -67,6 +72,8 @@ import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
 public class DeltaSinkTableITCase {
+
+    private static final int PARALLELISM = 2;
 
     private static final Logger LOG = LoggerFactory.getLogger(DeltaSinkTableITCase.class);
 
@@ -83,6 +90,8 @@ public class DeltaSinkTableITCase {
     ));
 
     private static ExecutorService testWorkers;
+
+    private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
     protected RowType testRowType;
 
@@ -109,6 +118,20 @@ public class DeltaSinkTableITCase {
     public static void afterAll() {
         testWorkers.shutdownNow();
         TEMPORARY_FOLDER.delete();
+    }
+
+    @BeforeEach
+    public void setUp() {
+        try {
+            miniClusterResource.before();
+        } catch (Exception e) {
+            throw new RuntimeException("Weren't able to setup the test dependencies", e);
+        }
+    }
+
+    @AfterEach
+    public void afterEach() {
+        miniClusterResource.after();
     }
 
     /**
@@ -173,8 +196,9 @@ public class DeltaSinkTableITCase {
         }
     }
 
-    @ParameterizedRepeatedIfExceptionsTest(
-        suspend = 2000L, repeats = 3,
+    /*    @ParameterizedRepeatedIfExceptionsTest(
+        suspend = 2000L, repeats = 3,*/
+    @ParameterizedTest(
         name = "isPartitioned = {0}, " +
             "includeOptionalOptions = {1}, " +
             "useStaticPartition = {2}, " +
