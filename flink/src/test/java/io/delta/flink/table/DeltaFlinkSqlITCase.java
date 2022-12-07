@@ -58,6 +58,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
@@ -79,9 +80,9 @@ import io.delta.standalone.data.RowRecord;
 
 public class DeltaFlinkSqlITCase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeltaFlinkSqlITCase.class);
+    private static final int PARALLELISM = 2;
 
-    private static final int PARALLELISM = 4;
+    private static final Logger LOG = LoggerFactory.getLogger(DeltaFlinkSqlITCase.class);
 
     private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
 
@@ -402,8 +403,7 @@ public class DeltaFlinkSqlITCase {
         }
     }
 
-    @ParameterizedRepeatedIfExceptionsTest(
-        suspend = 2000L, repeats = 3,
+    @ParameterizedTest(
         name = "isPartitioned = {0}, " +
             "includeOptionalOptions = {1}, " +
             "useStaticPartition = {2}, " +
