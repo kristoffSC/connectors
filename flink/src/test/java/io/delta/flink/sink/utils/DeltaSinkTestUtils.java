@@ -116,7 +116,7 @@ public class DeltaSinkTestUtils {
 
     public static RowType addNewColumnToSchema(RowType schema) {
         List<RowType.RowField> fields = new ArrayList<>(schema.getFields());
-        fields.add(new RowType.RowField("someNewField", new IntType()));
+        fields.add(new RowType.RowField("col4", new IntType()));
         return new RowType(fields);
     }
 
@@ -379,6 +379,7 @@ public class DeltaSinkTestUtils {
                 .withBucketAssigner(getTestPartitionAssigner())
                 .build();
         }
+
         return DeltaSink
             .forRowData(
                 new Path(deltaTablePath),
