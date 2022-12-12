@@ -20,14 +20,11 @@ package io.delta.flink.table;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
@@ -48,7 +45,6 @@ import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.hamcrest.CoreMatchers;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -97,19 +93,13 @@ public class DeltaSinkTableITCase {
 
     @BeforeAll
     public static void beforeAll() throws IOException {
-        testWorkers = Executors.newCachedThreadPool(new ThreadFactory() {
-            @Override
-            public Thread newThread(@NotNull Runnable r) {
-                final Thread thread = new Thread(r);
-                thread.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-                    @Override
-                    public void uncaughtException(Thread t, Throwable e) {
-                        t.interrupt();
-                        throw new RuntimeException(e);
-                    }
-                });
-                return thread;
-            }
+        testWorkers = Executors.newCachedThreadPool(r -> {
+            final Thread thread = new Thread(r);
+            thread.setUncaughtExceptionHandler((t, e) -> {
+                t.interrupt();
+                throw new RuntimeException(e);
+            });
+            return thread;
         });
         TEMPORARY_FOLDER.create();
     }
@@ -429,7 +419,7 @@ public class DeltaSinkTableITCase {
                 boolean includeOptionalOptions,
                 boolean useBoundedMode,
                 String deltaTablePath,
-                String insertSql) throws Exception {
+                String insertSql) {
 
         if (useBoundedMode) {
             runFlinkJob(
@@ -489,12 +479,9 @@ public class DeltaSinkTableITCase {
                 isPartitioned,
                 insertSql),
             testWorkers
-        ).exceptionally(new Function<Throwable, Void>() {
-            @Override
-            public Void apply(Throwable throwable) {
-                LOG.error("Error while running Flink job in background.", throwable);
-                return null;
-            }
+        ).exceptionally(throwable -> {
+            LOG.error("Error while running Flink job in background.", throwable);
+            return null;
         });
     }
 

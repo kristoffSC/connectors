@@ -9,11 +9,13 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import org.apache.commons.io.FileUtils;
@@ -39,6 +41,16 @@ import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
+import org.apache.hadoop.fs.Path;
+import org.apache.parquet.column.page.PageReadStore;
+import org.apache.parquet.example.data.simple.SimpleGroup;
+import org.apache.parquet.example.data.simple.convert.GroupRecordConverter;
+import org.apache.parquet.hadoop.ParquetFileReader;
+import org.apache.parquet.hadoop.util.HadoopInputFile;
+import org.apache.parquet.io.ColumnIOFactory;
+import org.apache.parquet.io.MessageColumnIO;
+import org.apache.parquet.io.RecordReader;
+import org.apache.parquet.schema.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -524,5 +536,55 @@ public class DeltaTestUtils {
             DeltaTestUtils.class.getClassLoader(),
             false
         );
+    }
+
+    public static List<Integer> readParquetTable(String tablePath) throws Exception {
+        try (Stream<java.nio.file.Path> stream = Files.list(Paths.get((tablePath)))) {
+            Set<String> collect = stream
+                .filter(file -> !Files.isDirectory(file))
+                .map(java.nio.file.Path::getFileName)
+                .map(java.nio.file.Path::toString)
+                .filter(name -> !name.contains("inprogress"))
+                .collect(Collectors.toSet());
+
+            List<Integer> data = new ArrayList<>();
+            for (String fileName : collect) {
+                System.out.println(fileName);
+                data.addAll(readParquetFile(
+                        new Path(tablePath + fileName),
+                        new org.apache.hadoop.conf.Configuration()
+                    )
+                );
+            }
+            return data;
+        }
+    }
+
+    private static List<Integer> readParquetFile(
+            Path filePath,
+            org.apache.hadoop.conf.Configuration hadoopConf) throws IOException {
+
+        ParquetFileReader reader = ParquetFileReader.open(
+            HadoopInputFile.fromPath(filePath, hadoopConf)
+        );
+
+        MessageType schema = reader.getFooter().getFileMetaData().getSchema();
+        PageReadStore pages;
+
+        List<Integer> data = new LinkedList<>();
+        while ((pages = reader.readNextRowGroup()) != null) {
+            long rows = pages.getRowCount();
+            MessageColumnIO columnIO = new ColumnIOFactory().getColumnIO(schema);
+            RecordReader recordReader =
+                columnIO.getRecordReader(pages, new GroupRecordConverter(schema));
+
+            for (int i = 0; i < rows; i++) {
+                SimpleGroup simpleGroup = (SimpleGroup) recordReader.read();
+                //data.add(Integer.parseInt(simpleGroup.getString("age", 0)));
+                data.add(simpleGroup.getInteger("age", 0));
+            }
+        }
+        Collections.sort(data);
+        return data;
     }
 }
