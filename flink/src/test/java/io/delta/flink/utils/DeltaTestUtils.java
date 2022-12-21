@@ -20,23 +20,29 @@ import java.util.stream.Stream;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.RuntimeExecutionMode;
+import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.runtime.highavailability.nonha.embedded.HaLeadershipControl;
 import org.apache.flink.runtime.minicluster.MiniCluster;
 import org.apache.flink.runtime.minicluster.RpcServiceSharing;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamUtils;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.collect.ClientAndIterator;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectIdentifier;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.ResolvedSchema;
+import org.apache.flink.table.data.util.DataFormatConverters;
 import org.apache.flink.table.factories.DynamicTableFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,6 +63,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.Snapshot;
+import io.delta.standalone.actions.AddFile;
 
 public class DeltaTestUtils {
 
@@ -560,6 +568,61 @@ public class DeltaTestUtils {
         }
     }
 
+    public static StreamExecutionEnvironment getTestStreamEnv(boolean streamingMode) {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setRestartStrategy(RestartStrategies.noRestart());
+
+        if (streamingMode) {
+            env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
+            env.enableCheckpointing(1000, CheckpointingMode.EXACTLY_ONCE);
+        } else {
+            env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        }
+
+        return env;
+    }
+
+    /**
+     * Verifies if Delta table under parameter {@code tablePath} contains expected number of rows
+     * with given rowType format.
+     *
+     * @param tablePath               Path to Delta table.
+     * @param rowType                 {@link RowType} for test Delta table.
+     * @param expectedNumberOfRecords expected number of row in Delta table.
+     * @return Head snapshot of Delta table.
+     * @throws IOException If any issue while reading Delta Table.
+     */
+    @SuppressWarnings("unchecked")
+    public static Snapshot verifyDeltaTable(
+            String tablePath,
+            RowType rowType,
+            Integer expectedNumberOfRecords) throws IOException {
+
+        DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+        Snapshot snapshot = deltaLog.snapshot();
+        List<AddFile> deltaFiles = snapshot.getAllFiles();
+        int finalTableRecordsCount = TestParquetReader
+            .readAndValidateAllTableRecords(
+                deltaLog,
+                rowType,
+                DataFormatConverters.getConverterForDataType(
+                    TypeConversions.fromLogicalToDataType(rowType)));
+        long finalVersion = snapshot.getVersion();
+
+        LOG.info(
+            String.format(
+                "RESULTS: final record count: [%d], final table version: [%d], number of Delta "
+                    + "files: [%d]",
+                finalTableRecordsCount,
+                finalVersion,
+                deltaFiles.size()
+            )
+        );
+
+        assertThat(finalTableRecordsCount, equalTo(expectedNumberOfRecords));
+        return snapshot;
+    }
+
     private static List<Integer> readParquetFile(
             Path filePath,
             org.apache.hadoop.conf.Configuration hadoopConf) throws IOException {
@@ -580,7 +643,6 @@ public class DeltaTestUtils {
 
             for (int i = 0; i < rows; i++) {
                 SimpleGroup simpleGroup = (SimpleGroup) recordReader.read();
-                //data.add(Integer.parseInt(simpleGroup.getString("age", 0)));
                 data.add(simpleGroup.getInteger("age", 0));
             }
         }
