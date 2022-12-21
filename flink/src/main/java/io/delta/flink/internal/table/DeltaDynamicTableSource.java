@@ -1,6 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package io.delta.flink.internal.table;
-
-import java.util.List;
 
 import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
@@ -10,19 +25,15 @@ import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.connector.source.ScanTableSource;
 import org.apache.flink.table.connector.source.SourceProvider;
-import org.apache.flink.table.connector.source.abilities.SupportsFilterPushDown;
-import org.apache.flink.table.connector.source.abilities.SupportsLimitPushDown;
-import org.apache.flink.table.connector.source.abilities.SupportsProjectionPushDown;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.expressions.ResolvedExpression;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
-public class DeltaDynamicTableSource implements
-        ScanTableSource,
-        SupportsProjectionPushDown,
-        SupportsFilterPushDown,
-        SupportsLimitPushDown {
+/**
+ * Implementation of {@link ScanTableSource} interface for Table/SQL support for Delta Source
+ * connector.
+ */
+public class DeltaDynamicTableSource implements ScanTableSource {
 
     private final Configuration hadoopConf;
 
@@ -30,8 +41,13 @@ public class DeltaDynamicTableSource implements
 
     private final RowType rowType;
 
-    private long limit;
-
+    /**
+     * Constructor for creating Source of Flink dynamic table to Delta table.
+     *
+     * @param hadoopConf   Hadoop's configuration.
+     * @param tableOptions Table options returned by Catalog and resolved query plan.
+     * @param rowType      Flink's logical type with the structure of the events in the stream.
+     */
     public DeltaDynamicTableSource(
             Configuration hadoopConf,
             ReadableConfig tableOptions,
@@ -58,7 +74,6 @@ public class DeltaDynamicTableSource implements
         if (DeltaFlinkJobSpecificOptions.MODE.defaultValue().equalsIgnoreCase(mode)) {
             sourceBuilder = DeltaSource.forBoundedRowData(new Path(tablePath), hadoopConf);
         } else {
-            // TODO FLINK_SQL_PR2 write IT test for this.
             sourceBuilder = DeltaSource.forContinuousRowData(new Path(tablePath), hadoopConf);
         }
 
@@ -78,22 +93,4 @@ public class DeltaDynamicTableSource implements
         return "DeltaSource";
     }
 
-    @Override
-    public Result applyFilters(List<ResolvedExpression> filters) {
-        // TODO FLINK_SQL_PR2 Support filters
-        return null;
-    }
-
-    @Override
-    public void applyLimit(long limit) {
-        // TODO FLINK_SQL_PR2 use this
-        this.limit = limit;
-
-    }
-
-    @Override
-    public boolean supportsNestedProjection() {
-        /// TODO FLINK_SQL_PR2  support nested projection
-        return false;
-    }
 }

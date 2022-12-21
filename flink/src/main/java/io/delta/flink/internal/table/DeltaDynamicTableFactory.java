@@ -41,11 +41,13 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Creates a {@link DynamicTableSink} instance representing DeltaLake table.
+ * Creates a {@link DynamicTableSink} and {@link DynamicTableSource} instance representing DeltaLake
+ * table.
  *
  * <p>
  * This implementation automatically resolves all necessary object for creating instance of {@link
- * io.delta.flink.sink.DeltaSink} except Delta table's path that needs to be provided explicitly.
+ * io.delta.flink.sink.DeltaSink} and {@link io.delta.flink.source.DeltaSource} except Delta table's
+ * path that needs to be provided explicitly.
  */
 public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     DynamicTableSourceFactory {
