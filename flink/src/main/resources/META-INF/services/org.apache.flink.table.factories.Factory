@@ -13,5 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#io.delta.flink.internal.table.DeltaDynamicTableFactory
-io.delta.flink.internal.table.DeltaCatalogFactory
+io.delta.flink.internal.table.DeltaDynamicTableFactory

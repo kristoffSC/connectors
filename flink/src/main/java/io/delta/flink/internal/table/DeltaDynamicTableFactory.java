@@ -25,25 +25,32 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
+import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
+import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Creates a {@link DynamicTableSink} instance representing DeltaLake table.
+ * Creates a {@link DynamicTableSink} and {@link DynamicTableSource} instance representing DeltaLake
+ * table.
  *
  * <p>
  * This implementation automatically resolves all necessary object for creating instance of {@link
- * io.delta.flink.sink.DeltaSink} except Delta table's path that needs to be provided explicitly.
+ * io.delta.flink.sink.DeltaSink} and {@link io.delta.flink.source.DeltaSource} except Delta table's
+ * path that needs to be provided explicitly.
  */
-public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
+public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
+    DynamicTableSourceFactory {
 
     public static final String IDENTIFIER = "delta";
 
@@ -51,10 +58,6 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
         new org.apache.flink.configuration.Configuration();
 
     DeltaDynamicTableFactory() {}
-
-    /*public DeltaDynamicTableFactory(boolean createdViaDeltaCatalog) {
-        this.createdViaDeltaCatalog = createdViaDeltaCatalog;
-    }*/
 
     @Override
     public String factoryIdentifier() {
@@ -101,6 +104,34 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
     }
 
     @Override
+    public DynamicTableSource createDynamicTableSource(Context context) {
+        FactoryUtil.TableFactoryHelper helper =
+            FactoryUtil.createTableFactoryHelper(this, context);
+        helper.validate();
+
+        ReadableConfig tableOptions = helper.getOptions();
+        ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
+
+        Configuration hadoopConf = resolveHadoopConf(tableOptions);
+
+        RowType rowType = (RowType) tableSchema.toSourceRowDataType().getLogicalType();
+
+        return new DeltaDynamicTableSource(
+            hadoopConf,
+            tableOptions,
+            rowType
+        );
+    }
+
+    @Override
+    public Set<ConfigOption<?>> forwardOptions() {
+        return Stream.of(
+            DeltaTableConnectorOptions.TABLE_PATH,
+            DeltaTableConnectorOptions.HADOOP_CONF_DIR
+        ).collect(Collectors.toSet());
+    }
+
+    @Override
     public Set<ConfigOption<?>> requiredOptions() {
         final Set<ConfigOption<?>> options = new HashSet<>();
         options.add(DeltaTableConnectorOptions.TABLE_PATH);
@@ -112,6 +143,10 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory {
         final Set<ConfigOption<?>> options = new HashSet<>();
         options.add(DeltaTableConnectorOptions.HADOOP_CONF_DIR);
         options.add(DeltaTableConnectorOptions.MERGE_SCHEMA);
+
+        // TODO With Delta Catalog, this option will be injected only through query hints.
+        //  The DDL validation will be done in Delta Catalog during "createTable" operation.
+        options.add(DeltaFlinkJobSpecificOptions.MODE);
         return options;
     }
 

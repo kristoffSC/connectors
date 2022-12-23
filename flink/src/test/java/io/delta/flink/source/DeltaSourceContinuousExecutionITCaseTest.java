@@ -533,9 +533,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     }
 
     private void shouldReadDeltaTableFromSnapshotAndUpdates(
-        DeltaSource<RowData> deltaSource,
-        FailoverType failoverType)
-        throws Exception {
+            DeltaSource<RowData> deltaSource,
+            FailoverType failoverType)
+            throws Exception {
 
         int numberOfTableUpdateBulks = 5;
         int rowsPerTableUpdate = 5;
