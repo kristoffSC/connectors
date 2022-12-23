@@ -75,6 +75,8 @@ public class DeltaEndToEndTableITCase {
             getTestStreamEnv(false) // streamingMode = false
         );
 
+        setupDeltaCatalog(tableEnv);
+
         String sourceTable =
             String.format("CREATE TABLE sourceTable ("
                     + "col1 BIGINT,"
@@ -112,4 +114,12 @@ public class DeltaEndToEndTableITCase {
         verifyDeltaTable(sinkTablePath, rowType, 1100);
     }
 
+    private void setupDeltaCatalog(StreamTableEnvironment tableEnv) {
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+
+        tableEnv.executeSql(catalogSQL);
+        tableEnv.executeSql(useDeltaCatalog);
+    }
 }

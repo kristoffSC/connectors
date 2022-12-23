@@ -19,6 +19,7 @@ package io.delta.flink.internal.table;
 
 import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.connector.ChangelogMode;
@@ -93,4 +94,8 @@ public class DeltaDynamicTableSource implements ScanTableSource {
         return "DeltaSource";
     }
 
+    @VisibleForTesting
+    Configuration getHadoopConf() {
+        return new Configuration(this.hadoopConf);
+    }
 }

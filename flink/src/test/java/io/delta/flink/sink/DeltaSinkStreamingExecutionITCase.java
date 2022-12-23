@@ -78,6 +78,8 @@ import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -91,6 +93,9 @@ import io.delta.standalone.actions.CommitInfo;
  * Tests the functionality of the {@link DeltaSink} in STREAMING mode.
  */
 public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseBase {
+
+    private static final Logger LOG =
+        LoggerFactory.getLogger(DeltaSinkStreamingExecutionITCase.class);
 
     private static final int NUM_SOURCES = 4;
 
@@ -147,6 +152,12 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
     })
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
 
+        LOG.info(
+            "Running testFileSink test for parameters isPartitioned: {}, triggerFailover: {}",
+            isPartitioned,
+            triggerFailover
+        );
+
         initSourceFolder(isPartitioned, deltaTablePath);
 
         JobGraph jobGraph = createJobGraphWithFailoverSource(
@@ -176,6 +187,13 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
     public void testFileSinkWithGlobalCommitterFailover(
             boolean isPartitioned,
             GlobalCommitterExceptionMode exceptionMode) throws Exception {
+
+        LOG.info(
+            "Running testFileSinkWithGlobalCommitterFailover test for parameters "
+                + "isPartitioned: {}, exceptionMode: {}",
+            isPartitioned,
+            exceptionMode
+        );
 
         // GIVEN
         FailoverDeltaGlobalCommitter.reset();

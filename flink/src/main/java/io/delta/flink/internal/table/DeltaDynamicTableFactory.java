@@ -105,9 +105,21 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
 
     @Override
     public DynamicTableSource createDynamicTableSource(Context context) {
+
+        // Check if requested table is Delta or not.
         FactoryUtil.TableFactoryHelper helper =
             FactoryUtil.createTableFactoryHelper(this, context);
-        helper.validate();
+        String connectorType = helper.getOptions().get(FactoryUtil.CONNECTOR);
+        if (!"delta".equals(connectorType)) {
+
+            // Look for Table factory proper fort this table type.
+            DynamicTableSourceFactory sourceFactory =
+                FactoryUtil.discoverFactory(this.getClass().getClassLoader(),
+                    DynamicTableSourceFactory.class, connectorType);
+            return sourceFactory.createDynamicTableSource(context);
+        }
+
+        helper.validateExcept("table.");
 
         ReadableConfig tableOptions = helper.getOptions();
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();

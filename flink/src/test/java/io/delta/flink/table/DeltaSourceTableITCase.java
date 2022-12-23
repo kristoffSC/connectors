@@ -134,6 +134,8 @@ public class DeltaSourceTableITCase {
             getTestStreamEnv(false) // streamingMode = false
         );
 
+        setupDeltaCatalog(tableEnv);
+
         tableEnv.executeSql(buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA,false));
 
         String connectorModeHint = StringUtils.isNullOrWhitespaceOnly(jobMode) ?
@@ -198,6 +200,8 @@ public class DeltaSourceTableITCase {
             getTestStreamEnv(true) // streamingMode = true
         );
 
+        setupDeltaCatalog(tableEnv);
+
         tableEnv.executeSql(buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA,false));
 
         String selectSql =
@@ -244,6 +248,8 @@ public class DeltaSourceTableITCase {
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
             getTestStreamEnv(false) // streamingMode = false
         );
+
+        setupDeltaCatalog(tableEnv);
 
         tableEnv.executeSql(
             buildSourceTableSql(nonPartitionedLargeTablePath, LARGE_TABLE_SCHEMA, false)
@@ -311,5 +317,14 @@ public class DeltaSourceTableITCase {
             DeltaSourceTableITCase.TEST_SOURCE_TABLE_NAME,
             tablePath
         );
+    }
+
+    private void setupDeltaCatalog(StreamTableEnvironment tableEnv) {
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+
+        tableEnv.executeSql(catalogSQL);
+        tableEnv.executeSql(useDeltaCatalog);
     }
 }

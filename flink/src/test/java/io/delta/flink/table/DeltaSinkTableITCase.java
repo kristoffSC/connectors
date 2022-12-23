@@ -501,6 +501,8 @@ public class DeltaSinkTableITCase {
             tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
         }
 
+        setupDeltaCatalog(tableEnv);
+
         String sourceSql = buildSourceTableSql(
             10,
             includeOptionalOptions,
@@ -582,5 +584,14 @@ public class DeltaSinkTableITCase {
                 + " 'table-path' = '%s'"
                 + ")",
             DeltaSinkTableITCase.TEST_SINK_TABLE_NAME, tablePath);
+    }
+
+    private void setupDeltaCatalog(TableEnvironment tableEnv) {
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+
+        tableEnv.executeSql(catalogSQL);
+        tableEnv.executeSql(useDeltaCatalog);
     }
 }

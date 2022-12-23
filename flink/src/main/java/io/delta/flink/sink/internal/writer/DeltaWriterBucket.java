@@ -37,6 +37,7 @@ import org.apache.flink.streaming.api.functions.sink.filesystem.DeltaPendingFile
 import org.apache.flink.streaming.api.functions.sink.filesystem.InProgressFileWriter;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.CheckpointRollingPolicy;
+import org.apache.flink.table.data.columnar.ColumnarRowData;
 import org.apache.flink.table.utils.PartitionPathUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -342,10 +343,22 @@ public class DeltaWriterBucket<IN> {
         if (deltaInProgressPart == null || rollingPolicy.shouldRollOnEvent(
             deltaInProgressPart.getBulkPartWriter(), element)) {
             if (LOG.isDebugEnabled()) {
+
+                // For some cases the element can be a type of ColumnarRowData which throws
+                // Exception when calling toString() on it.
+                String elementLog;
+                if (element instanceof ColumnarRowData) {
+                    elementLog = "ColumnarRowData of arity: "
+                        + ((ColumnarRowData) element).getArity();
+                } else {
+                    elementLog = element.toString();
+                }
+
                 LOG.debug(
                     "Opening new part file for bucket id={} due to element {}.",
                     bucketId,
-                    element);
+                    elementLog
+                );
             }
             deltaInProgressPart = rollPartFile(currentTime);
         }
