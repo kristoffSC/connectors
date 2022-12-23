@@ -33,7 +33,6 @@ import java.util.stream.Stream;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
-import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.streaming.api.CheckpointingMode;
@@ -360,8 +359,7 @@ public class DeltaFlinkSqlITCase {
         );
     }
 
-    @ParameterizedRepeatedIfExceptionsTest(
-        suspend = 2000L, repeats = 3,
+    @ParameterizedTest(
         name = "isPartitioned = {0}, " +
             "includeOptionalOptions = {1}, " +
             "useStaticPartition = {2}, " +
@@ -447,8 +445,7 @@ public class DeltaFlinkSqlITCase {
         }
     }
 
-    @ParameterizedRepeatedIfExceptionsTest(
-        suspend = 2000L, repeats = 3,
+    @ParameterizedTest(
         name = "isPartitioned = {0}, " +
             "includeOptionalOptions = {1}, " +
             "useStaticPartition = {2}, " +
