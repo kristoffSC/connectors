@@ -18,6 +18,7 @@
 
 package io.delta.flink.table;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
 import org.apache.flink.types.RowKind;
+import org.apache.flink.util.CloseableIterator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -183,6 +185,8 @@ public class DeltaFlinkSqlITCase {
         tableEnv.executeSql(insertSql).await(10, TimeUnit.SECONDS);
 
         String selectSql = "SELECT * FROM sinkTable";
+        //String selectSql = "SELECT * FROM sinkTable /*+ OPTIONS('path' = 'hello/me') */";
+        //String selectSql = "SELECT * FROM sinkTable /*+ OPTIONS('connector' = 'dummy') */";
         TableResult selectResult = tableEnv.executeSql(selectSql);
 
         List<Row> sinkRows = new ArrayList<>();
@@ -317,6 +321,204 @@ public class DeltaFlinkSqlITCase {
         );
     }
 
+    @Test
+    public void testSelectDeltaTableWithoutDeltaCatalog() throws Exception {
+
+        // GIVEN
+        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+
+        String sourceTableSql = String.format(
+            "CREATE TABLE sourceTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") "
+                + "WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            sourceTablePath);
+
+        tableEnv.executeSql(sourceTableSql);
+
+        String sinkTableSql = "CREATE TABLE sinkTable ("
+            + " col1 VARCHAR,"
+            + " col2 VARCHAR,"
+            + " col3 INT"
+            + ") WITH ("
+            + "  'connector' = 'blackhole'"
+            + ");";
+
+        tableEnv.executeSql(sinkTableSql);
+
+        // WHEN
+        String selectSql = "SELECT * FROM sourceTable";
+
+        // THEN
+        ValidationException validationException =
+            assertThrows(ValidationException.class, () -> tableEnv.executeSql(selectSql));
+
+        assertThat(
+            "Query Delta table should not be possible without Delta catalog.",
+            validationException.getCause().getMessage(),
+            containsString("Cannot discover a connector using option: 'connector'='delta'")
+        );
+    }
+
+    @Test
+    public void testSelectDeltaTableAsTempTable() throws Exception {
+
+        // GIVEN
+        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        tableEnv.executeSql(catalogSQL);
+
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+        tableEnv.executeSql(useDeltaCatalog);
+
+        String sourceTableSql = String.format(
+            "CREATE TABLE sourceTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") "
+                + "WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            sourceTablePath);
+
+        tableEnv.executeSql(sourceTableSql);
+
+        String resourcesDirectory = new File("src/test/resources/hadoop-conf").getAbsolutePath();
+        String tempDeltaTable = "CREATE TEMPORARY TABLE sourceTable_tmp"
+            + "  WITH  ("
+            + " 'mode' = 'streaming'"
+            + ")"
+            + "  LIKE sourceTable;";
+
+        tableEnv.executeSql(tempDeltaTable);
+
+        // WHEN
+        String selectSql = "SELECT * FROM sourceTable_tmp";
+
+        // THEN
+        TableResult selectResult = tableEnv.executeSql(selectSql);
+        List<Row> sourceRows = new ArrayList<>();
+        try (org.apache.flink.util.CloseableIterator<Row> collect = selectResult.collect()) {
+            collect.forEachRemaining(sourceRows::add);
+        }
+
+        assertThat(sourceRows.size(), equalTo(1));
+    }
+
+    @Test
+    public void testSelectViewFromDeltaTable() throws Exception {
+
+        // GIVEN
+        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        tableEnv.executeSql(catalogSQL);
+
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+        tableEnv.executeSql(useDeltaCatalog);
+
+        String sourceTableSql = String.format(
+            "CREATE TABLE sourceTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") "
+                + "WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            sourceTablePath);
+
+        tableEnv.executeSql(sourceTableSql);
+
+        String viewSql = "CREATE VIEW sourceTable_view AS "
+            + "SELECT col1 from sourceTable";
+
+        String temporaryViewSql = "CREATE TEMPORARY VIEW sourceTable_view_tmp AS "
+            + "SELECT col1 from sourceTable";
+
+        tableEnv.executeSql(viewSql);
+        tableEnv.executeSql(temporaryViewSql);
+
+        // WHEN
+        String selectViewSql = "SELECT * FROM sourceTable_view";
+        String selectViewTmpSql = "SELECT * FROM sourceTable_view_tmp";
+
+        // THEN
+        TableResult selectViewResult = tableEnv.executeSql(selectViewSql);
+        TableResult selectTmpViewResult = tableEnv.executeSql(selectViewTmpSql);
+
+        assertSelectResult(selectViewResult);
+        assertSelectResult(selectTmpViewResult);
+    }
+
+    @Test
+    public void testSelectWithClauseFromDeltaTable() throws Exception {
+
+        // GIVEN
+        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+
+        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
+        tableEnv.executeSql(catalogSQL);
+
+        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
+        tableEnv.executeSql(useDeltaCatalog);
+
+        String sourceTableSql = String.format(
+            "CREATE TABLE sourceTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") "
+                + "WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            sourceTablePath);
+
+        tableEnv.executeSql(sourceTableSql);
+
+        // WHEN
+        String withSelect = "WITH sourceTable_with AS ("
+            + "SELECT col1 FROM sourceTable"
+            + ") "
+            + "SELECT * FROM sourceTable_with";
+
+        // THEN
+        TableResult selectViewResult= tableEnv.executeSql(withSelect);
+
+        assertSelectResult(selectViewResult);
+    }
+
+    private void assertSelectResult(TableResult selectResult) throws Exception {
+        List<Row> sourceRows = new ArrayList<>();
+        try (CloseableIterator<Row> collect = selectResult.collect()) {
+            collect.forEachRemaining(sourceRows::add);
+        }
+
+        assertThat(sourceRows.size(), equalTo(1));
+    }
+
+
     @Disabled
     @Test
     public void testUsingTwoCatalogs() throws Exception {
@@ -400,8 +602,7 @@ public class DeltaFlinkSqlITCase {
     private StreamExecutionEnvironment getTestStreamEnv() {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setRestartStrategy(RestartStrategies.noRestart());
-        //env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
-        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
         env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE);
         return env;
     }
