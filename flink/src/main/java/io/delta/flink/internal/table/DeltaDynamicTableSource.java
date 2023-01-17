@@ -104,4 +104,8 @@ public class DeltaDynamicTableSource implements ScanTableSource {
         return "DeltaSource";
     }
 
+    @VisibleForTesting
+    Configuration getHadoopConf() {
+        return new Configuration(this.hadoopConf);
+    }
 }
