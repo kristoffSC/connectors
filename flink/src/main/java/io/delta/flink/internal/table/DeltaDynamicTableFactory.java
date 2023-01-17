@@ -83,6 +83,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         helper.validateExcept("table.");
 
 
+
         ReadableConfig tableOptions = helper.getOptions();
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
 

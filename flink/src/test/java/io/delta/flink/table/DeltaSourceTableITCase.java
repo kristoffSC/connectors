@@ -261,8 +261,6 @@ public class DeltaSourceTableITCase {
             getTestStreamEnv(false) // streamingMode = false
         );
 
-        setupDeltaCatalog(tableEnv);
-
         // CREATE Source TABLE
         tableEnv.executeSql(
             buildSourceTableSql(nonPartitionedLargeTablePath, LARGE_TABLE_SCHEMA, false)

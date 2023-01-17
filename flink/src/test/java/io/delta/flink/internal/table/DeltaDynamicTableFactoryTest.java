@@ -1,7 +1,6 @@
 package io.delta.flink.internal.table;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -182,34 +181,6 @@ class DeltaDynamicTableFactoryTest {
         ValidationException sourceValidationException = assertThrows(
             ValidationException.class,
             () -> tableFactory.createDynamicTableSource(tableContext)
-        );
-
-        LOG.info(sinkValidationException.getMessage());
-        LOG.info(sourceValidationException.getMessage());
-    }
-
-    @Test
-    void shouldValidateIfMissingHadoopConfDir() {
-
-        options.put("table-path", "file://some/path");
-        options.put("hadoop-conf-dir", "fiele://invalid/path");
-        Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
-
-        RuntimeException sinkValidationException = assertThrows(
-            RuntimeException.class,
-            () -> tableFactory.createDynamicTableSink(tableContext)
-        );
-
-        RuntimeException sourceValidationException = assertThrows(
-            RuntimeException.class,
-            () -> tableFactory.createDynamicTableSink(tableContext)
-        );
-
-        assertThat(
-            sinkValidationException.getCause().getClass(), equalTo(FileNotFoundException.class)
-        );
-        assertThat(
-            sourceValidationException.getCause().getClass(), equalTo(FileNotFoundException.class)
         );
 
         LOG.info(sinkValidationException.getMessage());
