@@ -208,6 +208,8 @@ public class DeltaSourceTableITCase {
             getTestStreamEnv(true) // streamingMode = true
         );
 
+        setupDeltaCatalog(tableEnv);
+
         // CREATE Source TABLE
         tableEnv.executeSql(
             buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA, false)
@@ -260,6 +262,8 @@ public class DeltaSourceTableITCase {
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
             getTestStreamEnv(false) // streamingMode = false
         );
+
+        setupDeltaCatalog(tableEnv);
 
         // CREATE Source TABLE
         tableEnv.executeSql(

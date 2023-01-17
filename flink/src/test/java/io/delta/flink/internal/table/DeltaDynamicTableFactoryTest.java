@@ -47,9 +47,7 @@ class DeltaDynamicTableFactoryTest {
         this.tableFactory = new DeltaDynamicTableFactory();
         this.options = new HashMap<>();
         this.options.put(FactoryUtil.CONNECTOR.key(), "delta");
-    }
-
-        originalEnvVariables = System.getenv();
+        this.originalEnvVariables = System.getenv();
     }
 
     @AfterEach
