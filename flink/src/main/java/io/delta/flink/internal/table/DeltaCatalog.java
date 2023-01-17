@@ -279,6 +279,6 @@ public class DeltaCatalog extends AbstractCatalog {
 
     @Override
     public Optional<Factory> getFactory() {
-        return Optional.of(new DeltaDynamicTableFactory());
+        return Optional.of(DeltaDynamicTableFactory.fromCatalog());
     }
 }

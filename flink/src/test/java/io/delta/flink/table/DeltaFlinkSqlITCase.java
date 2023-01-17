@@ -18,7 +18,6 @@
 
 package io.delta.flink.table;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +40,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
@@ -50,14 +48,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@Disabled
 public class DeltaFlinkSqlITCase {
 
     private static final int PARALLELISM = 2;
-
-    private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
-
-    private static final String TEST_SINK_TABLE_NAME = "test_compact_sink_table";
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
@@ -181,8 +174,6 @@ public class DeltaFlinkSqlITCase {
         tableEnv.executeSql(insertSql).await(10, TimeUnit.SECONDS);
 
         String selectSql = "SELECT * FROM sinkTable";
-        //String selectSql = "SELECT * FROM sinkTable /*+ OPTIONS('path' = 'hello/me') */";
-        //String selectSql = "SELECT * FROM sinkTable /*+ OPTIONS('connector' = 'dummy') */";
         TableResult selectResult = tableEnv.executeSql(selectSql);
 
         List<Row> sinkRows = new ArrayList<>();
@@ -313,7 +304,7 @@ public class DeltaFlinkSqlITCase {
         assertThat(
             "Query Delta table should not be possible without Delta catalog.",
             validationException.getCause().getMessage(),
-            containsString("Cannot discover a connector using option: 'connector'='delta'")
+            containsString("Delta Table SQL/Table API was used without Delta Catalog.")
         );
     }
 
@@ -359,7 +350,7 @@ public class DeltaFlinkSqlITCase {
         assertThat(
             "Query Delta table should not be possible without Delta catalog.",
             validationException.getCause().getMessage(),
-            containsString("Cannot discover a connector using option: 'connector'='delta'")
+            containsString("Delta Table SQL/Table API was used without Delta Catalog.")
         );
     }
 
@@ -392,7 +383,6 @@ public class DeltaFlinkSqlITCase {
 
         tableEnv.executeSql(sourceTableSql);
 
-        String resourcesDirectory = new File("src/test/resources/hadoop-conf").getAbsolutePath();
         String tempDeltaTable = "CREATE TEMPORARY TABLE sourceTable_tmp"
             + "  WITH  ("
             + " 'mode' = 'streaming'"
@@ -405,13 +395,15 @@ public class DeltaFlinkSqlITCase {
         String selectSql = "SELECT * FROM sourceTable_tmp";
 
         // THEN
-        TableResult selectResult = tableEnv.executeSql(selectSql);
-        List<Row> sourceRows = new ArrayList<>();
-        try (org.apache.flink.util.CloseableIterator<Row> collect = selectResult.collect()) {
-            collect.forEachRemaining(sourceRows::add);
-        }
+        ValidationException validationException =
+            assertThrows(ValidationException.class, () -> tableEnv.executeSql(selectSql));
 
-        assertThat(sourceRows.size(), equalTo(1));
+        assertThat(
+            "Using Flink Temporary tables should not be possible since those are always using"
+                + "Flink's default in-memory catalog.",
+            validationException.getCause().getMessage(),
+            containsString("Delta Table SQL/Table API was used without Delta Catalog.")
+        );
     }
 
     @Test
@@ -512,87 +504,6 @@ public class DeltaFlinkSqlITCase {
         }
 
         assertThat(sourceRows.size(), equalTo(1));
-    }
-
-
-    @Disabled
-    @Test
-    public void testUsingTwoCatalogs() throws Exception {
-
-        // GIVEN
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-
-        String deltaCatalogSql = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        String defaultCatalogSql = "CREATE CATALOG flinkDefaultCatalog WITH"
-            + " ('type' = 'generic_in_memory');";
-
-        tableEnv.executeSql(deltaCatalogSql);
-        tableEnv.executeSql(defaultCatalogSql);
-
-        String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-
-        String sourceTableSql = "CREATE TABLE `flinkDefaultCatalog`.`default`.`sourceTable ("
-            + " col1 VARCHAR,"
-            + " col2 VARCHAR,"
-            + " col3 INT"
-            + ") WITH ("
-            + "'connector' = 'datagen',"
-            + "'rows-per-second' = '1',"
-            + "'fields.col3.kind' = 'sequence',"
-            + "'fields.col3.start' = '1',"
-            + "'fields.col3.end' = '5'"
-            + ")";
-
-        tableEnv.executeSql(sourceTableSql);
-
-
-        String sinkTableSql = String.format(
-            "CREATE TABLE `myDeltaCatalog`.`default`.`sinkTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
-                + ") "
-                + "WITH ("
-                + " 'connector' = 'delta',"
-                + " 'table-path' = '%s'"
-                + ")",
-            targetTablePath);
-
-        tableEnv.executeSql(sinkTableSql);
-    }
-
-    private String buildInsertAllFieldsSql(boolean useStaticPartition) {
-
-        if (useStaticPartition) {
-            return String.format(
-                "INSERT INTO %s PARTITION(col1='val1') SELECT col2, col3 FROM %s",
-                DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
-                DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
-            );
-        }
-
-        return String.format(
-            "INSERT INTO %s SELECT * FROM %s",
-            DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
-            DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
-        );
-    }
-
-    private String buildInsertOneFieldSql(boolean useStaticPartition) {
-
-        if (useStaticPartition) {
-            return String.format(
-                "INSERT INTO %s PARTITION(col1='val1') (col2) (SELECT col2 FROM %s)",
-                DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
-                DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
-            );
-        }
-
-        return String.format(
-            "INSERT INTO %s (col1) (SELECT col1 FROM %s)",
-            DeltaFlinkSqlITCase.TEST_SINK_TABLE_NAME,
-            DeltaFlinkSqlITCase.TEST_SOURCE_TABLE_NAME
-        );
     }
 
     private StreamExecutionEnvironment getTestStreamEnv() {

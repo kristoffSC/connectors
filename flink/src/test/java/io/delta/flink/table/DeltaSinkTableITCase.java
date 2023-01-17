@@ -18,7 +18,6 @@
 
 package io.delta.flink.table;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -556,13 +555,7 @@ public class DeltaSinkTableITCase {
             boolean includeOptionalOptions,
             boolean isPartitioned) {
 
-        String resourcesDirectory = new File("src/test/resources/hadoop-conf").getAbsolutePath();
-        String optionalTableOptions = (includeOptionalOptions ?
-            String.format(
-                " 'hadoop-conf-dir' = '%s', 'mergeSchema' = 'true', ",
-                resourcesDirectory)
-            : ""
-        );
+        String optionalTableOptions = (includeOptionalOptions ? "'mergeSchema' = 'true', " : "");
 
         String partitionedClause = isPartitioned ? "PARTITIONED BY (col1, col3) " : "";
         String additionalCol = includeOptionalOptions ? ", col4 INT " : "";

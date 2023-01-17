@@ -14,3 +14,4 @@
 # limitations under the License.
 
 io.delta.flink.internal.table.DeltaCatalogFactory
+io.delta.flink.internal.table.DeltaDynamicTableFactory
