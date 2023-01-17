@@ -17,6 +17,9 @@
  */
 package io.delta.flink.internal.table;
 
+import java.util.List;
+
+import io.delta.flink.internal.table.DeltaFlinkJobSpecificOptions.TableMode;
 import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.builder.DeltaSourceBuilderBase;
 import org.apache.flink.annotation.VisibleForTesting;
@@ -27,7 +30,6 @@ import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.connector.source.ScanTableSource;
 import org.apache.flink.table.connector.source.SourceProvider;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.types.logical.RowType;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -40,23 +42,23 @@ public class DeltaDynamicTableSource implements ScanTableSource {
 
     private final ReadableConfig tableOptions;
 
-    private final RowType rowType;
+    private final List<String> columns;
 
     /**
      * Constructor for creating Source of Flink dynamic table to Delta table.
      *
      * @param hadoopConf   Hadoop's configuration.
      * @param tableOptions Table options returned by Catalog and resolved query plan.
-     * @param rowType      Flink's logical type with the structure of the events in the stream.
+     * @param columns      Table's columns to extract from Delta table.
      */
     public DeltaDynamicTableSource(
             Configuration hadoopConf,
             ReadableConfig tableOptions,
-            RowType rowType) {
+            List<String> columns) {
 
         this.hadoopConf = hadoopConf;
         this.tableOptions = tableOptions;
-        this.rowType = rowType;
+        this.columns = columns;
     }
 
     @Override
@@ -67,26 +69,34 @@ public class DeltaDynamicTableSource implements ScanTableSource {
     @Override
     public ScanRuntimeProvider getScanRuntimeProvider(ScanContext runtimeProviderContext) {
 
-        String mode = tableOptions.get(DeltaFlinkJobSpecificOptions.MODE);
+        TableMode mode = tableOptions.get(DeltaFlinkJobSpecificOptions.MODE);
         String tablePath = tableOptions.get(DeltaTableConnectorOptions.TABLE_PATH);
 
         DeltaSourceBuilderBase<RowData, ?> sourceBuilder;
 
-        if (DeltaFlinkJobSpecificOptions.MODE.defaultValue().equalsIgnoreCase(mode)) {
-            sourceBuilder = DeltaSource.forBoundedRowData(new Path(tablePath), hadoopConf);
-        } else {
-            sourceBuilder = DeltaSource.forContinuousRowData(new Path(tablePath), hadoopConf);
+        switch (mode) {
+            case BATCH:
+                sourceBuilder = DeltaSource.forBoundedRowData(new Path(tablePath), hadoopConf);
+                break;
+            case STREAMING:
+                sourceBuilder = DeltaSource.forContinuousRowData(new Path(tablePath), hadoopConf);
+                break;
+            default:
+                throw new RuntimeException(
+                    String.format(
+                        "Unrecognized table mode %s used for Delta table %s",
+                        mode, tablePath
+                    ));
         }
 
-        sourceBuilder
-            .columnNames(rowType.getFieldNames());
+        sourceBuilder.columnNames(columns);
 
         return SourceProvider.of(sourceBuilder.build());
     }
 
     @Override
     public DynamicTableSource copy() {
-        return new DeltaDynamicTableSource(this.hadoopConf, this.tableOptions, this.rowType);
+        return new DeltaDynamicTableSource(this.hadoopConf, this.tableOptions, this.columns);
     }
 
     @Override
@@ -94,8 +104,4 @@ public class DeltaDynamicTableSource implements ScanTableSource {
         return "DeltaSource";
     }
 
-    @VisibleForTesting
-    Configuration getHadoopConf() {
-        return new Configuration(this.hadoopConf);
-    }
 }

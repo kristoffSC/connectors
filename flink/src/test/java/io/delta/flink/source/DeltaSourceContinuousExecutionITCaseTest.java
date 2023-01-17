@@ -106,7 +106,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // Each row has a unique column across all Delta table data. We are converting List or
         // read rows to set of values for that unique column.
-        // If there were eny duplicates or missing values we will catch them here by comparing
+        // If there were any duplicates or missing values we will catch them here by comparing
         // size of that Set to expected number of rows.
         Set<String> uniqueValues =
             resultData.stream().flatMap(Collection::stream).map(row -> row.getString(1).toString())
@@ -139,7 +139,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // Each row has a unique column across all Delta table data. We are converting List or
         // read rows to set of values for that unique column.
-        // If there were eny duplicates or missing values we will catch them here by comparing
+        // If there were any duplicates or missing values we will catch them here by comparing
         // size of that Set to expected number of rows.
         Set<Long> uniqueValues =
             resultData.stream().flatMap(Collection::stream).map(row -> row.getLong(0))
@@ -559,7 +559,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // Each row has a unique column across all Delta table data. We are converting List or
         // read rows to set of values for that unique column.
-        // If there were eny duplicates or missing values we will catch them here by comparing
+        // If there were any duplicates or missing values we will catch them here by comparing
         // size of that Set to expected number of rows.
         Set<String> uniqueValues =
             resultData.stream().flatMap(Collection::stream)

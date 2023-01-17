@@ -18,17 +18,16 @@
 package io.delta.flink.internal.table;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.catalog.ResolvedSchema;
@@ -83,10 +82,12 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         // This must have been a Delta Table, so continue with this factory
         helper.validateExcept("table.");
 
+
         ReadableConfig tableOptions = helper.getOptions();
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
 
-        Configuration conf = resolveHadoopConf(tableOptions);
+        Configuration conf =
+            HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
 
         RowType rowType = (RowType) tableSchema.toSinkRowDataType().getLogicalType();
 
@@ -122,16 +123,14 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         helper.validateExcept("table.");
 
         ReadableConfig tableOptions = helper.getOptions();
-        ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
-
-        Configuration hadoopConf = resolveHadoopConf(tableOptions);
-
-        RowType rowType = (RowType) tableSchema.toSourceRowDataType().getLogicalType();
+        Configuration hadoopConf =
+            HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
+        List<String> columns = context.getCatalogTable().getResolvedSchema().getColumnNames();
 
         return new DeltaDynamicTableSource(
             hadoopConf,
             tableOptions,
-            rowType
+            columns
         );
     }
 
@@ -160,50 +159,6 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         //  The DDL validation will be done in Delta Catalog during "createTable" operation.
         options.add(DeltaFlinkJobSpecificOptions.MODE);
         return options;
-    }
-
-    /**
-     * Tries to resolve Hadoop conf from conf dir provided as table option or from environment
-     * variable HADOOP_HOME and HADOOP_CONF_DIR.
-     * <p>
-     * The configuration will be resolved in below order, where every next element will override
-     * configuration loaded from previous one.
-     * <ul>
-     *     <li>HADOOP_HOME environment variable</li>
-     *     <li>HADOOP_CONF_DIR environment variable</li>
-     *     <li>"hadoop-conf-dir" table property</li>
-     * </ul>
-     *
-     * @param tableOptions Flink Table's options resolved for given table
-     * @return {@link Configuration} object
-     */
-    private Configuration resolveHadoopConf(ReadableConfig tableOptions) {
-
-        Configuration userHadoopConf = null;
-        Optional<String> hadoopConfDirOptional =
-            tableOptions.getOptional(DeltaTableConnectorOptions.HADOOP_CONF_DIR);
-
-        if (hadoopConfDirOptional.isPresent()) {
-            userHadoopConf = loadHadoopConfFromFolder(hadoopConfDirOptional.get());
-            if (userHadoopConf == null) {
-                throw new RuntimeException(
-                    "Failed to resolve Hadoop userHadoopConf file from given path",
-                    new FileNotFoundException(
-                        "Couldn't resolve Hadoop userHadoopConf at given path: " +
-                            hadoopConfDirOptional.get()));
-            }
-        }
-
-        // We are using helper method HadoopUtils.getHadoopConfiguration to resolve
-        // cluster's Hadoop configuration. This method looks for Hadoop config in env variables and
-        // Flink cluster configuration. For this moment DynamicTableSinkFactory does not have
-        // access to Flink's configuration that is why we are passing "dummy" config as an argument.
-        Configuration hadoopConfiguration = HadoopUtils.getHadoopConfiguration(emptyClusterConfig);
-        if (userHadoopConf != null) {
-            hadoopConfiguration.addResource(userHadoopConf);
-        }
-
-        return hadoopConfiguration;
     }
 
     /**

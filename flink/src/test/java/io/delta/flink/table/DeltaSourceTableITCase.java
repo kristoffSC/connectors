@@ -79,6 +79,10 @@ public class DeltaSourceTableITCase {
      */
     private String nonPartitionedTablePath;
 
+    // TODO would have been nice to make a TableInfo class that contained the path (maybe a
+    //  generator so it is always random), column names, column types, so all this information
+    //  was coupled together. This class could be used for all IT tests where we use predefined
+    //  Tables.
     /**
      * Schema for this table has only
      * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
@@ -127,7 +131,7 @@ public class DeltaSourceTableITCase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "batch"})
+    @ValueSource(strings = {"", "batch", "BATCH", "baTCH"})
     public void testBatchTableJob(String jobMode) throws Exception {
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
@@ -136,14 +140,17 @@ public class DeltaSourceTableITCase {
 
         setupDeltaCatalog(tableEnv);
 
-        tableEnv.executeSql(buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA,false));
+        // CREATE Source TABLE
+        tableEnv.executeSql(
+            buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA, false)
+        ); // includeHadoopConfDir = false
 
         String connectorModeHint = StringUtils.isNullOrWhitespaceOnly(jobMode) ?
             "" : String.format("/*+ OPTIONS('mode' = '%s') */", jobMode);
 
-        String insertSql = String.format("SELECT * FROM sourceTable %s", connectorModeHint);
+        String selectSql = String.format("SELECT * FROM sourceTable %s", connectorModeHint);
 
-        Table resultTable = tableEnv.sqlQuery(insertSql);
+        Table resultTable = tableEnv.sqlQuery(selectSql);
 
         DataStream<Row> rowDataStream = tableEnv.toDataStream(resultTable);
 
@@ -182,8 +189,9 @@ public class DeltaSourceTableITCase {
         assertNoMoreColumns(resultData, 3);
     }
 
-    @Test
-    public void testStreamingTableJob() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"streaming", "STREAMING", "streamING"})
+    public void testStreamingTableJob(String jobMode) throws Exception {
 
         int numberOfTableUpdateBulks = 5;
         int rowsPerTableUpdate = 5;
@@ -200,12 +208,16 @@ public class DeltaSourceTableITCase {
             getTestStreamEnv(true) // streamingMode = true
         );
 
-        setupDeltaCatalog(tableEnv);
+        // CREATE Source TABLE
+        tableEnv.executeSql(
+            buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA, false)
+        ); // includeHadoopConfDir = false
 
-        tableEnv.executeSql(buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA,false));
+        String connectorModeHint = StringUtils.isNullOrWhitespaceOnly(jobMode) ?
+            "" : String.format("/*+ OPTIONS('mode' = '%s') */", jobMode);
 
-        String selectSql =
-            "SELECT * FROM sourceTable /*+ OPTIONS('mode' = 'streaming') */";
+        String selectSql = String.format("SELECT * FROM sourceTable %s", connectorModeHint);
+
         Table resultTable = tableEnv.sqlQuery(selectSql);
 
         DataStream<Row> rowDataStream = tableEnv.toDataStream(resultTable);
@@ -222,7 +234,7 @@ public class DeltaSourceTableITCase {
 
         // Each row has a unique column across all Delta table data. We are converting List or
         // read rows to set of values for that unique column.
-        // If there were eny duplicates or missing values we will catch them here by comparing
+        // If there were any duplicates or missing values we will catch them here by comparing
         // size of that Set to expected number of rows.
         Set<String> uniqueValues =
             resultData.stream().flatMap(Collection::stream)
@@ -251,14 +263,15 @@ public class DeltaSourceTableITCase {
 
         setupDeltaCatalog(tableEnv);
 
+        // CREATE Source TABLE
         tableEnv.executeSql(
             buildSourceTableSql(nonPartitionedLargeTablePath, LARGE_TABLE_SCHEMA, false)
-        );
+        ); // includeHadoopConfDir = false
 
         // WHEN
-        String insertSql = "SELECT * FROM sourceTable WHERE col1 > 500";
+        String selectSql = "SELECT * FROM sourceTable WHERE col1 > 500";
 
-        Table resultTable = tableEnv.sqlQuery(insertSql);
+        Table resultTable = tableEnv.sqlQuery(selectSql);
 
         DataStream<Row> rowDataStream = tableEnv.toDataStream(resultTable);
 

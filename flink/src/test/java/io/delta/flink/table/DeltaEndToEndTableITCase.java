@@ -61,6 +61,8 @@ public class DeltaEndToEndTableITCase {
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
+
+        assertThat(sinkTablePath, not(equalTo(nonPartitionedLargeTablePath)));
     }
 
     @AfterEach
@@ -107,8 +109,6 @@ public class DeltaEndToEndTableITCase {
         tableEnv.executeSql(sinkTable);
 
         tableEnv.executeSql(selectToInsertSql).await(10, TimeUnit.SECONDS);
-
-        assertThat(sinkTablePath, not(equalTo(nonPartitionedLargeTablePath)));
 
         RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
         verifyDeltaTable(sinkTablePath, rowType, 1100);
