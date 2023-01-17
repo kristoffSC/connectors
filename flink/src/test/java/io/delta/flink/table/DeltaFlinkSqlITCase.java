@@ -44,8 +44,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -56,8 +54,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class DeltaFlinkSqlITCase {
 
     private static final int PARALLELISM = 2;
-
-    private static final Logger LOG = LoggerFactory.getLogger(DeltaFlinkSqlITCase.class);
 
     private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
 
