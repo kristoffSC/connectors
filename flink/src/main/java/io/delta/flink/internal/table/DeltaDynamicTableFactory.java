@@ -85,6 +85,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
 
 
 
+
         ReadableConfig tableOptions = helper.getOptions();
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
 

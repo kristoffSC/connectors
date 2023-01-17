@@ -18,7 +18,6 @@
 
 package io.delta.flink.table;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -142,8 +141,8 @@ public class DeltaSourceTableITCase {
 
         // CREATE Source TABLE
         tableEnv.executeSql(
-            buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA, false)
-        ); // includeHadoopConfDir = false
+            buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA)
+        );
 
         String connectorModeHint = StringUtils.isNullOrWhitespaceOnly(jobMode) ?
             "" : String.format("/*+ OPTIONS('mode' = '%s') */", jobMode);
@@ -212,8 +211,8 @@ public class DeltaSourceTableITCase {
 
         // CREATE Source TABLE
         tableEnv.executeSql(
-            buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA, false)
-        ); // includeHadoopConfDir = false
+            buildSourceTableSql(nonPartitionedTablePath, SMALL_TABLE_SCHEMA)
+        );
 
         String connectorModeHint = StringUtils.isNullOrWhitespaceOnly(jobMode) ?
             "" : String.format("/*+ OPTIONS('mode' = '%s') */", jobMode);
@@ -267,8 +266,8 @@ public class DeltaSourceTableITCase {
 
         // CREATE Source TABLE
         tableEnv.executeSql(
-            buildSourceTableSql(nonPartitionedLargeTablePath, LARGE_TABLE_SCHEMA, false)
-        ); // includeHadoopConfDir = false
+            buildSourceTableSql(nonPartitionedLargeTablePath, LARGE_TABLE_SCHEMA)
+        );
 
         // WHEN
         String selectSql = "SELECT * FROM sourceTable WHERE col1 > 500";
@@ -307,18 +306,7 @@ public class DeltaSourceTableITCase {
         assertNoMoreColumns(resultData, 3);
     }
 
-    private String buildSourceTableSql(
-            String tablePath,
-            String schemaString,
-            boolean includeHadoopConfDir) {
-
-        String resourcesDirectory = new File("src/test/resources/hadoop-conf").getAbsolutePath();
-        String hadoopConfDirPath = (includeHadoopConfDir ?
-            String.format(
-                " 'hadoop-conf-dir' = '%s',",
-                resourcesDirectory)
-            : ""
-        );
+    private String buildSourceTableSql(String tablePath, String schemaString) {
 
         return String.format(
             "CREATE TABLE %s ("
@@ -326,7 +314,6 @@ public class DeltaSourceTableITCase {
                 + ") "
                 + "WITH ("
                 + " 'connector' = 'delta',"
-                + hadoopConfDirPath
                 + " 'table-path' = '%s'"
                 + ")",
             DeltaSourceTableITCase.TEST_SOURCE_TABLE_NAME,
