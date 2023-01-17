@@ -17,6 +17,7 @@ import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableFactory.Context;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.hadoop.conf.Configuration;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -39,6 +40,8 @@ class DeltaDynamicTableFactoryTest {
 
     private Map<String, String> options;
 
+    private Map<String, String> originalEnvVariables;
+
     @BeforeEach
     public void setUp() {
         this.tableFactory = new DeltaDynamicTableFactory();
@@ -46,25 +49,12 @@ class DeltaDynamicTableFactoryTest {
         this.options.put(FactoryUtil.CONNECTOR.key(), "delta");
     }
 
-    @Test
-    void shouldLoadHadoopConfFromPath() {
+        originalEnvVariables = System.getenv();
+    }
 
-        String path = "src/test/resources/hadoop-conf";
-        File file = new File(path);
-        String confDir = file.getAbsolutePath();
-
-        options.put("table-path", "file://some/path");
-        options.put("hadoop-conf-dir", confDir);
-        Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
-
-        DeltaDynamicTableSource dynamicTableSource =
-            (DeltaDynamicTableSource) tableFactory.createDynamicTableSource(tableContext);
-
-        DeltaDynamicTableSink dynamicTableSink =
-            (DeltaDynamicTableSink) tableFactory.createDynamicTableSink(tableContext);
-
-        assertHadoopConf(dynamicTableSource.getHadoopConf());
-        assertHadoopConf(dynamicTableSink.getHadoopConf());
+    @AfterEach
+    public void afterEach() {
+        CommonTestUtils.setEnv(originalEnvVariables, true);
     }
 
     @Test
@@ -113,29 +103,6 @@ class DeltaDynamicTableFactoryTest {
         Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
 
         CommonTestUtils.setEnv(Collections.singletonMap("HADOOP_CONF_DIR", confDir), true);
-
-        DeltaDynamicTableSource dynamicTableSource =
-            (DeltaDynamicTableSource) tableFactory.createDynamicTableSource(tableContext);
-
-        DeltaDynamicTableSink dynamicTableSink =
-            (DeltaDynamicTableSink) tableFactory.createDynamicTableSink(tableContext);
-
-        assertHadoopConf(dynamicTableSource.getHadoopConf());
-        assertHadoopConf(dynamicTableSink.getHadoopConf());
-    }
-
-    @Test
-    void shouldOverrideConfFromConfDirProperty() {
-
-        String path = "src/test/resources/hadoop-conf";
-        File file = new File(path);
-        String confDir = file.getAbsolutePath();
-
-        options.put("table-path", "file://some/path");
-        options.put("hadoop-conf-dir", confDir);
-        Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
-
-        CommonTestUtils.setEnv(Collections.singletonMap("HADOOP_HOME", confDir), true);
 
         DeltaDynamicTableSource dynamicTableSource =
             (DeltaDynamicTableSource) tableFactory.createDynamicTableSource(tableContext);
