@@ -59,8 +59,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.rules.TemporaryFolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -76,8 +74,6 @@ import io.delta.standalone.data.RowRecord;
 public class DeltaSinkTableITCase {
 
     private static final int PARALLELISM = 2;
-
-    private static final Logger LOG = LoggerFactory.getLogger(DeltaSinkTableITCase.class);
 
     private static final String TEST_SOURCE_TABLE_NAME = "test_source_table";
 
