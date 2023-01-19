@@ -7,6 +7,7 @@ public class DeltaCatalogFactory implements CatalogFactory {
 
     @Override
     public Catalog createCatalog(Context context) {
+        // TODO DC - get properties, look for defaultDatabase name etc.
         return new DeltaCatalog(context.getName(), "default");
     }
 

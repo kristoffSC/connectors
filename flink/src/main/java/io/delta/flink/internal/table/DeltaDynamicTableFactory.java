@@ -189,6 +189,6 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     private RuntimeException throwIfNotFromCatalog() {
         return new RuntimeException("Delta Table SQL/Table API was used without Delta Catalog. "
             + "It is required to use Delta Catalog with all Flink SQL operations that involve "
-            + "Delta table. Please see documentation for details -> ");
+            + "Delta table. Please see documentation for details -> TODO DC add link to docs");
     }
 }

@@ -738,10 +738,10 @@ lazy val flink = (project in file("flink"))
       "org.apache.flink" % "flink-clients" % flinkVersion % "test",
       "org.apache.flink" % "flink-test-utils" % flinkVersion % "test",
       "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "test" classifier "tests",
-      "org.mockito" % "mockito-inline" % "3.8.0" % "test",
+      "org.mockito" % "mockito-inline" % "4.11.0" % "test",
       "net.aichler" % "jupiter-interface" % JupiterKeys.jupiterVersion.value % Test,
       "org.junit.vintage" % "junit-vintage-engine" % "5.8.2" % "test",
-      "org.mockito" % "mockito-junit-jupiter" % "4.5.0" % "test",
+      "org.mockito" % "mockito-junit-jupiter" % "4.11.0" % "test",
       "org.junit.jupiter" % "junit-jupiter-params" % "5.8.2" % "test",
       "io.github.artsok" % "rerunner-jupiter" % "2.1.6" % "test",
 
@@ -754,7 +754,7 @@ lazy val flink = (project in file("flink"))
     Compile / sourceGenerators += Def.task {
       val file = (Compile / sourceManaged).value / "meta" / "Meta.java"
       IO.write(file,
-        s"""package io.delta.flink.sink.internal.committer;
+        s"""package io.delta.flink.internal;
            |
            |final class Meta {
            |  public static final String FLINK_VERSION = "${flinkVersion}";

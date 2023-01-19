@@ -129,7 +129,7 @@ public class DeltaSourceTableITCase {
         miniClusterResource.after();
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"", "batch", "BATCH", "baTCH"})
     public void testBatchTableJob(String jobMode) throws Exception {
 
@@ -188,7 +188,7 @@ public class DeltaSourceTableITCase {
         assertNoMoreColumns(resultData, 3);
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"streaming", "STREAMING", "streamING"})
     public void testStreamingTableJob(String jobMode) throws Exception {
 

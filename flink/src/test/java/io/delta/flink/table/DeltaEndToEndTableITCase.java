@@ -7,14 +7,14 @@ import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.ExecutionITCaseTestConstants;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.types.logical.RowType;
-import org.apache.flink.test.util.MiniClusterWithClientResource;
+import org.apache.flink.test.junit5.MiniClusterExtension;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.rules.TemporaryFolder;
-import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
+import static io.delta.flink.utils.DeltaTestUtils.buildClusterResourceConfig;
 import static io.delta.flink.utils.DeltaTestUtils.getTestStreamEnv;
 import static io.delta.flink.utils.DeltaTestUtils.verifyDeltaTable;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
@@ -29,7 +29,10 @@ public class DeltaEndToEndTableITCase {
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
-    private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
+    @RegisterExtension
+    private static final MiniClusterExtension miniClusterResource =  new MiniClusterExtension(
+        buildClusterResourceConfig(PARALLELISM)
+    );
 
     /**
      * Schema for this table has only
@@ -54,7 +57,6 @@ public class DeltaEndToEndTableITCase {
     @BeforeEach
     public void setUp() {
         try {
-            miniClusterResource.before();
             nonPartitionedLargeTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             sinkTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             DeltaTestUtils.initTestForNonPartitionedLargeTable(nonPartitionedLargeTablePath);
@@ -63,11 +65,6 @@ public class DeltaEndToEndTableITCase {
         }
 
         assertThat(sinkTablePath, not(equalTo(nonPartitionedLargeTablePath)));
-    }
-
-    @AfterEach
-    public void afterEach() {
-        miniClusterResource.after();
     }
 
     @Test
@@ -85,6 +82,7 @@ public class DeltaEndToEndTableITCase {
                     + "col2 BIGINT,"
                     + "col3 VARCHAR"
                     + ") "
+                    + "PARTITIONED BY (col1)"
                     + "WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s'"

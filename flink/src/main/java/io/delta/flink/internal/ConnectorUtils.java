@@ -5,6 +5,10 @@ import org.apache.hadoop.fs.Path;
 
 public class ConnectorUtils {
 
+    public static final String ENGINE_INFO =
+        "flink-engine/" + io.delta.flink.internal.Meta.FLINK_VERSION +
+            " flink-delta-connector/" + io.delta.flink.internal.Meta.CONNECTOR_VERSION;
+
     /**
      * Given a path `child`: 1. Returns `child` if the path is already relative 2. Tries
      * relativizing `child` with respect to `basePath` a) If the `child` doesn't live within the

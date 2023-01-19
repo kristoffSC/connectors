@@ -227,19 +227,26 @@ public class DeltaTestUtils {
     }
 
     public static MiniClusterWithClientResource buildCluster(int parallelismLevel) {
+
+        return new MiniClusterWithClientResource(
+            buildClusterResourceConfig(parallelismLevel));
+    }
+
+    public static MiniClusterResourceConfiguration buildClusterResourceConfig(
+            int parallelismLevel) {
+
         Configuration configuration = new Configuration();
 
         // By default, let's check for leaked classes in tests.
         configuration.set(CoreOptions.CHECK_LEAKED_CLASSLOADER, true);
 
-        return new MiniClusterWithClientResource(
-            new MiniClusterResourceConfiguration.Builder()
-                .setNumberTaskManagers(1)
-                .setNumberSlotsPerTaskManager(parallelismLevel)
-                .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
-                .withHaLeadershipControl()
-                .setConfiguration(configuration)
-                .build());
+        return new MiniClusterResourceConfiguration.Builder()
+            .setNumberTaskManagers(1)
+            .setNumberSlotsPerTaskManager(parallelismLevel)
+            .setRpcServiceSharing(RpcServiceSharing.DEDICATED)
+            .withHaLeadershipControl()
+            .setConfiguration(configuration)
+            .build();
     }
 
     public static <T> List<T> testBoundedStream(
