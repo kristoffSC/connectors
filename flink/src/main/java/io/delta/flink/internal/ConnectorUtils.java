@@ -1,5 +1,8 @@
 package io.delta.flink.internal;
 
+import java.util.HashSet;
+import java.util.List;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -32,6 +35,10 @@ public class ConnectorUtils {
             }
         }
         return child.toString();
+    }
+
+    public static <T> boolean listEqualsIgnoreOrder(List<T> list1, List<T> list2) {
+        return new HashSet<>(list1).equals(new HashSet<>(list2));
     }
 
 }

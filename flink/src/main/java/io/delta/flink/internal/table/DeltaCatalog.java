@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import io.delta.flink.internal.ConnectorUtils;
 import org.apache.flink.table.catalog.CatalogBaseTable;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogPartitionSpec;
@@ -123,17 +124,21 @@ public class DeltaCatalog extends DeltaCatalogBase {
             }
 
             // Table was not present in metastore however it is present on Filesystem, we have to
-            // verify if schema and properties stored in _delta_log match with DDL.
+            // verify if schema, partition spec and properties stored in _delta_log match with DDL.
             // TODO DC - handle case when deltaSchema is null.
             Metadata deltaMetadata = deltaLog.update().getMetadata();
             StructType deltaSchema = deltaMetadata.getSchema();
 
-            if (!ddlDeltaSchema.equals(deltaSchema)) {
+            if (!(ddlDeltaSchema.equals(deltaSchema)
+                || ConnectorUtils.listEqualsIgnoreOrder(
+                    ddlPartitionColumns,
+                    deltaMetadata.getPartitionColumns()))) {
                 throw CatalogExceptionHelper.deltaLogAndDdlSchemaMismatchException(
                     catalogTablePath,
                     deltaTablePath,
+                    deltaMetadata,
                     ddlDeltaSchema,
-                    deltaSchema
+                    ddlPartitionColumns
                 );
             }
 
@@ -196,6 +201,32 @@ public class DeltaCatalog extends DeltaCatalogBase {
     }
 
     @Override
+    public CatalogTableStatistics getTableStatistics(ObjectPath tablePath)
+        throws TableNotExistException, CatalogException {
+        return this.decoratedCatalog.getTableStatistics(tablePath);
+    }
+
+    @Override
+    public CatalogColumnStatistics getTableColumnStatistics(ObjectPath tablePath)
+        throws TableNotExistException, CatalogException {
+        return this.decoratedCatalog.getTableColumnStatistics(tablePath);
+    }
+
+    @Override
+    public void alterTableStatistics(ObjectPath tablePath, CatalogTableStatistics tableStatistics,
+        boolean ignoreIfNotExists) throws TableNotExistException, CatalogException {
+        this.decoratedCatalog.alterTableStatistics(tablePath, tableStatistics, ignoreIfNotExists);
+    }
+
+    @Override
+    public void alterTableColumnStatistics(ObjectPath tablePath,
+        CatalogColumnStatistics columnStatistics, boolean ignoreIfNotExists)
+        throws TableNotExistException, CatalogException, TablePartitionedException {
+        this.decoratedCatalog.alterTableColumnStatistics(tablePath, columnStatistics,
+            ignoreIfNotExists);
+    }
+
+    @Override
     public List<CatalogPartitionSpec> listPartitions(ObjectPath tablePath)
         throws TableNotExistException, TableNotPartitionedException, CatalogException {
         return this.decoratedCatalog.listPartitions(tablePath);
@@ -251,18 +282,6 @@ public class DeltaCatalog extends DeltaCatalogBase {
     }
 
     @Override
-    public CatalogTableStatistics getTableStatistics(ObjectPath tablePath)
-        throws TableNotExistException, CatalogException {
-        return this.decoratedCatalog.getTableStatistics(tablePath);
-    }
-
-    @Override
-    public CatalogColumnStatistics getTableColumnStatistics(ObjectPath tablePath)
-        throws TableNotExistException, CatalogException {
-        return this.decoratedCatalog.getTableColumnStatistics(tablePath);
-    }
-
-    @Override
     public CatalogTableStatistics getPartitionStatistics(ObjectPath tablePath,
         CatalogPartitionSpec partitionSpec) throws PartitionNotExistException, CatalogException {
         return this.decoratedCatalog.getPartitionStatistics(tablePath, partitionSpec);
@@ -272,20 +291,6 @@ public class DeltaCatalog extends DeltaCatalogBase {
     public CatalogColumnStatistics getPartitionColumnStatistics(ObjectPath tablePath,
         CatalogPartitionSpec partitionSpec) throws PartitionNotExistException, CatalogException {
         return this.decoratedCatalog.getPartitionColumnStatistics(tablePath, partitionSpec);
-    }
-
-    @Override
-    public void alterTableStatistics(ObjectPath tablePath, CatalogTableStatistics tableStatistics,
-        boolean ignoreIfNotExists) throws TableNotExistException, CatalogException {
-        this.decoratedCatalog.alterTableStatistics(tablePath, tableStatistics, ignoreIfNotExists);
-    }
-
-    @Override
-    public void alterTableColumnStatistics(ObjectPath tablePath,
-        CatalogColumnStatistics columnStatistics, boolean ignoreIfNotExists)
-        throws TableNotExistException, CatalogException, TablePartitionedException {
-        this.decoratedCatalog.alterTableColumnStatistics(tablePath, columnStatistics,
-            ignoreIfNotExists);
     }
 
     @Override

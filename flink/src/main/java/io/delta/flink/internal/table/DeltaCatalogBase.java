@@ -88,12 +88,6 @@ public abstract class DeltaCatalogBase extends AbstractCatalog {
     }
 
     @Override
-    public List<String> listViews(String databaseName)
-        throws DatabaseNotExistException, CatalogException {
-        return this.decoratedCatalog.listViews(databaseName);
-    }
-
-    @Override
     public void renameTable(ObjectPath tablePath, String newTableName, boolean ignoreIfNotExists)
         throws TableNotExistException, TableAlreadyExistException, CatalogException {
         this.decoratedCatalog.renameTable(tablePath, newTableName, ignoreIfNotExists);
@@ -104,6 +98,12 @@ public abstract class DeltaCatalogBase extends AbstractCatalog {
     public void dropTable(ObjectPath tablePath, boolean ignoreIfNotExists)
         throws TableNotExistException, CatalogException {
         this.decoratedCatalog.dropTable(tablePath, ignoreIfNotExists);
+    }
+
+    @Override
+    public List<String> listViews(String databaseName)
+        throws DatabaseNotExistException, CatalogException {
+        return this.decoratedCatalog.listViews(databaseName);
     }
 
     @Override

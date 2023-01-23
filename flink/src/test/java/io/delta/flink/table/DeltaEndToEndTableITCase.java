@@ -71,7 +71,7 @@ public class DeltaEndToEndTableITCase {
     public void testEndToEndTableJob() throws Exception {
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(false) // streamingMode = false
+            getTestStreamEnv(true) // streamingMode = false
         );
 
         setupDeltaCatalog(tableEnv);

@@ -1,10 +1,12 @@
 package io.delta.flink.internal.table;
 
+import java.util.List;
 import java.util.Map.Entry;
 
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 
+import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.StructType;
 
 public final class CatalogExceptionHelper {
@@ -14,19 +16,26 @@ public final class CatalogExceptionHelper {
     static CatalogException deltaLogAndDdlSchemaMismatchException(
             ObjectPath catalogTablePath,
             String deltaTablePath,
+            Metadata deltaMetadata,
             StructType ddlDeltaSchema,
-            StructType deltaSchema) {
+            List<String> ddlPartitions) {
+
+        String deltaSchemaString = (deltaMetadata.getSchema() == null)
+            ? "null"
+            : deltaMetadata.getSchema().getTreeString();
 
         return new CatalogException(
             String.format(
-                " Delta table [%s] from filesystem path [%s] has different schema "
-                    + "that was defined in CREATE TABLE DDL.\n"
-                    + "DDL schema [%s],\n"
-                    + "_delta_log schema [%s]",
+                " Delta table [%s] from filesystem path [%s] has different schema or partition "
+                    + "spec that one defined in CREATE TABLE DDL.\n"
+                    + "DDL schema [%s],\n_delta_log schema [%s]\n"
+                    + "DDL partition spec [%s],\n_delta_log partition spec [%s]\n",
                 catalogTablePath,
                 deltaTablePath,
                 ddlDeltaSchema.getTreeString(),
-                deltaSchema.getTreeString())
+                deltaSchemaString,
+                ddlPartitions,
+                deltaMetadata.getPartitionColumns())
         );
     }
 
