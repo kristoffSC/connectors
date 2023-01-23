@@ -34,6 +34,7 @@ public class DeltaTableConnectorOptions {
             .stringType()
             .noDefaultValue();
 
+    // TODO DC - mergeSchema will not be possible with SQL this should be removed
     /**
      * Indicator whether we should try to update table's schema with stream's schema in case
      * those will not match. The update is not guaranteed as there will be still some checks

@@ -91,7 +91,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
             FactoryUtil.TableFactoryHelper helper =
                 FactoryUtil.createTableFactoryHelper(this, context);
             String connectorType = helper.getOptions().get(FactoryUtil.CONNECTOR);
-            if (!"delta".equals(connectorType)) {
+            if (!IDENTIFIER.equals(connectorType)) {
 
                 // Look for Table factory proper fort this table type.
                 DynamicTableSinkFactory sinkFactory =
@@ -135,7 +135,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
             FactoryUtil.TableFactoryHelper helper =
                 FactoryUtil.createTableFactoryHelper(this, context);
             String connectorType = helper.getOptions().get(FactoryUtil.CONNECTOR);
-            if (!"delta".equals(connectorType)) {
+            if (!IDENTIFIER.equals(connectorType)) {
 
                 // Look for Table factory proper fort this table type.
                 DynamicTableSourceFactory sourceFactory =
