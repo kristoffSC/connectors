@@ -71,7 +71,7 @@ public class DeltaEndToEndTableITCase {
     public void testEndToEndTableJob() throws Exception {
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(true) // streamingMode = false
+            getTestStreamEnv(false) // streamingMode = false
         );
 
         setupDeltaCatalog(tableEnv);
@@ -82,7 +82,6 @@ public class DeltaEndToEndTableITCase {
                     + "col2 BIGINT,"
                     + "col3 VARCHAR"
                     + ") "
-                    + "PARTITIONED BY (col1)"
                     + "WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s'"

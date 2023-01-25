@@ -1,7 +1,9 @@
 package io.delta.flink.table;
 
 import java.io.IOException;
+import java.util.Collections;
 
+import io.delta.flink.internal.ConnectorUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -19,6 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.Operation;
+import io.delta.standalone.Operation.Name;
+import io.delta.standalone.OptimisticTransaction;
 import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.IntegerType;
 import io.delta.standalone.types.LongType;
@@ -156,6 +161,10 @@ public class DeltaCatalogITCase {
         assertThat(metadata.getPartitionColumns()).isEmpty();
     }
 
+    /**
+     * Verifies that CREATE TABLE will throw exception when _delta_log exists under table-path but
+     * has different schema that specified in DDL.
+     */
     @ParameterizedTest(name = "DDL schema = {0}")
     @ValueSource(strings = {
         "name VARCHAR, surname VARCHAR", // missing column
@@ -165,8 +174,7 @@ public class DeltaCatalogITCase {
         "name INT, surname VARCHAR, age INT", // different type for first column
         "name VARCHAR NOT NULL, surname VARCHAR, age INT" // all columns should be nullable
     })
-    public void shouldThrowOnCreateTableIfDeltaLogExistsAndSchemaDoNotMatch(String ddlSchema)
-        throws Exception {
+    public void shouldThrowIfSchemaDoesNotMatch(String ddlSchema) throws Exception {
 
         // GIVEN
         DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
@@ -195,10 +203,122 @@ public class DeltaCatalogITCase {
 
         // THEN
         assertThat(exception.getCause().getMessage()).contains(
-            "has different schema that was defined in CREATE TABLE DDL");
+            "has different schema or partition spec that one defined in CREATE TABLE DDL");
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
+        verifyThatDeltaLogWasNotChanged(metadata);
+        assertThat(metadata.getConfiguration()).isEmpty();
+    }
+
+    /**
+     * Verifies that CREATE TABLE will throw exception when _delta_log exists under table-path but
+     * has different partition spec that specified in DDL.
+     */
+    @Test
+    public void shouldThrowIfPartitionSpecDoesNotMatch() throws Exception {
+
+        // GIVEN
+        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage(
+                "There should be Delta table files in test folder before calling DeltaCatalog.")
+            .isTrue();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "name VARCHAR,"
+                    + "surname VARCHAR,"
+                    + "age INT"
+                    + ") "
+                    + "PARTITIONED BY (name)"
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
+
+        // THEN
+        assertThat(exception.getCause().getMessage()).contains(
+            "has different schema or partition spec that one defined in CREATE TABLE DDL");
+
+        // Check if there were no changes made to existing _delta_log
+        Metadata metadata = deltaLog.update().getMetadata();
+        verifyThatDeltaLogWasNotChanged(metadata);
+        assertThat(metadata.getConfiguration()).isEmpty();
+    }
+
+    /**
+     * Verifies that CREATE TABLE will throw exception when _delta_log exists under table-path but
+     * has different delta table properties that specified in DDL.
+     */
+    @Test
+    public void shouldThrowIfDeltaTablePropertiesNotMatch() throws Exception {
+
+        // GIVEN
+        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        // Set delta table property. DDL will try to override it with different value
+        OptimisticTransaction transaction = deltaLog.startTransaction();
+        Metadata updatedMetadata = transaction.metadata()
+            .copyBuilder()
+            .configuration(Collections.singletonMap("delta.appendOnly", "false"))
+            .build();
+
+        transaction.updateMetadata(updatedMetadata);
+        transaction.commit(
+            Collections.singletonList(updatedMetadata),
+            new Operation(Name.SET_TABLE_PROPERTIES),
+            ConnectorUtils.ENGINE_INFO
+        );
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage(
+                "There should be Delta table files in test folder before calling DeltaCatalog.")
+            .isTrue();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "name VARCHAR,"
+                    + "surname VARCHAR,"
+                    + "age INT"
+                    + ") "
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s',"
+                    + " 'delta.appendOnly' = 'true'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
+
+        // THEN
+        assertThat(exception.getCause().getMessage())
+            .contains(
+                "DDL option delta.appendOnly for table default.sourceTable has different value "
+                    + "than _delta_log table property");
+
+        // Check if there were no changes made to existing _delta_log
+        Metadata metadata = deltaLog.update().getMetadata();
+        verifyThatDeltaLogWasNotChanged(metadata);
+        assertThat(metadata.getConfiguration())
+            .containsExactlyEntriesOf(Collections.singletonMap("delta.appendOnly", "false"));
+    }
+
+    private void verifyThatDeltaLogWasNotChanged(Metadata metadata) {
         StructType schema = metadata.getSchema();
         assertThat(schema).isNotNull();
         assertThat(schema.getFields())
@@ -208,7 +328,6 @@ public class DeltaCatalogITCase {
                 new StructField("surname", new StringType()),
                 new StructField("age", new IntegerType())
             );
-
         assertThat(metadata.getPartitionColumns()).isEmpty();
     }
 
@@ -227,6 +346,4 @@ public class DeltaCatalogITCase {
         tableEnv.executeSql(catalogSQL);
         tableEnv.executeSql(useDeltaCatalog);
     }
-
-
 }

@@ -9,6 +9,8 @@ import org.apache.flink.table.catalog.exceptions.CatalogException;
 import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.StructType;
 
+// TODO DC - consider extending CatalogException for more concrete types like
+//  "DeltaSchemaMismatchException" etc.
 public final class CatalogExceptionHelper {
 
     private CatalogExceptionHelper() {}
@@ -28,8 +30,8 @@ public final class CatalogExceptionHelper {
             String.format(
                 " Delta table [%s] from filesystem path [%s] has different schema or partition "
                     + "spec that one defined in CREATE TABLE DDL.\n"
-                    + "DDL schema [%s],\n_delta_log schema [%s]\n"
-                    + "DDL partition spec [%s],\n_delta_log partition spec [%s]\n",
+                    + "DDL schema:\n[%s],\n_delta_log schema:\n[%s]\n"
+                    + "DDL partition spec:\n[%s],\n_delta_log partition spec\n[%s]\n",
                 catalogTablePath,
                 deltaTablePath,
                 ddlDeltaSchema.getTreeString(),

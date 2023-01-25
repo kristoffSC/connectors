@@ -90,6 +90,7 @@ public class DeltaCatalog extends DeltaCatalogBase {
                 throw CatalogExceptionHelper.jobSpecificOptionInDdlException(ddlOption);
             }
 
+            // TODO DC - Add tests for this
             // validate for Delta log Store config and parquet config.
             if (ddlOption.startsWith("spark.") ||
                 ddlOption.startsWith("delta.logStore") ||
@@ -129,8 +130,9 @@ public class DeltaCatalog extends DeltaCatalogBase {
             Metadata deltaMetadata = deltaLog.update().getMetadata();
             StructType deltaSchema = deltaMetadata.getSchema();
 
+            // Validate ddl schema and partition spec matches _delta_log's.
             if (!(ddlDeltaSchema.equals(deltaSchema)
-                || ConnectorUtils.listEqualsIgnoreOrder(
+                && ConnectorUtils.listEqualsIgnoreOrder(
                     ddlPartitionColumns,
                     deltaMetadata.getPartitionColumns()))) {
                 throw CatalogExceptionHelper.deltaLogAndDdlSchemaMismatchException(
