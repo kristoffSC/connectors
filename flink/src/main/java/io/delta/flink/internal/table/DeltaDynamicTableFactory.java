@@ -70,7 +70,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         Configuration conf =
             HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
 
-        RowType rowType = (RowType) tableSchema.toSinkRowDataType().getLogicalType();
+        RowType rowType = (RowType) tableSchema.toPhysicalRowDataType().getLogicalType();
 
         Boolean shouldTryUpdateSchema = tableOptions
             .getOptional(DeltaTableConnectorOptions.MERGE_SCHEMA)
@@ -94,7 +94,13 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         ReadableConfig tableOptions = helper.getOptions();
         Configuration hadoopConf =
             HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
-        List<String> columns = context.getCatalogTable().getResolvedSchema().getColumnNames();
+
+        List<String> columns = ((RowType) context
+            .getCatalogTable()
+            .getResolvedSchema()
+            .toPhysicalRowDataType()
+            .getLogicalType()
+        ).getFieldNames();
 
         return new DeltaDynamicTableSource(
             hadoopConf,

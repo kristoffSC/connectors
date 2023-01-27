@@ -19,9 +19,11 @@
 package io.delta.flink.table;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import io.delta.flink.utils.DeltaTestUtils;
@@ -32,10 +34,12 @@ import io.delta.flink.utils.TableUpdateDescriptor;
 import io.delta.flink.utils.TestDescriptor;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.apache.flink.types.Row;
+import org.apache.flink.util.CloseableIterator;
 import org.apache.flink.util.StringUtils;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterAll;
@@ -298,6 +302,45 @@ public class DeltaSourceTableITCase {
 
         // Checking that we don't have more columns.
         assertNoMoreColumns(resultData, 3);
+    }
+
+    @Test
+    public void testSelectComputedColumns() throws Exception {
+
+        // GIVEN
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
+            getTestStreamEnv(false) // streamingMode = false
+        );
+
+        String computedColumnsSchema = ""
+            + "col1 BIGINT,"
+            + "col2 BIGINT,"
+            + "col3 VARCHAR,"
+            + "col4 AS col1 * col2";
+
+        // CREATE Source TABLE
+        tableEnv.executeSql(
+            buildSourceTableSql(nonPartitionedLargeTablePath, computedColumnsSchema)
+        );
+
+        // WHEN
+        String selectSql = "SELECT col1, col2, col4 FROM sourceTable";
+
+        TableResult tableResult = tableEnv.executeSql(selectSql);
+
+        List<Row> results = new ArrayList<>();
+        tableResult.await(10, TimeUnit.SECONDS);
+        try (CloseableIterator<Row> collect = tableResult.collect()) {
+            while (collect.hasNext()) {
+                results.add(collect.next());
+            }
+        }
+
+        assertThat(results.isEmpty(), equalTo(false));
+        for (Row row : results) {
+            assertThat(row.getField("col4"),
+                equalTo((long) row.getField("col1") * (long) row.getField("col2")));
+        }
     }
 
     private String buildSourceTableSql(String tablePath, String schemaString) {
