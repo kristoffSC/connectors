@@ -3,12 +3,10 @@ package io.delta.flink.internal.table;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.table.catalog.AbstractCatalog;
 import org.apache.flink.table.catalog.Catalog;
 import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogFunction;
-import org.apache.flink.table.catalog.GenericInMemoryCatalog;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 import org.apache.flink.table.catalog.exceptions.DatabaseAlreadyExistException;
@@ -27,13 +25,15 @@ public abstract class DeltaCatalogBase extends AbstractCatalog {
 
     protected final Configuration hadoopConfiguration;
 
-    public DeltaCatalogBase(String name, String defaultDatabase) {
+    public DeltaCatalogBase(
+            String name,
+            String defaultDatabase,
+            Catalog decoratedCatalog,
+            Configuration hadoopConfiguration) {
         super(name, defaultDatabase);
 
-        // TODO DC - the concrete decorated catalog should be abstracted and injected.
-        this.decoratedCatalog = new GenericInMemoryCatalog(name, defaultDatabase);
-        this.hadoopConfiguration =
-            HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
+        this.decoratedCatalog = decoratedCatalog;
+        this.hadoopConfiguration = hadoopConfiguration;
     }
 
     @Override

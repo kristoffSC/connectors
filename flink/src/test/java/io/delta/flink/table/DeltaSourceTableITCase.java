@@ -182,14 +182,15 @@ public class DeltaSourceTableITCase {
         String selectSql = "SELECT * FROM sourceTable";
 
         // WHEN
-        TableResult resultTable = tableEnv.executeSql(selectSql);
+        TableResult tableResult = tableEnv.executeSql(selectSql);
 
         // THEN
-        resultTable.await(10, TimeUnit.SECONDS);
-        CloseableIterator<Row> collect = resultTable.collect();
         List<Row> results = new ArrayList<>();
-        while (collect.hasNext()) {
-            results.add(collect.next());
+        tableResult.await(10, TimeUnit.SECONDS);
+        try (CloseableIterator<Row> collect = tableResult.collect()) {
+            while (collect.hasNext()) {
+                results.add(collect.next());
+            }
         }
 
         // A rough assertion on an actual data. Full assertions are done in other tests.
@@ -370,6 +371,47 @@ public class DeltaSourceTableITCase {
 
         // Checking that we don't have more columns.
         assertNoMoreColumns(resultData, 3);
+    }
+
+    @Test
+    public void testSelectComputedColumns() throws Exception {
+
+        // GIVEN
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
+            getTestStreamEnv(false) // streamingMode = false
+        );
+
+        setupDeltaCatalog(tableEnv);
+
+        String computedColumnsSchema = ""
+            + "col1 BIGINT,"
+            + "col2 BIGINT,"
+            + "col3 VARCHAR,"
+            + "col4 AS col1 * col2";
+
+        // CREATE Source TABLE
+        tableEnv.executeSql(
+            buildSourceTableSql(nonPartitionedLargeTablePath, computedColumnsSchema)
+        );
+
+        // WHEN
+        String selectSql = "SELECT col1, col2, col4 FROM sourceTable";
+
+        TableResult tableResult = tableEnv.executeSql(selectSql);
+
+        List<Row> results = new ArrayList<>();
+        tableResult.await(10, TimeUnit.SECONDS);
+        try (CloseableIterator<Row> collect = tableResult.collect()) {
+            while (collect.hasNext()) {
+                results.add(collect.next());
+            }
+        }
+
+        assertThat(results).isNotEmpty();
+        for (Row row : results) {
+            assertThat(row.getField("col4"))
+                .isEqualTo((long) row.getField("col1") * (long) row.getField("col2"));
+        }
     }
 
     private String buildSourceTableSql(String tablePath, String schemaString) {

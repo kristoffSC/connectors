@@ -149,7 +149,13 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
             ReadableConfig tableOptions = helper.getOptions();
             Configuration hadoopConf =
                 HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
-            List<String> columns = context.getCatalogTable().getResolvedSchema().getColumnNames();
+
+            List<String> columns = ((RowType) context
+                .getCatalogTable()
+                .getResolvedSchema()
+                .toPhysicalRowDataType()
+                .getLogicalType()
+            ).getFieldNames();
 
             return new DeltaDynamicTableSource(
                 hadoopConf,

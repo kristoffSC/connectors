@@ -83,7 +83,7 @@ public class DeltaCatalogITCase {
                     + "col1 BIGINT,"
                     + "col2 BIGINT,"
                     + "col3 VARCHAR,"
-                    + "col4 AS col1 * col2," // computed column
+                    + "col4 AS col1 * col2," // computed column, should not be added to _delta_log
                     + "col5 AS CONCAT(col3, '_hello')," // computed column
                     + "col6 AS CAST(col1 AS VARCHAR)" // computed column
                     + ") "
@@ -107,10 +107,7 @@ public class DeltaCatalogITCase {
             .containsExactly(
                 new StructField("col1", new LongType()),
                 new StructField("col2", new LongType()),
-                new StructField("col3", new StringType()),
-                new StructField("col4", new LongType()),
-                new StructField("col5", new StringType()),
-                new StructField("col6", new StringType())
+                new StructField("col3", new StringType())
             );
 
         assertThat(metadata.getPartitionColumns()).containsExactly("col1");

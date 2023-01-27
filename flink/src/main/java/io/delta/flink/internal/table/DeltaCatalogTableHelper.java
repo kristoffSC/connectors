@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
 import io.delta.flink.sink.internal.SchemaConverter;
 import org.apache.flink.table.catalog.Column;
-import org.apache.flink.table.catalog.Column.ComputedColumn;
 import org.apache.flink.table.catalog.Column.PhysicalColumn;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
@@ -40,7 +39,10 @@ public final class DeltaCatalogTableHelper {
         List<LogicalType> types = new LinkedList<>();
 
         for (Column column : columns) {
-            if (column instanceof PhysicalColumn || column instanceof ComputedColumn) {
+            // We care only about physical columns. As stated in Flink doc - metadata columns and
+            // computed columns are excluded from persisting. Therefore, a computed column cannot
+            // be the target of an INSERT INTO statement.
+            if (column instanceof PhysicalColumn) {
                 names.add(column.getName());
                 types.add(column.getDataType().getLogicalType());
             }
