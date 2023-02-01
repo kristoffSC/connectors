@@ -19,7 +19,6 @@ import org.apache.flink.table.catalog.exceptions.TablePartitionedException;
 import org.apache.flink.table.catalog.stats.CatalogColumnStatistics;
 import org.apache.flink.table.catalog.stats.CatalogTableStatistics;
 import org.apache.flink.table.expressions.Expression;
-import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -40,34 +39,38 @@ public class CatalogProxy extends DeltaCatalogBase {
     }
 
     @Override
-    public CatalogBaseTable getTable(ObjectPath tablePath)
-        throws TableNotExistException, CatalogException {
+    public CatalogBaseTable getTable(ObjectPath tablePath) throws TableNotExistException {
 
-        CatalogBaseTable table = this.deltaCatalog.getTable(tablePath);
-        String connectorType = getConnectorType(table);
-
-        if (!DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
-            // it's not a Delta table, redirect to decorated catalog.
-            return this.deltaCatalog.getTable(tablePath);
+        DeltaCatalogBaseTable catalogTable = getCatalogTableUnchecked(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // it's a Delta table, redirect to delta catalog.
+            return this.deltaCatalog.getTable(catalogTable);
         }
 
-        return table;
+        return catalogTable.getMetastoreTable();
     }
 
     @Override
     public boolean tableExists(ObjectPath tablePath) throws CatalogException {
-        // TODO DC - should we check also if _delta_log exists?
-        return decoratedCatalog.tableExists(tablePath);
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // it's a Delta table, redirect to delta catalog.
+            return this.deltaCatalog.tableExists(catalogTable);
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            return this.decoratedCatalog.tableExists(tablePath);
+        }
     }
 
     @Override
     public void createTable(ObjectPath tablePath, CatalogBaseTable table, boolean ignoreIfExists)
         throws TableAlreadyExistException, DatabaseNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(table);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        DeltaCatalogBaseTable catalogTable = new DeltaCatalogBaseTable(tablePath, table);
+        if (catalogTable.isDeltaTable()) {
             // it's a Delta table, redirect to delta catalog.
-            this.deltaCatalog.createTable(tablePath, table, ignoreIfExists);
+            this.deltaCatalog.createTable(catalogTable, ignoreIfExists);
         } else {
             // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.createTable(tablePath, table, ignoreIfExists);
@@ -75,13 +78,15 @@ public class CatalogProxy extends DeltaCatalogBase {
     }
 
     @Override
-    public void alterTable(ObjectPath tablePath, CatalogBaseTable newTable,
-        boolean ignoreIfNotExists) throws TableNotExistException, CatalogException {
+    public void alterTable(
+            ObjectPath tablePath,
+            CatalogBaseTable newTable,
+            boolean ignoreIfNotExists) throws TableNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(newTable);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        DeltaCatalogBaseTable catalogTable = new DeltaCatalogBaseTable(tablePath, newTable);
+        if (catalogTable.isDeltaTable()) {
             // it's a Delta table, redirect to delta catalog.
-            this.deltaCatalog.alterTable(tablePath, newTable, ignoreIfNotExists);
+            this.deltaCatalog.alterTable(catalogTable, ignoreIfNotExists);
         } else {
             // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.alterTable(tablePath, newTable, ignoreIfNotExists);
@@ -91,8 +96,15 @@ public class CatalogProxy extends DeltaCatalogBase {
     @Override
     public List<CatalogPartitionSpec> listPartitions(ObjectPath tablePath)
         throws TableNotExistException, TableNotPartitionedException, CatalogException {
-        // TODO DC
-        return null;
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // it's a Delta table, redirect to delta catalog.
+            return this.deltaCatalog.listPartitions(catalogTable);
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            return this.decoratedCatalog.listPartitions(tablePath);
+        }
     }
 
     @Override
@@ -122,8 +134,15 @@ public class CatalogProxy extends DeltaCatalogBase {
     @Override
     public boolean partitionExists(ObjectPath tablePath, CatalogPartitionSpec partitionSpec)
         throws CatalogException {
-        // TODO DC
-        return false;
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // it's a Delta table, redirect to delta catalog.
+            return this.deltaCatalog.partitionExists(catalogTable, partitionSpec);
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            return this.decoratedCatalog.partitionExists(tablePath, partitionSpec);
+        }
     }
 
     @Override
@@ -152,8 +171,7 @@ public class CatalogProxy extends DeltaCatalogBase {
     public CatalogTableStatistics getTableStatistics(ObjectPath tablePath)
         throws TableNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // Table statistic call is used by calcite to get Table schema, so we cannot throw
             // from this method.
             return CatalogTableStatistics.UNKNOWN;
@@ -167,8 +185,7 @@ public class CatalogProxy extends DeltaCatalogBase {
     public CatalogColumnStatistics getTableColumnStatistics(ObjectPath tablePath)
         throws TableNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // Table statistic call is used by calcite to get Table schema, so we cannot throw
             // from this method.
             return CatalogColumnStatistics.UNKNOWN;
@@ -184,8 +201,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             CatalogPartitionSpec partitionSpec)
         throws PartitionNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support partition statistics.");
@@ -201,8 +217,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             CatalogPartitionSpec partitionSpec)
         throws PartitionNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support partition column statistics.");
@@ -218,8 +233,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             CatalogTableStatistics tableStatistics,
             boolean ignoreIfNotExists) throws TableNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter table statistics.");
@@ -237,8 +251,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             boolean ignoreIfNotExists)
             throws TableNotExistException, CatalogException, TablePartitionedException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter table column statistics.");
@@ -256,8 +269,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             CatalogTableStatistics partitionStatistics,
             boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter partition statistics.");
@@ -275,8 +287,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             CatalogColumnStatistics columnStatistics,
             boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
 
-        String connectorType = getConnectorType(tablePath);
-        if (DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType)) {
+        if (getCatalogTable(tablePath).isDeltaTable()) {
             // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter partition column statistics.");
@@ -287,16 +298,22 @@ public class CatalogProxy extends DeltaCatalogBase {
         }
     }
 
-    private String getConnectorType(ObjectPath tablePath) {
+    private DeltaCatalogBaseTable getCatalogTable(ObjectPath tablePath) {
         try {
-            CatalogBaseTable table = this.decoratedCatalog.getTable(tablePath);
-            return getConnectorType(table);
+            return getCatalogTableUnchecked(tablePath);
         } catch (TableNotExistException e) {
             throw new CatalogException(e);
         }
     }
 
-    private String getConnectorType(CatalogBaseTable table) {
-        return table.getOptions().get(FactoryUtil.CONNECTOR.key());
+    /**
+     * In some cases like {@link Catalog#getTable(ObjectPath)} Flink runtime expects
+     * TableNotExistException In those cases we cannot throw checked exception because it could
+     * break some table planner logic.
+     */
+    private DeltaCatalogBaseTable getCatalogTableUnchecked(ObjectPath tablePath)
+        throws TableNotExistException {
+        CatalogBaseTable table = this.decoratedCatalog.getTable(tablePath);
+        return new DeltaCatalogBaseTable(tablePath, table);
     }
 }

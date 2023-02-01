@@ -10,19 +10,22 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
-import io.delta.flink.sink.internal.SchemaConverter;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.Column.PhysicalColumn;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
+import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.table.types.utils.LogicalTypeDataTypeConverter;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Operation;
 import io.delta.standalone.Operation.Name;
 import io.delta.standalone.OptimisticTransaction;
 import io.delta.standalone.actions.Metadata;
+import io.delta.standalone.types.StructField;
 import io.delta.standalone.types.StructType;
 
 public final class DeltaCatalogTableHelper {
@@ -48,9 +51,25 @@ public final class DeltaCatalogTableHelper {
             }
         }
 
-        return SchemaConverter.toDeltaDataType(
+        return io.delta.flink.sink.internal.SchemaConverter.toDeltaDataType(
             RowType.of(types.toArray(new LogicalType[0]), names.toArray(new String[0]))
         );
+    }
+
+    public static Pair<String[], DataType[]> resolveFlinkTypesFromDelta(StructType tableSchema) {
+        StructField[] fields = tableSchema.getFields();
+        String[] columnNames = new String[fields.length];
+        DataType[] columnTypes = new DataType[fields.length];
+        int i = 0;
+        for (StructField field : fields) {
+            columnNames[i] = field.getName();
+            columnTypes[i] = LogicalTypeDataTypeConverter.toDataType(
+                io.delta.flink.source.internal.SchemaConverter.toFlinkDataType(field.getDataType(),
+                field.isNullable()));
+            i++;
+        }
+
+        return Pair.of(columnNames, columnTypes);
     }
 
     public static void validateDuplicateColumns(List<Column> columns) {

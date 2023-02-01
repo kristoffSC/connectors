@@ -1,13 +1,20 @@
 package io.delta.flink.table;
 
 import java.io.IOException;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.StringJoiner;
 
 import io.delta.flink.internal.ConnectorUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.test.junit5.MiniClusterExtension;
+import org.apache.flink.types.Row;
+import org.apache.flink.util.CloseableIterator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,7 +97,9 @@ public class DeltaCatalogITCase {
                     + "PARTITIONED BY (col1)"
                     + "WITH ("
                     + " 'connector' = 'delta',"
-                    + " 'table-path' = '%s'"
+                    + " 'table-path' = '%s',"
+                    + " 'delta.appendOnly' = 'false',"
+                    + " 'userCustomProp' = 'myVal'"
                     + ")",
                 tablePath);
 
@@ -111,6 +120,11 @@ public class DeltaCatalogITCase {
             );
 
         assertThat(metadata.getPartitionColumns()).containsExactly("col1");
+        assertThat(metadata.getConfiguration())
+            .containsExactly(
+                new SimpleEntry<>("delta.appendOnly", "false"),
+                new SimpleEntry<>("userCustomProp", "myVal")
+            );
     }
 
     @Test
@@ -258,7 +272,7 @@ public class DeltaCatalogITCase {
      * has different delta table properties that specified in DDL.
      */
     @Test
-    public void shouldThrowIfDeltaTablePropertiesNotMatch() throws Exception {
+    public void shouldThrowIfDeltaTablePropertiesDoNotMatch() throws Exception {
 
         // GIVEN
         DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
@@ -313,6 +327,136 @@ public class DeltaCatalogITCase {
         verifyThatDeltaLogWasNotChanged(metadata);
         assertThat(metadata.getConfiguration())
             .containsExactlyEntriesOf(Collections.singletonMap("delta.appendOnly", "false"));
+    }
+
+    @Test
+    public void shouldDescribeTable() throws Exception {
+
+        // GIVEN
+        DeltaTestUtils.initTestForPartitionedTable(tablePath);
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage("There should be Delta table files in test folder before test.")
+            .isTrue();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "name VARCHAR,"
+                    + "surname VARCHAR,"
+                    + "age INT,"
+                    + "col1 VARCHAR," // partition column
+                    + "col2 VARCHAR" // partition column
+                    + ") "
+                    + "PARTITIONED BY (col1, col2)"
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        tableEnv.executeSql(deltaTable).await();
+        TableResult describeResult = tableEnv.executeSql("DESCRIBE sourceTable");
+
+        List<String> describeRows = new ArrayList<>();
+        try (CloseableIterator<Row> collect = describeResult.collect()) {
+            while (collect.hasNext()) {
+                Row row = collect.next();
+                StringJoiner sj = new StringJoiner(";");
+                for (int i = 0; i < row.getArity(); i++) {
+                    sj.add(String.valueOf(row.getField(i)));
+                }
+                describeRows.add(sj.toString());
+            }
+        }
+
+        // column name; column type; is nullable; primary key; comments; watermark
+        assertThat(describeRows).containsExactly(
+            "name;VARCHAR(1);true;null;null;null",
+            "surname;VARCHAR(1);true;null;null;null",
+            "age;INT;true;null;null;null",
+            "col1;VARCHAR(1);true;null;null;null",
+            "col2;VARCHAR(1);true;null;null;null"
+        );
+    }
+
+    @Test
+    public void shouldAlterTableName() throws Exception {
+
+        // GIVEN
+        DeltaTestUtils.initTestForPartitionedTable(tablePath);
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage("There should be Delta table files in test folder before test.")
+            .isTrue();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "name VARCHAR,"
+                    + "surname VARCHAR,"
+                    + "age INT,"
+                    + "col1 VARCHAR," // partition column
+                    + "col2 VARCHAR" // partition column
+                    + ") "
+                    + "PARTITIONED BY (col1, col2)"
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        tableEnv.executeSql(deltaTable).await();
+        tableEnv.executeSql("ALTER TABLE sourceTable RENAME TO newSourceTable");
+
+        TableResult tableResult = tableEnv.executeSql("SHOW TABLES;");
+        List<String> catalogTables = new ArrayList<>();
+        try (CloseableIterator<Row> collect = tableResult.collect()) {
+            while (collect.hasNext()) {
+                catalogTables.add((String) collect.next().getField(0));
+            }
+        }
+
+        assertThat(catalogTables).containsExactly("newSourceTable");
+    }
+
+    @Test
+    public void shouldAlterTableProperties() throws Exception {
+
+        // GIVEN
+        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage("There should be Delta table files in test folder before test.")
+            .isTrue();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "name VARCHAR,"
+                    + "surname VARCHAR,"
+                    + "age INT"
+                    + ") "
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        tableEnv.executeSql(deltaTable).await();
+        tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal')").await();
+
+        assertThat(deltaLog.update().getMetadata().getConfiguration())
+            .containsExactlyEntriesOf(Collections.singletonMap("userCustomProp", "myVal"));
     }
 
     private void verifyThatDeltaLogWasNotChanged(Metadata metadata) {

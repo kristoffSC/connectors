@@ -396,22 +396,11 @@ public class DeltaSourceTableITCase {
 
         // WHEN
         String selectSql = "SELECT col1, col2, col4 FROM sourceTable";
+        //Column 'col4' not found in any table
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(selectSql));
 
-        TableResult tableResult = tableEnv.executeSql(selectSql);
-
-        List<Row> results = new ArrayList<>();
-        tableResult.await(10, TimeUnit.SECONDS);
-        try (CloseableIterator<Row> collect = tableResult.collect()) {
-            while (collect.hasNext()) {
-                results.add(collect.next());
-            }
-        }
-
-        assertThat(results).isNotEmpty();
-        for (Row row : results) {
-            assertThat(row.getField("col4"))
-                .isEqualTo((long) row.getField("col1") * (long) row.getField("col2"));
-        }
+        assertThat(exception.getMessage()).contains("Column 'col4' not found in any table");
     }
 
     private String buildSourceTableSql(String tablePath, String schemaString) {
