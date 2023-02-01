@@ -5,16 +5,24 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.api.Schema.Builder;
+import org.apache.flink.table.catalog.CatalogBaseTable;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.Column.PhysicalColumn;
+import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
+import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
@@ -136,6 +144,138 @@ public final class DeltaCatalogTableHelper {
             throw new RuntimeException("Cannot map object to JSON", e);
         }
         return new Operation(opName, operationParameters, Collections.emptyMap());
+    }
+
+    /**
+     * Validate DDL Delta table properties if they match properties from _delta_log add new
+     * properties to metadata.
+     *
+     * @param deltaDdlOptions DDL options that should be added to _delta_log.
+     * @param tableCatalogPath
+     * @param deltaMetadata
+     * @return a map of deltaLogProperties that will have same properties than original metadata
+     * plus new ones that were defined in DDL.
+     */
+    public static Map<String, String> prepareDeltaTableProperties(
+        Map<String, String> deltaDdlOptions,
+        ObjectPath tableCatalogPath,
+        Metadata deltaMetadata,
+        boolean allowOverride) {
+
+        Map<String, String> deltaLogProperties = new HashMap<>(deltaMetadata.getConfiguration());
+        for (Entry<String, String> ddlOption : deltaDdlOptions.entrySet()) {
+            String deltaLogPropertyValue =
+                deltaLogProperties.putIfAbsent(ddlOption.getKey(), ddlOption.getValue());
+
+            if (!allowOverride
+                && deltaLogPropertyValue != null
+                && !deltaLogPropertyValue.equalsIgnoreCase(ddlOption.getValue())) {
+                // _delta_log contains property defined in ddl but with different value.
+                throw CatalogExceptionHelper.ddlAndDeltaLogOptionMismatchException(
+                    tableCatalogPath,
+                    ddlOption,
+                    deltaLogPropertyValue
+                );
+            }
+        }
+        return deltaLogProperties;
+    }
+
+    public static void validateDdlSchemaAndPartitionSpecMatchesDelta(
+        String deltaTablePath,
+        ObjectPath tableCatalogPath,
+        List<String> ddlPartitionColumns,
+        StructType ddlDeltaSchema,
+        Metadata deltaMetadata) {
+
+        StructType deltaSchema = deltaMetadata.getSchema();
+        if (!(ddlDeltaSchema.equals(deltaSchema)
+            && ConnectorUtils.listEqualsIgnoreOrder(
+            ddlPartitionColumns,
+            deltaMetadata.getPartitionColumns()))) {
+            throw CatalogExceptionHelper.deltaLogAndDdlSchemaMismatchException(
+                tableCatalogPath,
+                deltaTablePath,
+                deltaMetadata,
+                ddlDeltaSchema,
+                ddlPartitionColumns
+            );
+        }
+    }
+
+    public static Map<String, String> filterMetastoreDdlOptions(Map<String, String> ddlOptions) {
+        return ddlOptions.entrySet().stream()
+            .filter(entry ->
+                !(entry.getKey().contains(FactoryUtil.CONNECTOR.key())
+                    || entry.getKey().contains(DeltaTableConnectorOptions.TABLE_PATH.key()))
+            ).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+    }
+
+    public static CatalogTable prepareMetastoreTable(
+            CatalogBaseTable table,
+            String deltaTablePath,
+            List<String> ddlPartitionColumns) {
+        // Store only path, table name and connector type in metastore.
+        // For computed and meta columns are not supported.
+        Map<String, String> optionsToStoreInMetastore = new HashMap<>();
+        optionsToStoreInMetastore.put(FactoryUtil.CONNECTOR.key(),
+            DeltaDynamicTableFactory.IDENTIFIER);
+        optionsToStoreInMetastore.put(DeltaTableConnectorOptions.TABLE_PATH.key(),
+            deltaTablePath);
+
+        // TODO DC - Consult with TD and Scott watermark and primary key definitions.
+        List<Pair<String, Expression>> watermarkSpec = table.getUnresolvedSchema()
+            .getWatermarkSpecs()
+            .stream()
+            .map(wmSpec -> Pair.of(wmSpec.getColumnName(), wmSpec.getWatermarkExpression()))
+            .collect(Collectors.toList());
+
+        // Add watermark spec to schema.
+        Builder schemaBuilder = Schema.newBuilder();
+        for (Pair<String, Expression> watermark : watermarkSpec) {
+            schemaBuilder.watermark(watermark.getKey(), watermark.getValue());
+        }
+
+        // Add primary key def to schema.
+        table.getUnresolvedSchema()
+            .getPrimaryKey()
+            .map(
+                unresolvedPrimaryKey -> Pair.of(unresolvedPrimaryKey.getConstraintName(),
+                    unresolvedPrimaryKey.getColumnNames())
+            )
+            .ifPresent(
+                primaryKey -> schemaBuilder.primaryKeyNamed(primaryKey.getKey(),
+                    primaryKey.getValue())
+            );
+
+        // prepare catalog table to store in metastore. This table will have only selected
+        // options from DDL and an empty schema.
+        return CatalogTable.of(
+            // don't store any schema in metastore, except watermark and primary key def.
+            schemaBuilder.build(),
+            table.getComment(),
+            ddlPartitionColumns,
+            optionsToStoreInMetastore
+        );
+    }
+
+    public static void validateDdlOptions(Map<String, String> ddlOptions) {
+        for (String ddlOption : ddlOptions.keySet()) {
+
+            // validate for Flink Job specific options in DDL
+            if (DeltaFlinkJobSpecificOptions.JOB_OPTIONS.contains(ddlOption)) {
+                throw CatalogExceptionHelper.jobSpecificOptionInDdlException(ddlOption);
+            }
+
+            // TODO DC - Add tests for this
+            // validate for Delta log Store config and parquet config.
+            if (ddlOption.startsWith("spark.") ||
+                ddlOption.startsWith("delta.logStore") ||
+                ddlOption.startsWith("io.delta") ||
+                ddlOption.startsWith("parquet.")) {
+                throw CatalogExceptionHelper.invalidOptionInDdl(ddlOption);
+            }
+        }
     }
 
 }

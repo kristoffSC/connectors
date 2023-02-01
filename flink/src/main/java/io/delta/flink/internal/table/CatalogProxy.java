@@ -86,7 +86,7 @@ public class CatalogProxy extends DeltaCatalogBase {
         DeltaCatalogBaseTable catalogTable = new DeltaCatalogBaseTable(tablePath, newTable);
         if (catalogTable.isDeltaTable()) {
             // it's a Delta table, redirect to delta catalog.
-            this.deltaCatalog.alterTable(catalogTable, ignoreIfNotExists);
+            this.deltaCatalog.alterTable(catalogTable);
         } else {
             // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.alterTable(tablePath, newTable, ignoreIfNotExists);
@@ -99,8 +99,10 @@ public class CatalogProxy extends DeltaCatalogBase {
 
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
-            // it's a Delta table, redirect to delta catalog.
-            return this.deltaCatalog.listPartitions(catalogTable);
+            // Delta standalone Metadata does not provide information about partition value.
+            // This information is needed to build CatalogPartitionSpec
+            throw new CatalogException(
+                "Delta table connector does not support partition listing.");
         } else {
             // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.listPartitions(tablePath);
@@ -108,27 +110,56 @@ public class CatalogProxy extends DeltaCatalogBase {
     }
 
     @Override
-    public List<CatalogPartitionSpec> listPartitions(ObjectPath tablePath,
-        CatalogPartitionSpec partitionSpec)
-        throws TableNotExistException, TableNotPartitionedException, PartitionSpecInvalidException,
-        CatalogException {
-        // TODO DC
-        return null;
+    public List<CatalogPartitionSpec> listPartitions(
+            ObjectPath tablePath,
+            CatalogPartitionSpec partitionSpec)
+        throws CatalogException, TableNotPartitionedException, TableNotExistException,
+        PartitionSpecInvalidException {
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // Delta standalone Metadata does not provide information about partition value.
+            // This information is needed to build CatalogPartitionSpec
+            throw new CatalogException(
+                "Delta table connector does not support partition listing.");
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            return this.decoratedCatalog.listPartitions(tablePath, partitionSpec);
+        }
     }
 
     @Override
-    public List<CatalogPartitionSpec> listPartitionsByFilter(ObjectPath tablePath,
-        List<Expression> filters)
-        throws TableNotExistException, TableNotPartitionedException, CatalogException {
-        // TODO DC
-        return null;
+    public List<CatalogPartitionSpec> listPartitionsByFilter(
+            ObjectPath tablePath,
+            List<Expression> filters) throws TableNotExistException, TableNotPartitionedException,
+        CatalogException {
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // Delta standalone Metadata does not provide information about partition value.
+            // This information is needed to build CatalogPartitionSpec
+            throw new CatalogException(
+                "Delta table connector does not support partition listing by filter.");
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            return this.decoratedCatalog.listPartitionsByFilter(tablePath, filters);
+        }
     }
 
     @Override
     public CatalogPartition getPartition(ObjectPath tablePath, CatalogPartitionSpec partitionSpec)
         throws PartitionNotExistException, CatalogException {
-        // TODO DC
-        return null;
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // Delta standalone Metadata does not provide information about partition value.
+            // This information is needed to build CatalogPartitionSpec
+            throw new CatalogException(
+                "Delta table connector does not support partition listing.");
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            return this.decoratedCatalog.getPartition(tablePath, partitionSpec);
+        }
     }
 
     @Override
@@ -137,8 +168,10 @@ public class CatalogProxy extends DeltaCatalogBase {
 
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
-            // it's a Delta table, redirect to delta catalog.
-            return this.deltaCatalog.partitionExists(catalogTable, partitionSpec);
+            // Delta standalone Metadata does not provide information about partition value.
+            // This information is needed to build CatalogPartitionSpec
+            throw new CatalogException(
+                "Delta table connector does not support partition listing.");
         } else {
             // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.partitionExists(tablePath, partitionSpec);
@@ -146,25 +179,71 @@ public class CatalogProxy extends DeltaCatalogBase {
     }
 
     @Override
-    public void createPartition(ObjectPath tablePath, CatalogPartitionSpec partitionSpec,
-        CatalogPartition partition, boolean ignoreIfExists)
-        throws TableNotExistException, TableNotPartitionedException, PartitionSpecInvalidException,
-        PartitionAlreadyExistsException, CatalogException {
+    public void createPartition(
+            ObjectPath tablePath,
+            CatalogPartitionSpec partitionSpec,
+            CatalogPartition partition,
+            boolean ignoreIfExists) throws TableNotExistException, TableNotPartitionedException,
+        PartitionSpecInvalidException, PartitionAlreadyExistsException, CatalogException {
 
-        // TODO DC
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // Delta standalone does not provide partition create option.
+            throw new CatalogException(
+                "Delta table connector does not support partition creation.");
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            this.decoratedCatalog.createPartition(
+                tablePath,
+                partitionSpec,
+                partition,
+                ignoreIfExists
+            );
+        }
     }
 
     @Override
-    public void dropPartition(ObjectPath tablePath, CatalogPartitionSpec partitionSpec,
-        boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
-        // TODO DC
+    public void dropPartition(
+            ObjectPath tablePath,
+            CatalogPartitionSpec partitionSpec,
+            boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // Delta standalone does not provide partition drop option.
+            throw new CatalogException(
+                "Delta table connector does not support partition drop operation.");
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            this.decoratedCatalog.dropPartition(
+                tablePath,
+                partitionSpec,
+                ignoreIfNotExists
+            );
+        }
     }
 
     @Override
-    public void alterPartition(ObjectPath tablePath, CatalogPartitionSpec partitionSpec,
-        CatalogPartition newPartition, boolean ignoreIfNotExists)
-        throws PartitionNotExistException, CatalogException {
-        // TODO DC
+    public void alterPartition(
+            ObjectPath tablePath,
+            CatalogPartitionSpec partitionSpec,
+            CatalogPartition newPartition,
+            boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
+
+        DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
+        if (catalogTable.isDeltaTable()) {
+            // Delta standalone does not provide alter partition option.
+            throw new CatalogException(
+                "Delta table connector does not support alter partition operation.");
+        } else {
+            // it's not a Delta table, redirect to decorated catalog.
+            this.decoratedCatalog.alterPartition(
+                tablePath,
+                partitionSpec,
+                newPartition,
+                ignoreIfNotExists
+            );
+        }
     }
 
     @Override

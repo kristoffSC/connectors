@@ -17,13 +17,14 @@
  */
 package io.delta.flink.internal.table;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.GlobalConfiguration;
-import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
@@ -32,7 +33,6 @@ import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.logical.RowType;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Creates a {@link DynamicTableSink} and {@link DynamicTableSource} instance representing DeltaLake
@@ -86,85 +86,88 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
 
-        if (fromCatalog) {
-            // Check if requested table is Delta or not.
-            FactoryUtil.TableFactoryHelper helper =
-                FactoryUtil.createTableFactoryHelper(this, context);
-            String connectorType = helper.getOptions().get(FactoryUtil.CONNECTOR);
-            if (!IDENTIFIER.equals(connectorType)) {
-
-                // Look for Table factory proper fort this table type.
-                DynamicTableSinkFactory sinkFactory =
-                    FactoryUtil.discoverFactory(this.getClass().getClassLoader(),
-                        DynamicTableSinkFactory.class, connectorType);
-                return sinkFactory.createDynamicTableSink(context);
-            }
-
-            // This must have been a Delta Table, so continue with this factory
-            helper.validateExcept("table.");
-
-            ReadableConfig tableOptions = helper.getOptions();
-            ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
-
-            Configuration conf =
-                HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
-
-            RowType rowType = (RowType) tableSchema.toSinkRowDataType().getLogicalType();
-
-            Boolean shouldTryUpdateSchema = tableOptions
-                .getOptional(DeltaTableConnectorOptions.MERGE_SCHEMA)
-                .orElse(DeltaTableConnectorOptions.MERGE_SCHEMA.defaultValue());
-
-            return new DeltaDynamicTableSink(
-                new Path(tableOptions.get(DeltaTableConnectorOptions.TABLE_PATH)),
-                conf,
-                rowType,
-                shouldTryUpdateSchema,
-                context.getCatalogTable()
-            );
-        } else {
+        if (!fromCatalog) {
             throw throwIfNotFromCatalog();
         }
+
+        // Check if requested table is Delta or not.
+        FactoryUtil.TableFactoryHelper helper =
+            FactoryUtil.createTableFactoryHelper(this, context);
+        Configuration options = (Configuration) helper.getOptions();
+
+        String connectorType = options.get(FactoryUtil.CONNECTOR);
+        if (!IDENTIFIER.equals(connectorType)) {
+
+            // Look for Table factory proper fort this table type.
+            DynamicTableSinkFactory sinkFactory =
+                FactoryUtil.discoverFactory(this.getClass().getClassLoader(),
+                    DynamicTableSinkFactory.class, connectorType);
+            return sinkFactory.createDynamicTableSink(context);
+        }
+
+        // This must have been a Delta Table, so continue with this factory
+        DeltaTableFactoryHelper.validateQueryOptions(options.toMap());
+
+        ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
+
+        org.apache.hadoop.conf.Configuration conf =
+            HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
+
+        RowType rowType = (RowType) tableSchema.toSinkRowDataType().getLogicalType();
+
+        Boolean shouldTryUpdateSchema = options
+            .getOptional(DeltaTableConnectorOptions.MERGE_SCHEMA)
+            .orElse(DeltaTableConnectorOptions.MERGE_SCHEMA.defaultValue());
+
+        return new DeltaDynamicTableSink(
+            new Path(options.get(DeltaTableConnectorOptions.TABLE_PATH)),
+            conf,
+            rowType,
+            shouldTryUpdateSchema,
+            context.getCatalogTable()
+        );
     }
 
     @Override
     public DynamicTableSource createDynamicTableSource(Context context) {
 
-        if (fromCatalog) {
-            // Check if requested table is Delta or not.
-            FactoryUtil.TableFactoryHelper helper =
-                FactoryUtil.createTableFactoryHelper(this, context);
-            String connectorType = helper.getOptions().get(FactoryUtil.CONNECTOR);
-            if (!IDENTIFIER.equals(connectorType)) {
-
-                // Look for Table factory proper fort this table type.
-                DynamicTableSourceFactory sourceFactory =
-                    FactoryUtil.discoverFactory(this.getClass().getClassLoader(),
-                        DynamicTableSourceFactory.class, connectorType);
-                return sourceFactory.createDynamicTableSource(context);
-            }
-
-            helper.validateExcept("table.");
-
-            ReadableConfig tableOptions = helper.getOptions();
-            Configuration hadoopConf =
-                HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
-
-            List<String> columns = ((RowType) context
-                .getCatalogTable()
-                .getResolvedSchema()
-                .toPhysicalRowDataType()
-                .getLogicalType()
-            ).getFieldNames();
-
-            return new DeltaDynamicTableSource(
-                hadoopConf,
-                tableOptions,
-                columns
-            );
-        } else {
+        if (!fromCatalog) {
             throw throwIfNotFromCatalog();
         }
+
+        // Check if requested table is Delta or not.
+        FactoryUtil.TableFactoryHelper helper =
+            FactoryUtil.createTableFactoryHelper(this, context);
+        Configuration options = (Configuration) helper.getOptions();
+
+        String connectorType = options.get(FactoryUtil.CONNECTOR);
+        if (!IDENTIFIER.equals(connectorType)) {
+
+            // Look for Table factory proper fort this table type.
+            DynamicTableSourceFactory sourceFactory =
+                FactoryUtil.discoverFactory(this.getClass().getClassLoader(),
+                    DynamicTableSourceFactory.class, connectorType);
+            return sourceFactory.createDynamicTableSource(context);
+        }
+
+        // This must have been a Delta Table, so continue with this factory
+        DeltaTableFactoryHelper.validateQueryOptions(options.toMap());
+
+        org.apache.hadoop.conf.Configuration hadoopConf =
+            HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
+
+        List<String> columns = ((RowType) context
+            .getCatalogTable()
+            .getResolvedSchema()
+            .toPhysicalRowDataType()
+            .getLogicalType()
+        ).getFieldNames();
+
+        return new DeltaDynamicTableSource(
+            hadoopConf,
+            options,
+            columns
+        );
     }
 
     @Override
@@ -176,20 +179,14 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
 
     @Override
     public Set<ConfigOption<?>> requiredOptions() {
-        final Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(DeltaTableConnectorOptions.TABLE_PATH);
-        return options;
+        // We do not use Flink's helper validation logic. We are using our own instead.
+        return Collections.emptySet();
     }
 
     @Override
     public Set<ConfigOption<?>> optionalOptions() {
-        final Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(DeltaTableConnectorOptions.MERGE_SCHEMA);
-
-        // TODO With Delta Catalog, this option will be injected only through query hints.
-        //  The DDL validation will be done in Delta Catalog during "createTable" operation.
-        options.add(DeltaFlinkJobSpecificOptions.MODE);
-        return options;
+        // We do not use Flink's helper validation logic. We are using our own instead.
+        return Collections.emptySet();
     }
 
     private RuntimeException throwIfNotFromCatalog() {
