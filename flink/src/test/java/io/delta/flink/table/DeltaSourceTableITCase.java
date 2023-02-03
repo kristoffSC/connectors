@@ -446,7 +446,7 @@ public class DeltaSourceTableITCase {
             assertThrows(ValidationException.class, () -> tableEnv.executeSql(selectSql));
 
         assertThat(exception.getCause().getMessage())
-            .isEqualTo("Only Job specific options are allowed in SQL statement.\n"
+            .isEqualTo("Only job specific options are allowed in INSERT SQL statement.\n"
                 + "Invalid options used:\n"
                 + "[delta.appendOnly, spark.some.option, delta.logStore, customOption, io.delta"
                 + ".storage.S3DynamoDBLogStore.ddb.region, parquet.writer.max-padding]\n"

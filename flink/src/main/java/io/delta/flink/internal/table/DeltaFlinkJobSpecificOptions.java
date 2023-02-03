@@ -48,10 +48,10 @@ public class DeltaFlinkJobSpecificOptions {
             .enumType(QueryMode.class)
             .defaultValue(QueryMode.BATCH);
 
-    public static final Set<String> JOB_OPTIONS;
+    public static final Set<String> SOURCE_JOB_OPTIONS;
 
     static {
-        JOB_OPTIONS = Stream.of(
+        SOURCE_JOB_OPTIONS = Stream.of(
             MODE.key(),
             DeltaSourceOptions.VERSION_AS_OF.key(),
             DeltaSourceOptions.TIMESTAMP_AS_OF.key(),

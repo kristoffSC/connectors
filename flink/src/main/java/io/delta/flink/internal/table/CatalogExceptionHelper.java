@@ -46,7 +46,7 @@ public final class CatalogExceptionHelper {
             "DDL contains Job Specific option %s. Job specific options can be used only via Query"
                 + " hints.\nJob specific options are:\n%s",
             ddlOption,
-            String.join(", ", DeltaFlinkJobSpecificOptions.JOB_OPTIONS)
+            String.join(", ", DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS)
         );
         return new CatalogException(message);
     }

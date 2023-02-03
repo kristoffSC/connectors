@@ -263,7 +263,7 @@ public final class DeltaCatalogTableHelper {
         for (String ddlOption : ddlOptions.keySet()) {
 
             // validate for Flink Job specific options in DDL
-            if (DeltaFlinkJobSpecificOptions.JOB_OPTIONS.contains(ddlOption)) {
+            if (DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS.contains(ddlOption)) {
                 throw CatalogExceptionHelper.jobSpecificOptionInDdlException(ddlOption);
             }
 
