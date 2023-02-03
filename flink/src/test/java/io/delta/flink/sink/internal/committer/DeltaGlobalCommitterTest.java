@@ -402,7 +402,7 @@ public class DeltaGlobalCommitterTest {
 
         // THEN
         assertThat(deltaLog.update().getVersion())
-            .describedAs(
+            .withFailMessage(
                 "Target delta table should be at version 0 since second commit call should be "
                     + "ignored since it is adding a duplicate data.")
             .isEqualTo(0L);
@@ -412,7 +412,7 @@ public class DeltaGlobalCommitterTest {
         assertThat(
             versionLog.getActions().stream().filter(action -> action instanceof AddFile)
                 .count())
-            .describedAs("Target Delta Table should have only one AddFile action in its log. "
+            .withFailMessage("Target Delta Table should have only one AddFile action in its log. "
                 + "Probably duplicate data was added.")
             .isEqualTo(1);
     }

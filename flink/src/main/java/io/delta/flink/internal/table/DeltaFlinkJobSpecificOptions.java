@@ -43,10 +43,10 @@ public class DeltaFlinkJobSpecificOptions {
      * Option to specify if SELECT query should be bounded (read only Delta Snapshot) or should
      * continuously monitor Delta table for new changes.
      */
-    public static final ConfigOption<TableMode> MODE =
+    public static final ConfigOption<QueryMode> MODE =
         ConfigOptions.key("mode")
-            .enumType(TableMode.class)
-            .defaultValue(TableMode.BATCH);
+            .enumType(QueryMode.class)
+            .defaultValue(QueryMode.BATCH);
 
     public static final Set<String> JOB_OPTIONS;
 
@@ -68,10 +68,10 @@ public class DeltaFlinkJobSpecificOptions {
      * Expected values for {@link DeltaFlinkJobSpecificOptions#MODE} job specific option. Based on
      * this value, proper Delta source builder instance (DeltaSource.forBoundedRowData or
      * DeltaSource.forContinuousRowData) will be created. Flink will automatically convert string
-     * value from dynamic table option from DML/DQL query and convert to TableMode value. The value
+     * value from dynamic table option from DML/DQL query and convert to QueryMode value. The value
      * is case-insensitive.
      */
-    public enum TableMode {
+    public enum QueryMode {
 
         /**
          * Used to created Bounded Delta Source -
@@ -87,7 +87,7 @@ public class DeltaFlinkJobSpecificOptions {
 
         private final String name;
 
-        TableMode(String name) {
+        QueryMode(String name) {
             this.name = name;
         }
 

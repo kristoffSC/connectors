@@ -106,7 +106,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         }
 
         // This must have been a Delta Table, so continue with this factory
-        DeltaTableFactoryHelper.validateQueryOptions(options.toMap());
+        DeltaTableFactoryHelper.validateQueryOptions(options);
 
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
 
@@ -151,7 +151,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         }
 
         // This must have been a Delta Table, so continue with this factory
-        DeltaTableFactoryHelper.validateQueryOptions(options.toMap());
+        QueryOptions queryOptions = DeltaTableFactoryHelper.validateQueryOptions(options);
 
         org.apache.hadoop.conf.Configuration hadoopConf =
             HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
@@ -165,7 +165,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
 
         return new DeltaDynamicTableSource(
             hadoopConf,
-            options,
+            queryOptions,
             columns
         );
     }

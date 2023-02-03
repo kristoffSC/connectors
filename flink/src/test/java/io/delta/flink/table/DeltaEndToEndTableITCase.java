@@ -23,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNot.not;
 
+// TODO DC - add tests with query hints
 public class DeltaEndToEndTableITCase {
 
     private static final int PARALLELISM = 2;

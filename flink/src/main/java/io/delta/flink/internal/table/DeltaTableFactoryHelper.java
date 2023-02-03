@@ -2,12 +2,14 @@ package io.delta.flink.internal.table;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.factories.FactoryUtil;
 
@@ -24,12 +26,14 @@ public final class DeltaTableFactoryHelper {
     }
 
     // TODO DC - create tests for this
-    public static void validateQueryOptions(Map<String, String> options) {
+    public static QueryOptions validateQueryOptions(Configuration options) {
 
         validateDeltaTablePathOption(options);
 
+        Map<String, String> jobSpecificOptions = new HashMap<>();
+
         List<String> invalidOptions = new ArrayList<>();
-        for (Entry<String, String> entry : options.entrySet()) {
+        for (Entry<String, String> entry : options.toMap().entrySet()) {
             String optionName = entry.getKey();
 
             if (OPTIONS_TO_IGNORE.contains(optionName)) {
@@ -37,7 +41,9 @@ public final class DeltaTableFactoryHelper {
                 continue;
             }
 
-            if (!DeltaFlinkJobSpecificOptions.JOB_OPTIONS.contains(optionName)) {
+            if (DeltaFlinkJobSpecificOptions.JOB_OPTIONS.contains(optionName)) {
+                jobSpecificOptions.put(optionName, entry.getValue());
+            } else {
                 invalidOptions.add(optionName);
             }
         }
@@ -52,10 +58,16 @@ public final class DeltaTableFactoryHelper {
 
             throw new ValidationException(message);
         }
+
+        return new QueryOptions(
+            options.get(DeltaTableConnectorOptions.TABLE_PATH),
+            options.get(DeltaFlinkJobSpecificOptions.MODE),
+            jobSpecificOptions
+        );
     }
 
-    public static void validateDeltaTablePathOption(Map<String, String> options) {
-        if (!options.containsKey(DeltaTableConnectorOptions.TABLE_PATH.key())) {
+    public static void validateDeltaTablePathOption(Configuration options) {
+        if (!options.contains(DeltaTableConnectorOptions.TABLE_PATH)) {
             throw new ValidationException("Missing path to Delta table");
         }
     }
