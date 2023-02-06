@@ -88,7 +88,7 @@ public class DeltaSourceTableITCase {
     // TODO would have been nice to make a TableInfo class that contained the path (maybe a
     //  generator so it is always random), column names, column types, so all this information
     //  was coupled together. This class could be used for all IT tests where we use predefined
-    //  Tables.
+    //  Tables - https://github.com/delta-io/connectors/issues/499
     /**
      * Schema for this table has only
      * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type

@@ -29,13 +29,18 @@ import org.apache.hadoop.conf.Configuration;
 
 /**
  * This class contains Flink job specific options for {@link io.delta.flink.source.DeltaSource} and
- *  {@link io.delta.flink.sink.DeltaSink}. For Table API, this options can be set only using Flink,
- *  dynamic table options from DML/DQL query level, for example:
- *  <pre>{@code
+ * {@link io.delta.flink.sink.DeltaSink} that are relevant for Table API. For Table API, this
+ * options can be set only using Flink, dynamic table options from DML/DQL query level, for
+ * example:
+ * <pre>{@code
  *    SELECT * FROM my_delta_source_table /*+ OPTIONS(‘mode' = 'streaming')
  *  }</pre>
- *  Flink job specific options are not stored in metastore nor in Delta Log. Their scope is
- *  single Flink Job (DML/DQL query) only.
+ * Flink job specific options are not stored in metastore nor in Delta Log. Their scope is single
+ * Flink Job (DML/DQL query) only.
+ *
+ * <p>In practice this class will contain options from
+ * {@link io.delta.flink.source.internal.DeltaSourceOptions} and
+ * {@link io.delta.flink.sink.internal.DeltaSinkOptions} + extra ones like MODE.
  */
 public class DeltaFlinkJobSpecificOptions {
 

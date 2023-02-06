@@ -39,7 +39,7 @@ Depending on the version of the connector you can use it with following Apache F
 |:-------------------:|:---------------------:|
 |  0.4.x (Sink Only)  | 1.12.0 <= X <= 1.14.5 |
 |        0.5.0        | 1.13.0 <= X <= 1.13.6 |
-|   0.5.1-SNAPSHOT    |      X >= 1.15.0      |
+|        0.6.0        |      X >= 1.15.3      |
 
 ### APIs
 
@@ -330,7 +330,8 @@ Scala 2.12:
 <project>
     <properties>
         <scala.main.version>2.12</scala.main.version>
-        <flink-version>1.12.0</flink-version>
+        <delta-connectors-version>0.6.0</delta-connectors-version>
+        <flink-version>1.15.3</flink-version>
         <hadoop-version>3.1.0</hadoop-version>
     </properties>
 
@@ -338,12 +339,12 @@ Scala 2.12:
         <dependency>
             <groupId>io.delta</groupId>
             <artifactId>delta-flink</artifactId>
-            <version>0.5.0</version>
+            <version>${delta-connectors-version}</version>
         </dependency>
         <dependency>
             <groupId>io.delta</groupId>
             <artifactId>delta-standalone_${scala.main.version}</artifactId>
-            <version>0.5.0</version>
+            <version>${delta-connectors-version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
@@ -430,8 +431,7 @@ order not to violate the integrity of the table.
 
 #### What if I change the underlying Delta table schema ?
 
-Next commit (after mentioned schema change) performed from the `DeltaSink` to the Delta log will fail unless you will
-set `shouldTryUpdateSchema` param to true. In such case Delta Standalone will try to merge both schemas and check for
+Next commit (after mentioned schema change) performed from the `DeltaSink` to the Delta log will fail unless you call `RowDataDeltaSinkBuilder::withMergeSchema(true)`. In such case Delta Standalone will try to merge both schemas and check for
 their compatibility. If this check fails (e.g. the change consisted of removing a column) the commit to the Delta Log will fail, which will cause failure of the Flink job.
 
 ## Local Development & Testing
