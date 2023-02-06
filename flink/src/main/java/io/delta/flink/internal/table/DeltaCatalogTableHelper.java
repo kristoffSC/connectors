@@ -13,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
-import org.apache.flink.table.api.Schema.Builder;
 import org.apache.flink.table.catalog.CatalogBaseTable;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.Column;
@@ -21,7 +20,6 @@ import org.apache.flink.table.catalog.Column.PhysicalColumn;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
-import org.apache.flink.table.expressions.Expression;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalType;
@@ -223,36 +221,12 @@ public final class DeltaCatalogTableHelper {
         optionsToStoreInMetastore.put(DeltaTableConnectorOptions.TABLE_PATH.key(),
             deltaTablePath);
 
-        // TODO DC - Consult with TD and Scott watermark and primary key definitions.
-        List<Pair<String, Expression>> watermarkSpec = table.getUnresolvedSchema()
-            .getWatermarkSpecs()
-            .stream()
-            .map(wmSpec -> Pair.of(wmSpec.getColumnName(), wmSpec.getWatermarkExpression()))
-            .collect(Collectors.toList());
-
-        // Add watermark spec to schema.
-        Builder schemaBuilder = Schema.newBuilder();
-        for (Pair<String, Expression> watermark : watermarkSpec) {
-            schemaBuilder.watermark(watermark.getKey(), watermark.getValue());
-        }
-
-        // Add primary key def to schema.
-        table.getUnresolvedSchema()
-            .getPrimaryKey()
-            .map(
-                unresolvedPrimaryKey -> Pair.of(unresolvedPrimaryKey.getConstraintName(),
-                    unresolvedPrimaryKey.getColumnNames())
-            )
-            .ifPresent(
-                primaryKey -> schemaBuilder.primaryKeyNamed(primaryKey.getKey(),
-                    primaryKey.getValue())
-            );
-
         // prepare catalog table to store in metastore. This table will have only selected
         // options from DDL and an empty schema.
         return CatalogTable.of(
-            // don't store any schema in metastore, except watermark and primary key def.
-            schemaBuilder.build(),
+            // by design don't store schema in metastore. Also watermark and primary key will not
+            // be stored in metastore and for now it will not be supported by Delta connector SQL.
+            Schema.newBuilder().build(),
             table.getComment(),
             ddlPartitionColumns,
             optionsToStoreInMetastore
