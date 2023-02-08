@@ -17,23 +17,18 @@ import org.apache.flink.table.catalog.exceptions.FunctionNotExistException;
 import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
 import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.factories.Factory;
-import org.apache.hadoop.conf.Configuration;
 
 public abstract class DeltaCatalogBase extends AbstractCatalog {
 
     protected final Catalog decoratedCatalog;
 
-    protected final Configuration hadoopConfiguration;
-
     public DeltaCatalogBase(
             String name,
             String defaultDatabase,
-            Catalog decoratedCatalog,
-            Configuration hadoopConfiguration) {
+            Catalog decoratedCatalog) {
         super(name, defaultDatabase);
 
         this.decoratedCatalog = decoratedCatalog;
-        this.hadoopConfiguration = hadoopConfiguration;
     }
 
     @Override

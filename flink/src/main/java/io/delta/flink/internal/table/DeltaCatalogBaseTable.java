@@ -14,18 +14,18 @@ public class DeltaCatalogBaseTable {
     private final ObjectPath tableCatalogPath;
 
     @Nonnull
-    private final CatalogBaseTable metastoreTable;
+    private final CatalogBaseTable catalogTable;
 
     private final boolean deltaTable;
 
-    public DeltaCatalogBaseTable(ObjectPath tableCatalogPath, CatalogBaseTable metastoreTable) {
+    public DeltaCatalogBaseTable(ObjectPath tableCatalogPath, CatalogBaseTable catalogTable) {
         checkNotNull(tableCatalogPath, "Object path cannot be null for DeltaCatalogBaseTable.");
-        checkNotNull(metastoreTable, "Metastore table cannot be null for DeltaCatalogBaseTable.");
+        checkNotNull(catalogTable, "Catalog table cannot be null for DeltaCatalogBaseTable.");
 
         this.tableCatalogPath = tableCatalogPath;
-        this.metastoreTable = metastoreTable;
+        this.catalogTable = catalogTable;
 
-        String connectorType = metastoreTable.getOptions().get(FactoryUtil.CONNECTOR.key());
+        String connectorType = catalogTable.getOptions().get(FactoryUtil.CONNECTOR.key());
         this.deltaTable = DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType);
     }
 
@@ -33,8 +33,8 @@ public class DeltaCatalogBaseTable {
         return tableCatalogPath;
     }
 
-    public CatalogBaseTable getMetastoreTable() {
-        return metastoreTable;
+    public CatalogBaseTable getCatalogTable() {
+        return catalogTable;
     }
 
     public boolean isDeltaTable() {
@@ -42,7 +42,7 @@ public class DeltaCatalogBaseTable {
     }
 
     public Map<String, String> getOptions() {
-        return metastoreTable.getOptions();
+        return catalogTable.getOptions();
     }
 
     public String getDatabaseName() {

@@ -39,7 +39,7 @@ public class DeltaCatalog {
 
     public CatalogBaseTable getTable(DeltaCatalogBaseTable catalogTable) {
 
-        CatalogBaseTable metastoreTable = catalogTable.getMetastoreTable();
+        CatalogBaseTable metastoreTable = catalogTable.getCatalogTable();
 
         String tablePath =
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
@@ -64,7 +64,7 @@ public class DeltaCatalog {
 
     public boolean tableExists(DeltaCatalogBaseTable catalogTable) throws CatalogException {
 
-        CatalogBaseTable metastoreTable = catalogTable.getMetastoreTable();
+        CatalogBaseTable metastoreTable = catalogTable.getCatalogTable();
         String deltaTablePath =
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
         return DeltaLog.forTable(hadoopConfiguration, deltaTablePath).tableExists();
@@ -97,7 +97,7 @@ public class DeltaCatalog {
         Map<String, String> deltaDdlOptions =
             DeltaCatalogTableHelper.filterMetastoreDdlOptions(ddlOptions);
 
-        CatalogBaseTable table = catalogTable.getMetastoreTable();
+        CatalogBaseTable table = catalogTable.getCatalogTable();
         ObjectPath tableCatalogPath = catalogTable.getTableCatalogPath();
 
         // Get Partition columns from DDL;

@@ -43,9 +43,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsEqual.equalTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DeltaFlinkSqlITCase {
@@ -125,8 +123,8 @@ public class DeltaFlinkSqlITCase {
             collect.forEachRemaining(results::add);
         }
 
-        assertThat(results.size(), equalTo(1));
-        assertThat(results.get(0).getKind(), equalTo(RowKind.INSERT));
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).getKind()).isEqualTo(RowKind.INSERT);
     }
 
     @Test
@@ -188,8 +186,8 @@ public class DeltaFlinkSqlITCase {
                 .map((Function<Row, Integer>) row -> row.getFieldAs("col3"))
                 .distinct().count();
 
-        assertThat(sinkRows.size(), equalTo(5));
-        assertThat(uniqueValues, equalTo(5L));
+        assertThat(sinkRows).hasSize(5);
+        assertThat(uniqueValues).isEqualTo(5L);
     }
 
     @Test
@@ -256,8 +254,8 @@ public class DeltaFlinkSqlITCase {
                 .map((Function<Row, Integer>) row -> row.getFieldAs("col3"))
                 .distinct().count();
 
-        assertThat(sinkRows.size(), equalTo(1));
-        assertThat(uniqueValues, equalTo(1L));
+        assertThat(sinkRows).hasSize(1);
+        assertThat(uniqueValues).isEqualTo(1L);
     }
 
     @Test
@@ -304,10 +302,10 @@ public class DeltaFlinkSqlITCase {
             assertThrows(ValidationException.class, () -> tableEnv.executeSql(insertSql));
 
         assertThat(
-            "Query Delta table should not be possible without Delta catalog.",
-            validationException.getCause().getMessage(),
-            containsString("Delta Table SQL/Table API was used without Delta Catalog.")
-        );
+            validationException.getCause().getMessage())
+            .withFailMessage(
+                "Query Delta table should not be possible without Delta catalog.")
+            .contains("Delta Table SQL/Table API was used without Delta Catalog.");
     }
 
     @Test
@@ -350,10 +348,10 @@ public class DeltaFlinkSqlITCase {
             assertThrows(ValidationException.class, () -> tableEnv.executeSql(selectSql));
 
         assertThat(
-            "Query Delta table should not be possible without Delta catalog.",
-            validationException.getCause().getMessage(),
-            containsString("Delta Table SQL/Table API was used without Delta Catalog.")
-        );
+            validationException.getCause().getMessage())
+            .withFailMessage(
+                "Query Delta table should not be possible without Delta catalog.")
+            .contains("Delta Table SQL/Table API was used without Delta Catalog.");
     }
 
     @Test
@@ -401,11 +399,11 @@ public class DeltaFlinkSqlITCase {
             assertThrows(ValidationException.class, () -> tableEnv.executeSql(selectSql));
 
         assertThat(
-            "Using Flink Temporary tables should not be possible since those are always using"
-                + "Flink's default in-memory catalog.",
-            validationException.getCause().getMessage(),
-            containsString("Delta Table SQL/Table API was used without Delta Catalog.")
-        );
+            validationException.getCause().getMessage())
+            .withFailMessage(
+                "Using Flink Temporary tables should not be possible since those are always using"
+                    + "Flink's default in-memory catalog.")
+            .contains("Delta Table SQL/Table API was used without Delta Catalog.");
     }
 
     @Test
@@ -505,7 +503,7 @@ public class DeltaFlinkSqlITCase {
             collect.forEachRemaining(sourceRows::add);
         }
 
-        assertThat(sourceRows.size(), equalTo(1));
+        assertThat(sourceRows).hasSize(1);
     }
 
     private StreamExecutionEnvironment getTestStreamEnv() {

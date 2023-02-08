@@ -33,7 +33,7 @@ public class CatalogProxy extends DeltaCatalogBase {
         String defaultDatabase,
         Catalog decoratedCatalog,
         Configuration hadoopConfiguration) {
-        super(catalogName, defaultDatabase, decoratedCatalog, hadoopConfiguration);
+        super(catalogName, defaultDatabase, decoratedCatalog);
 
         this.deltaCatalog = new DeltaCatalog(catalogName, decoratedCatalog, hadoopConfiguration);
     }
@@ -47,7 +47,7 @@ public class CatalogProxy extends DeltaCatalogBase {
             return this.deltaCatalog.getTable(catalogTable);
         }
 
-        return catalogTable.getMetastoreTable();
+        return catalogTable.getCatalogTable();
     }
 
     @Override

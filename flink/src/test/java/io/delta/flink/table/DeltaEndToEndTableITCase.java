@@ -1,13 +1,18 @@
 package io.delta.flink.table;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.ExecutionITCaseTestConstants;
+import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.junit5.MiniClusterExtension;
+import org.apache.flink.types.Row;
+import org.apache.flink.util.CloseableIterator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,9 +24,7 @@ import static io.delta.flink.utils.DeltaTestUtils.getTestStreamEnv;
 import static io.delta.flink.utils.DeltaTestUtils.verifyDeltaTable;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.core.IsNot.not;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class DeltaEndToEndTableITCase {
 
@@ -64,7 +67,7 @@ public class DeltaEndToEndTableITCase {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
 
-        assertThat(sinkTablePath, not(equalTo(nonPartitionedLargeTablePath)));
+        assertThat(sinkTablePath).isNotEqualToIgnoringCase(nonPartitionedLargeTablePath);
     }
 
     @Test
@@ -109,6 +112,70 @@ public class DeltaEndToEndTableITCase {
 
         RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
         verifyDeltaTable(sinkTablePath, rowType, 1100);
+    }
+
+    @Test
+    public void testWriteAndReadNestedStructures()
+        throws Exception {
+
+        String sourceTableSql = "CREATE TABLE sourceTable ("
+            + " col1 INT,"
+            + " col2 ROW <a INT, b INT>"
+            + ") WITH ("
+            + "'connector' = 'datagen',"
+            + "'rows-per-second' = '1',"
+            + "'fields.col1.kind' = 'sequence',"
+            + "'fields.col1.start' = '1',"
+            + "'fields.col1.end' = '5'"
+            + ")";
+
+        String deltaSinkTable =
+            String.format("CREATE TABLE deltaSinkTable ("
+                    + "innerA INT,"
+                    + "innerB INT"
+                    + ") "
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                sinkTablePath);
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
+            getTestStreamEnv(true) // streamingMode = false
+        );
+
+        setupDeltaCatalog(tableEnv);
+
+        tableEnv.executeSql(sourceTableSql);
+        tableEnv.executeSql(deltaSinkTable);
+
+        tableEnv
+            .executeSql("INSERT INTO deltaSinkTable SELECT col2.a, col2.b FROM sourceTable")
+            .await(10, TimeUnit.SECONDS);
+
+        TableResult tableResult = tableEnv.executeSql("SELECT * FROM deltaSinkTable");
+
+        List<Row> result = new ArrayList<>();
+        try (CloseableIterator<Row> collect = tableResult.collect()) {
+            while (collect.hasNext()) {
+                result.add(collect.next());
+            }
+        }
+
+        assertThat(result).hasSize(5);
+        for (Row row : result) {
+            assertThat(row.getField("innerA")).isInstanceOf(Integer.class);
+            assertThat(row.getField("innerB")).isInstanceOf(Integer.class);
+        }
+
+        // tableEnv.executeSql("INSERT INTO deltaSinkTable SELECT * FROM sourceTable")
+        //    .await(10, TimeUnit.SECONDS);
+
+        // Caused by: java.lang.UnsupportedOperationException: Complex types not supported.
+        // tableEnv.executeSql("SELECT col2.a AS innerA, col2.b AS innerB FROM deltaSinkTable")
+        // .print();
+
+        System.out.println("hhh");
     }
 
     private void setupDeltaCatalog(StreamTableEnvironment tableEnv) {
