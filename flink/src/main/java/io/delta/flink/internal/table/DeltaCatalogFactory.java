@@ -9,7 +9,6 @@ import org.apache.flink.configuration.ConfigOptions;
 import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.table.catalog.Catalog;
 import org.apache.flink.table.catalog.CommonCatalogOptions;
-import org.apache.flink.table.catalog.GenericInMemoryCatalog;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 import org.apache.flink.table.factories.CatalogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,8 +44,7 @@ public class DeltaCatalogFactory implements CatalogFactory {
             context.getClassLoader()
         );
 
-        //Catalog decoratedCatalog = createDecoratedCatalog(deltaCatalogContext);
-        Catalog decoratedCatalog = new GenericInMemoryCatalog(context.getName(), "default");
+        Catalog decoratedCatalog = createDecoratedCatalog(deltaCatalogContext);
         Configuration hadoopConfiguration =
             HadoopUtils.getHadoopConfiguration(GlobalConfiguration.loadConfiguration());
         return new CatalogProxy(context.getName(), "default", decoratedCatalog,

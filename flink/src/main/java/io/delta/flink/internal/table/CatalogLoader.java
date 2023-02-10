@@ -5,7 +5,7 @@ import java.util.Map;
 
 import org.apache.flink.table.catalog.Catalog;
 import org.apache.flink.table.catalog.GenericInMemoryCatalogFactory;
-import org.apache.flink.table.catalog.exceptions.CatalogException;
+import org.apache.flink.table.catalog.hive.factories.HiveCatalogFactory;
 import org.apache.flink.table.factories.CatalogFactory.Context;
 import org.apache.hadoop.conf.Configuration;
 
@@ -51,9 +51,7 @@ public interface CatalogLoader extends Serializable {
             // https://github.com/delta-io/connectors/actions/runs/4115104278/jobs/7103364080
             // Maybe we should be able to use flink-table-test-utils for Hive dependencies if
             // this would be resolved after https://issues.apache.org/jira/browse/FLINK-27786.
-            // returning null for now, needs further discussion.
-            // return new HiveCatalogFactory().createCatalog(context);
-            throw new CatalogException("Hive decorated catalog is not yet supported.");
+            return new HiveCatalogFactory().createCatalog(context);
         }
     }
 

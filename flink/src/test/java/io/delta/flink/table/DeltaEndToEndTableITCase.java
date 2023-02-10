@@ -171,6 +171,7 @@ public class DeltaEndToEndTableITCase {
         // tableEnv.executeSql("INSERT INTO deltaSinkTable SELECT * FROM sourceTable")
         //    .await(10, TimeUnit.SECONDS);
 
+        // For Flink 1.15
         // Caused by: java.lang.UnsupportedOperationException: Complex types not supported.
         // tableEnv.executeSql("SELECT col2.a AS innerA, col2.b AS innerB FROM deltaSinkTable")
         // .print();
