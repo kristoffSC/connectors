@@ -1,4 +1,4 @@
-package io.delta.flink.table;
+package io.delta.flink.table.it.suite;
 
 import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
@@ -38,7 +38,7 @@ import io.delta.standalone.types.StringType;
 import io.delta.standalone.types.StructField;
 import io.delta.standalone.types.StructType;
 
-public class DeltaCatalogITCase {
+public abstract class DeltaCatalogTestSuite {
 
     private static final int PARALLELISM = 2;
 
@@ -66,10 +66,7 @@ public class DeltaCatalogITCase {
     @BeforeEach
     public void setUp() throws IOException {
         tablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-        tableEnv = TableEnvironment.create(
-            EnvironmentSettings.newInstance()
-                .build()
-        );
+        tableEnv = TableEnvironment.create(EnvironmentSettings.newInstance().build());
         setupDeltaCatalog(tableEnv);
     }
 
@@ -419,11 +416,11 @@ public class DeltaCatalogITCase {
         List<String> catalogTables = new ArrayList<>();
         try (CloseableIterator<Row> collect = tableResult.collect()) {
             while (collect.hasNext()) {
-                catalogTables.add((String) collect.next().getField(0));
+                catalogTables.add(((String) collect.next().getField(0)).toLowerCase());
             }
         }
 
-        assertThat(catalogTables).containsExactly("newSourceTable");
+        assertThat(catalogTables).containsExactly("newsourcetable");
     }
 
     @Test
@@ -479,12 +476,5 @@ public class DeltaCatalogITCase {
         );
     }
 
-    private void setupDeltaCatalog(TableEnvironment tableEnv) {
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-
-        tableEnv.executeSql(catalogSQL);
-        tableEnv.executeSql(useDeltaCatalog);
-    }
+    public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
 }

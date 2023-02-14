@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.delta.flink.table;
+package io.delta.flink.table.it.suite;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -71,7 +71,7 @@ import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
-public class DeltaSinkTableITCase {
+public abstract class DeltaSinkTableTestSuite {
 
     private static final int PARALLELISM = 2;
 
@@ -302,15 +302,15 @@ public class DeltaSinkTableITCase {
         if (useStaticPartition) {
             return String.format(
                 "INSERT INTO %s PARTITION(col1='val1') SELECT col2, col3 FROM %s",
-                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+                DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME,
+                DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME
             );
         }
 
         return String.format(
             "INSERT INTO %s SELECT * FROM %s",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME,
+            DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME
         );
     }
 
@@ -319,15 +319,15 @@ public class DeltaSinkTableITCase {
         if (useStaticPartition) {
             return String.format(
                 "INSERT INTO %s PARTITION(col1='val1') (col2) (SELECT col2 FROM %s)",
-                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+                DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME,
+                DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME
             );
         }
 
         return String.format(
             "INSERT INTO %s (col1) (SELECT col1 FROM %s)",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME,
+            DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME
         );
     }
 
@@ -340,8 +340,8 @@ public class DeltaSinkTableITCase {
                 "INSERT INTO %s PARTITION(col1='val1') (SELECT col2, cast(null as INT)"
                     + ((includeOptionalOptions) ? ", cast(null as INT) " : "")
                     + " FROM %s)",
-                DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-                DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+                DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME,
+                DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME
             );
         }
 
@@ -349,8 +349,8 @@ public class DeltaSinkTableITCase {
             "INSERT INTO %s (SELECT col1, cast(null as VARCHAR), cast(null as INT) "
                 + ((includeOptionalOptions) ? ", cast(null as INT) " : "")
                 + "FROM %s)",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME,
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME
+            DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME,
+            DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME
         );
     }
 
@@ -542,7 +542,7 @@ public class DeltaSinkTableITCase {
                 + "'number-of-rows' = '%s',"
                 + " 'rows-per-second' = '5'"
                 + ")",
-            DeltaSinkTableITCase.TEST_SOURCE_TABLE_NAME,
+            DeltaSinkTableTestSuite.TEST_SOURCE_TABLE_NAME,
             rows);
     }
 
@@ -569,17 +569,10 @@ public class DeltaSinkTableITCase {
                 + optionalTableOptions
                 + " 'table-path' = '%s'"
                 + ")",
-            DeltaSinkTableITCase.TEST_SINK_TABLE_NAME, tablePath);
+            DeltaSinkTableTestSuite.TEST_SINK_TABLE_NAME, tablePath);
     }
 
-    private void setupDeltaCatalog(TableEnvironment tableEnv) {
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-
-        tableEnv.executeSql(catalogSQL);
-        tableEnv.executeSql(useDeltaCatalog);
-    }
+    public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
 
     private static class RowTypeColumnarRowProducer implements RowProducer {
 

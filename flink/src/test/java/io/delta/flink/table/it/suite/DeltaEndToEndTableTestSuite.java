@@ -1,4 +1,4 @@
-package io.delta.flink.table;
+package io.delta.flink.table.it.suite;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.ExecutionITCaseTestConstants;
+import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.types.logical.RowType;
@@ -26,11 +27,11 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DeltaEndToEndTableITCase {
+public abstract class DeltaEndToEndTableTestSuite {
 
     private static final int PARALLELISM = 2;
 
-    private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
+    protected static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
     @RegisterExtension
     private static final MiniClusterExtension miniClusterResource =  new MiniClusterExtension(
@@ -114,6 +115,7 @@ public class DeltaEndToEndTableITCase {
         verifyDeltaTable(sinkTablePath, rowType, 1100);
     }
 
+    // TODO DC - work on this one
     @Test
     public void testWriteAndReadNestedStructures()
         throws Exception {
@@ -175,16 +177,7 @@ public class DeltaEndToEndTableITCase {
         // Caused by: java.lang.UnsupportedOperationException: Complex types not supported.
         // tableEnv.executeSql("SELECT col2.a AS innerA, col2.b AS innerB FROM deltaSinkTable")
         // .print();
-
-        System.out.println("hhh");
     }
 
-    private void setupDeltaCatalog(StreamTableEnvironment tableEnv) {
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-
-        tableEnv.executeSql(catalogSQL);
-        tableEnv.executeSql(useDeltaCatalog);
-    }
+    public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
 }

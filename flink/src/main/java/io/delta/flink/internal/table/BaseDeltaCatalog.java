@@ -18,11 +18,11 @@ import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
 import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.factories.Factory;
 
-public abstract class DeltaCatalogBase extends AbstractCatalog {
+public abstract class BaseDeltaCatalog extends AbstractCatalog {
 
     protected final Catalog decoratedCatalog;
 
-    public DeltaCatalogBase(
+    public BaseDeltaCatalog(
             String name,
             String defaultDatabase,
             Catalog decoratedCatalog) {

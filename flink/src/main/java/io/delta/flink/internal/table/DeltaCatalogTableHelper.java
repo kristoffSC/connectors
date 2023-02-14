@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.catalog.CatalogBaseTable;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.Column;
@@ -221,15 +223,24 @@ public final class DeltaCatalogTableHelper {
         optionsToStoreInMetastore.put(DeltaTableConnectorOptions.TABLE_PATH.key(),
             deltaTablePath);
 
-        // prepare catalog table to store in metastore. This table will have only selected
+        // Prepare catalog table to store in metastore. This table will have only selected
         // options from DDL and an empty schema.
-        return CatalogTable.of(
-            // by design don't store schema in metastore. Also watermark and primary key will not
-            // be stored in metastore and for now it will not be supported by Delta connector SQL.
-            Schema.newBuilder().build(),
-            table.getComment(),
-            ddlPartitionColumns,
-            optionsToStoreInMetastore
+        // Flink's Hive catalog calls CatalogTable::getSchema method (deprecated) and apply null
+        // check on the resul.
+        // The default implementation for this method returns null, and the DefaultCatalogTable
+        // returned by CatalogTable.of( ) does not override it,
+        // hence we need to have our own wrapper that will return empty TableSchema when
+        // getSchema method is called.
+        return new DeltaBaseTable(
+            CatalogTable.of(
+                // by design don't store schema in metastore. Also watermark and primary key will
+                // not be stored in metastore and for now it will not be supported by Delta
+                // connector SQL.
+                Schema.newBuilder().build(),
+                table.getComment(),
+                ddlPartitionColumns,
+                optionsToStoreInMetastore
+            )
         );
     }
 
@@ -249,6 +260,65 @@ public final class DeltaCatalogTableHelper {
                 ddlOption.startsWith("parquet.")) {
                 throw CatalogExceptionHelper.invalidOptionInDdl(ddlOption);
             }
+        }
+    }
+
+    private static class DeltaBaseTable implements CatalogTable {
+
+        private final CatalogTable decoratedTable;
+
+        private DeltaBaseTable(CatalogTable decoratedTable) {
+            this.decoratedTable = decoratedTable;
+        }
+
+        @Override
+        public boolean isPartitioned() {
+            return decoratedTable.isPartitioned();
+        }
+
+        @Override
+        public List<String> getPartitionKeys() {
+            return decoratedTable.getPartitionKeys();
+        }
+
+        @Override
+        public CatalogTable copy(Map<String, String> map) {
+            return decoratedTable.copy(map);
+        }
+
+        @Override
+        public Map<String, String> getOptions() {
+            return decoratedTable.getOptions();
+        }
+
+        @Override
+        public TableSchema getSchema() {
+            return TableSchema.builder().build();
+        }
+
+        @Override
+        public Schema getUnresolvedSchema() {
+            return Schema.newBuilder().build();
+        }
+
+        @Override
+        public String getComment() {
+            return decoratedTable.getComment();
+        }
+
+        @Override
+        public CatalogBaseTable copy() {
+            return decoratedTable.copy();
+        }
+
+        @Override
+        public Optional<String> getDescription() {
+            return decoratedTable.getDescription();
+        }
+
+        @Override
+        public Optional<String> getDetailedDescription() {
+            return decoratedTable.getDetailedDescription();
         }
     }
 

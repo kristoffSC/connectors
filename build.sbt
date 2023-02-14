@@ -746,6 +746,35 @@ lazy val flink = (project in file("flink"))
       "org.junit.jupiter" % "junit-jupiter-params" % "5.8.2" % "test",
       "io.github.artsok" % "rerunner-jupiter" % "2.1.6" % "test",
 
+      // Exclusions due to conflicts with Flink's libraries from table planer, hive, calcite etc.
+      "org.apache.hive" % "hive-metastore" % "3.1.2" % "test" excludeAll(
+        ExclusionRule("org.apache.avro", "avro"),
+        ExclusionRule("org.slf4j", "slf4j-log4j12"),
+        ExclusionRule("org.pentaho"),
+        ExclusionRule("org.apache.hbase"),
+        ExclusionRule("org.apache.hbase"),
+        ExclusionRule("co.cask.tephra"),
+        ExclusionRule("com.google.code.findbugs", "jsr305"),
+        ExclusionRule("org.eclipse.jetty.aggregate", "module: 'jetty-all"),
+        ExclusionRule("org.eclipse.jetty.orbit", "javax.servlet"),
+        ExclusionRule("org.apache.parquet", "parquet-hadoop-bundle"),
+        ExclusionRule("com.tdunning", "json"),
+        ExclusionRule("javax.transaction", "transaction-api"),
+        ExclusionRule("'com.zaxxer", "HikariCP"),
+      ),
+      // Exclusions due to conflicts with Flink's libraries from table planer, hive, calcite etc.
+      "org.apache.hive" % "hive-exec" % "3.1.2" % "test" classifier "core" excludeAll(
+        ExclusionRule("'org.apache.avro", "avro"),
+        ExclusionRule("org.slf4j", "slf4j-log4j12"),
+        ExclusionRule("org.pentaho"),
+        ExclusionRule("com.google.code.findbugs", "jsr305"),
+        ExclusionRule("org.apache.calcite.avatica"),
+        ExclusionRule("org.apache.calcite"),
+        ExclusionRule("org.apache.hive", "hive-llap-tez"),
+        ExclusionRule("org.apache.logging.log4j"),
+        ExclusionRule("com.google.protobuf", "protobuf-java"),
+      ),
+
       // Compiler plugins
       // -- Bump up the genjavadoc version explicitly to 0.18 to work with Scala 2.12
       compilerPlugin("com.typesafe.genjavadoc" %% "genjavadoc-plugin" % "0.18" cross CrossVersion.full)

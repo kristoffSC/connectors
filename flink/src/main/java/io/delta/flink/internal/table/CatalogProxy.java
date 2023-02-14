@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Redirects calls to Delta Catalog or decorated catalog depends on table type.
  */
-public class CatalogProxy extends DeltaCatalogBase {
+public class CatalogProxy extends BaseDeltaCatalog {
 
     private final DeltaCatalog deltaCatalog;
 

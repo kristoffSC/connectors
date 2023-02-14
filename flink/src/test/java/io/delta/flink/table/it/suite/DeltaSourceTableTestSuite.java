@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.delta.flink.table;
+package io.delta.flink.table.it.suite;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +38,7 @@ import io.delta.flink.utils.TestDescriptor;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -65,7 +66,7 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.SURNAME_COLUMN_V
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class DeltaSourceTableITCase {
+public abstract class DeltaSourceTableTestSuite {
 
     private static final int PARALLELISM = 2;
 
@@ -160,9 +161,10 @@ public class DeltaSourceTableITCase {
             assertThrows(RuntimeException.class, () -> tableEnv.executeSql(selectSql));
 
         assertThat(exception.getMessage())
-            .isEqualToNormalizingNewlines(
-                "Querying an unbounded table 'myDeltaCatalog.default.sourceTable' in batch mode "
-                    + "is not allowed. The table source is unbounded.");
+            .contains(
+                "Querying an unbounded table",
+                "in batch mode is not allowed. The table source is unbounded."
+            );
     }
 
     /**
@@ -614,17 +616,10 @@ public class DeltaSourceTableITCase {
                 + " 'connector' = 'delta',"
                 + " 'table-path' = '%s'"
                 + ")",
-            DeltaSourceTableITCase.TEST_SOURCE_TABLE_NAME,
+            DeltaSourceTableTestSuite.TEST_SOURCE_TABLE_NAME,
             tablePath
         );
     }
 
-    private void setupDeltaCatalog(StreamTableEnvironment tableEnv) {
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-
-        tableEnv.executeSql(catalogSQL);
-        tableEnv.executeSql(useDeltaCatalog);
-    }
+    public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
 }

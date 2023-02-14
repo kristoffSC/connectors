@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.delta.flink.table;
+package io.delta.flink.table.it.suite;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,6 +29,7 @@ import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -46,13 +47,15 @@ import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class DeltaFlinkSqlITCase {
+public abstract class DeltaFlinkSqlTestSuite {
 
     private static final int PARALLELISM = 2;
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
     private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
+
+    public TableEnvironment tableEnv;
 
     @BeforeAll
     public static void beforeAll() throws IOException {
@@ -68,6 +71,8 @@ public class DeltaFlinkSqlITCase {
     public void setUp() {
         try {
             miniClusterResource.before();
+            tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
+            setupDeltaCatalog(tableEnv);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
@@ -80,14 +85,6 @@ public class DeltaFlinkSqlITCase {
 
     @Test
     public void testPipelineWithoutDeltaTables_1() throws Exception {
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-        tableEnv.executeSql(catalogSQL);
-
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-        tableEnv.executeSql(useDeltaCatalog);
 
         String sourceTableSql = "CREATE TABLE sourceTable ("
             + " col1 VARCHAR,"
@@ -131,14 +128,6 @@ public class DeltaFlinkSqlITCase {
     public void testPipelineWithoutDeltaTables_2() throws Exception {
 
         String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-        tableEnv.executeSql(catalogSQL);
-
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-        tableEnv.executeSql(useDeltaCatalog);
 
         String sourceTableSql = "CREATE TABLE sourceTable ("
             + " col1 VARCHAR,"
@@ -198,14 +187,6 @@ public class DeltaFlinkSqlITCase {
 
         DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
 
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-        tableEnv.executeSql(catalogSQL);
-
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-        tableEnv.executeSql(useDeltaCatalog);
-
         String sourceTableSql = String.format("CREATE TABLE sourceTable ("
             + " col1 VARCHAR,"
             + " col2 VARCHAR,"
@@ -259,115 +240,11 @@ public class DeltaFlinkSqlITCase {
     }
 
     @Test
-    public void testInsertIntoDeltaTableWithoutDeltaCatalog() throws Exception {
-
-        // GIVEN
-        String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-
-        String sourceTableSql = "CREATE TABLE sourceTable ("
-            + " col1 VARCHAR,"
-            + " col2 VARCHAR,"
-            + " col3 INT"
-            + ") WITH ("
-            + "'connector' = 'datagen',"
-            + "'rows-per-second' = '1',"
-            + "'fields.col3.kind' = 'sequence',"
-            + "'fields.col3.start' = '1',"
-            + "'fields.col3.end' = '5'"
-            + ")";
-
-        tableEnv.executeSql(sourceTableSql);
-
-        String sinkTableSql = String.format(
-            "CREATE TABLE sinkTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
-                + ") "
-                + "WITH ("
-                + " 'connector' = 'delta',"
-                + " 'table-path' = '%s'"
-                + ")",
-            targetTablePath);
-
-        tableEnv.executeSql(sinkTableSql);
-
-        // WHEN
-        String insertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
-
-        // THEN
-        ValidationException validationException =
-            assertThrows(ValidationException.class, () -> tableEnv.executeSql(insertSql));
-
-        assertThat(
-            validationException.getCause().getMessage())
-            .withFailMessage(
-                "Query Delta table should not be possible without Delta catalog.")
-            .contains("Delta Table SQL/Table API was used without Delta Catalog.");
-    }
-
-    @Test
-    public void testSelectDeltaTableWithoutDeltaCatalog() throws Exception {
-
-        // GIVEN
-        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-
-        String sourceTableSql = String.format(
-            "CREATE TABLE sourceTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
-                + ") "
-                + "WITH ("
-                + " 'connector' = 'delta',"
-                + " 'table-path' = '%s'"
-                + ")",
-            sourceTablePath);
-
-        tableEnv.executeSql(sourceTableSql);
-
-        String sinkTableSql = "CREATE TABLE sinkTable ("
-            + " col1 VARCHAR,"
-            + " col2 VARCHAR,"
-            + " col3 INT"
-            + ") WITH ("
-            + "  'connector' = 'blackhole'"
-            + ");";
-
-        tableEnv.executeSql(sinkTableSql);
-
-        // WHEN
-        String selectSql = "SELECT * FROM sourceTable";
-
-        // THEN
-        ValidationException validationException =
-            assertThrows(ValidationException.class, () -> tableEnv.executeSql(selectSql));
-
-        assertThat(
-            validationException.getCause().getMessage())
-            .withFailMessage(
-                "Query Delta table should not be possible without Delta catalog.")
-            .contains("Delta Table SQL/Table API was used without Delta Catalog.");
-    }
-
-    @Test
     public void testSelectDeltaTableAsTempTable() throws Exception {
 
         // GIVEN
         String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
         DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        tableEnv.executeSql(catalogSQL);
-
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-        tableEnv.executeSql(useDeltaCatalog);
 
         String sourceTableSql = String.format(
             "CREATE TABLE sourceTable ("
@@ -413,14 +290,6 @@ public class DeltaFlinkSqlITCase {
         String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
         DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
 
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        tableEnv.executeSql(catalogSQL);
-
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-        tableEnv.executeSql(useDeltaCatalog);
-
         String sourceTableSql = String.format(
             "CREATE TABLE sourceTable ("
                 + " col1 VARCHAR,"
@@ -463,14 +332,6 @@ public class DeltaFlinkSqlITCase {
         String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
         DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
 
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(getTestStreamEnv());
-
-        String catalogSQL = "CREATE CATALOG myDeltaCatalog WITH ('type' = 'delta-catalog');";
-        tableEnv.executeSql(catalogSQL);
-
-        String useDeltaCatalog = "USE CATALOG myDeltaCatalog;";
-        tableEnv.executeSql(useDeltaCatalog);
-
         String sourceTableSql = String.format(
             "CREATE TABLE sourceTable ("
                 + " col1 VARCHAR,"
@@ -496,6 +357,8 @@ public class DeltaFlinkSqlITCase {
 
         assertSelectResult(selectViewResult);
     }
+
+    public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
 
     private void assertSelectResult(TableResult selectResult) throws Exception {
         List<Row> sourceRows = new ArrayList<>();
