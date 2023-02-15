@@ -1,5 +1,6 @@
-package io.delta.flink.table.it.suite;
+package io.delta.flink.table.it.impl;
 
+import io.delta.flink.table.it.suite.DeltaFlinkSqlTestSuite;
 import io.delta.flink.utils.extensions.HiveCatalogExtension;
 import org.apache.flink.table.api.TableEnvironment;
 import org.junit.jupiter.api.extension.RegisterExtension;

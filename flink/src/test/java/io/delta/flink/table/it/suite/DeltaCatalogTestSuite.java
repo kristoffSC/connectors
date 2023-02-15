@@ -220,6 +220,51 @@ public abstract class DeltaCatalogTestSuite {
     }
 
     /**
+     * Verifies that CREATE TABLE will throw exception when DDL contains not allowed options.
+     */
+    @Test
+    public void shouldThrowIfInvalidDdlOptions() throws Exception {
+
+        tablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+
+        String invalidOptions = ""
+            + "'spark.some.option' = 'aValue',\n"
+            + "'delta.logStore' = 'myLog',\n"
+            + "'io.delta.storage.S3DynamoDBLogStore.ddb.region' = 'Poland',\n"
+            + "'parquet.writer.max-padding' = '10'\n";
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "col1 INT,"
+                    + "col2 INT,"
+                    + "col3 INT"
+                    + ") WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s',"
+                    + "%s"
+                    + ")",
+                tablePath,
+                invalidOptions
+                );
+
+        // WHEN
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
+
+        // THEN
+        assertThat(exception.getCause().getMessage()).contains(""
+            + "Invalid options used:\n"
+            + "spark.some.option\n"
+            + "delta.logStore\n"
+            + "io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
+            + "parquet.writer.max-padding");
+
+        // Check if there were no changes made to existing _delta_log
+        assertThat(
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath).tableExists()).isFalse();
+    }
+
+    /**
      * Verifies that CREATE TABLE will throw exception when _delta_log exists under table-path but
      * has different partition spec that specified in DDL.
      */
@@ -466,6 +511,9 @@ public abstract class DeltaCatalogTestSuite {
                 new StructField("surname", new StringType()),
                 new StructField("age", new IntegerType())
             );
+
+        // we assume that there were no partition columns. In the future we might
+        // have change this for different test setups.
         assertThat(metadata.getPartitionColumns()).isEmpty();
     }
 

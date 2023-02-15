@@ -245,6 +245,7 @@ public final class DeltaCatalogTableHelper {
     }
 
     public static void validateDdlOptions(Map<String, String> ddlOptions) {
+        List<String> invalidOptions = new LinkedList<>();
         for (String ddlOption : ddlOptions.keySet()) {
 
             // validate for Flink Job specific options in DDL
@@ -252,14 +253,16 @@ public final class DeltaCatalogTableHelper {
                 throw CatalogExceptionHelper.jobSpecificOptionInDdlException(ddlOption);
             }
 
-            // TODO DC - Add tests for this
             // validate for Delta log Store config and parquet config.
             if (ddlOption.startsWith("spark.") ||
                 ddlOption.startsWith("delta.logStore") ||
                 ddlOption.startsWith("io.delta") ||
                 ddlOption.startsWith("parquet.")) {
-                throw CatalogExceptionHelper.invalidOptionInDdl(ddlOption);
+                invalidOptions.add(ddlOption);
             }
+        }
+        if (!invalidOptions.isEmpty()) {
+            throw CatalogExceptionHelper.invalidOptionInDdl(invalidOptions);
         }
     }
 

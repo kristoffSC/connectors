@@ -27,10 +27,28 @@ public class DeltaCatalog {
 
     private final String catalogName;
 
+    /**
+     * A Flink's {@link Catalog} implementation to which all Metastore related actions will be
+     * redirected. The {@link DeltaCatalog} will not call {@link Catalog#open()} on this instance.
+     * If it is required to call this method it should be done before passing this reference to
+     * {@link DeltaCatalog}.
+     */
     private final Catalog decoratedCatalog;
 
     private final Configuration hadoopConfiguration;
 
+    /**
+     * Creates instance of {@link DeltaCatalog} for given decorated catalog and catalog name.
+     *
+     * @param catalogName         catalog name.
+     * @param decoratedCatalog    A Flink's {@link Catalog} implementation to which all Metastore
+     *                            related actions will be redirected. The {@link DeltaCatalog} will
+     *                            not call {@link Catalog#open()} on this instance. If it is
+     *                            required to call this method it should be done before passing this
+     *                            reference to {@link DeltaCatalog}.
+     * @param hadoopConfiguration The {@link Configuration} object that will be used for {@link
+     *                            DeltaLog} initialization.
+     */
     DeltaCatalog(String catalogName, Catalog decoratedCatalog, Configuration hadoopConfiguration) {
         this.catalogName = catalogName;
         this.decoratedCatalog = decoratedCatalog;
@@ -55,7 +73,7 @@ public class DeltaCatalog {
         return CatalogTable.of(
             Schema.newBuilder()
                 .fromFields(flinkTypesFromDelta.getKey(), flinkTypesFromDelta.getValue())
-                .build(), // don't store any schema in metastore.
+                .build(), // Table Schema is not stored in metastore, we take it from _delta_log.
             metastoreTable.getComment(),
             deltaMetadata.getPartitionColumns(),
             metastoreTable.getOptions()

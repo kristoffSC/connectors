@@ -1,5 +1,6 @@
 package io.delta.flink.internal.table;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -51,11 +52,11 @@ public final class CatalogExceptionHelper {
         return new CatalogException(message);
     }
 
-    static CatalogException invalidOptionInDdl(String ddlOption) {
+    static CatalogException invalidOptionInDdl(Collection<String> invalidOptions) {
         String message = String.format(
-            "DDL contains invalid option %s. DDL can have delta table properties only or "
-                + "arbitrary user options",
-            ddlOption);
+            "DDL contains invalid options. DDL can have delta table properties or "
+                + "arbitrary user options only.\nInvalid options used:\n%s",
+            String.join("\n", invalidOptions));
         return new CatalogException(message);
     }
 
