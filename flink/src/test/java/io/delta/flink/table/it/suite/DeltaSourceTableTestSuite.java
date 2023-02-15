@@ -224,13 +224,14 @@ public abstract class DeltaSourceTableTestSuite {
 
         String selectSql = String.format("SELECT * FROM sourceTable %s", connectorModeHint);
 
-        Table resultTable = tableEnv.sqlQuery(selectSql);
+        TableResult resultTable = tableEnv.executeSql(selectSql);
 
-        // TODO DC - Maybe we don't need this. Instead we could just read data from TableResult
-        //  after from  tableEnv.executeSql(...).
-        DataStream<Row> rowDataStream = tableEnv.toDataStream(resultTable);
-
-        List<Row> resultData = DeltaTestUtils.testBoundedStream(rowDataStream, miniClusterResource);
+        List<Row> resultData = new ArrayList<>();
+        try (CloseableIterator<Row> collect = resultTable.collect()) {
+            while (collect.hasNext()) {
+                resultData.add(collect.next());
+            }
+        }
 
         List<String> readNames =
             resultData.stream()
@@ -414,7 +415,6 @@ public abstract class DeltaSourceTableTestSuite {
         assertThat(exception.getMessage()).contains("Column 'col4' not found in any table");
     }
 
-    // TODO DC - same for Sink
     @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"batch", "streaming"})
     public void testThrowOnInvalidQueryHints(String queryMode) {
