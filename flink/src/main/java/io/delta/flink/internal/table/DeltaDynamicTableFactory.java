@@ -106,7 +106,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         }
 
         // This must have been a Delta Table, so continue with this factory
-        DeltaTableFactoryHelper.validateSourceQueryOptions(options);
+        DeltaTableFactoryHelper.validateSinkQueryOptions(options);
 
         ResolvedSchema tableSchema = context.getCatalogTable().getResolvedSchema();
 

@@ -1,7 +1,6 @@
 package io.delta.flink.internal.table;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,7 +24,6 @@ public final class DeltaTableFactoryHelper {
         OPTIONS_TO_IGNORE.add(DeltaFlinkJobSpecificOptions.MODE.key());
     }
 
-    // TODO DC - create tests for this
     public static QueryOptions validateSourceQueryOptions(Configuration options) {
 
         validateDeltaTablePathOption(options);
@@ -51,11 +49,10 @@ public final class DeltaTableFactoryHelper {
         if (!invalidOptions.isEmpty()) {
             String message = String.format(
                 "Only job specific options are allowed in INSERT SQL statement.\n"
-                    + "Invalid options used:\n%s\n"
-                    + "Allowed options:\n%s",
-                invalidOptions,
-                Arrays.toString(
-                    DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS.toArray(new String[0]))
+                    + "Invalid options used: \n[%s]\n"
+                    + "Allowed options:\n[%s]",
+                String.join(", ", invalidOptions),
+                String.join(", ", DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS)
             );
 
             throw new ValidationException(message);
@@ -68,7 +65,6 @@ public final class DeltaTableFactoryHelper {
         );
     }
 
-    // TODO DC - create tests for this
     public static QueryOptions validateSinkQueryOptions(Configuration options) {
 
         validateDeltaTablePathOption(options);
@@ -91,7 +87,9 @@ public final class DeltaTableFactoryHelper {
         if (!invalidOptions.isEmpty()) {
             String message = String.format(
                 "Currently no job specific options are allowed in INSERT SQL statements.\n"
-                    + "Invalid options used:\n%s\n", invalidOptions);
+                    + "Invalid options used:\n[%s]",
+                String.join(", ", invalidOptions)
+            );
             throw new ValidationException(message);
         }
 

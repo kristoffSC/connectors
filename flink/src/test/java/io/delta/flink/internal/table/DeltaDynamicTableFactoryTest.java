@@ -4,6 +4,8 @@ import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.connector.datagen.table.DataGenTableSource;
@@ -102,7 +104,7 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
-    void shouldValidateUsedUnexpectedOption() {
+    void shouldThrowIfUsedUnexpectedOption() {
 
         options.put("table-path", "file://some/path");
         options.put("invalid-Option", "MyTarget");
@@ -118,8 +120,22 @@ class DeltaDynamicTableFactoryTest {
             () -> tableFactory.createDynamicTableSource(tableContext)
         );
 
-        LOG.info(sinkValidationException.getMessage());
-        LOG.info(sourceValidationException.getMessage());
+        assertThat(sinkValidationException.getMessage())
+            .isEqualTo(
+                "Currently no job specific options are allowed in INSERT SQL statements.\n"
+                    + "Invalid options used:\n"
+                    + "[invalid-Option]"
+            );
+        assertThat(sourceValidationException.getMessage())
+            .isEqualTo(
+                "Only job specific options are allowed in INSERT SQL statement.\n"
+                    + "Invalid options used: \n"
+                    + "[invalid-Option]\n"
+                    + "Allowed options:\n"
+                    + "[mode, startingTimestamp, ignoreDeletes, updateCheckIntervalMillis, "
+                    + "startingVersion, ignoreChanges, versionAsOf, updateCheckDelayMillis, "
+                    + "timestampAsOf]"
+            );
     }
 
     @Test
@@ -173,8 +189,53 @@ class DeltaDynamicTableFactoryTest {
         assertThrowsNotUsingCatalog(sinkException);
     }
 
+    @Test
+    public void shouldThrowIfInvalidJobSpecificOptionsUsed() {
+
+        options.put("table-path", "file://some/path");
+        Map<String, String> invalidOptions = Stream.of(
+                "spark.some.option",
+                "delta.logStore",
+                "io.delta.storage.S3DynamoDBLogStore.ddb.region",
+                "parquet.writer.max-padding"
+            )
+            .collect(Collectors.toMap(optionName -> optionName, s -> "aValue"));
+        this.options.putAll(invalidOptions);
+        Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, this.options);
+
+        ValidationException sinkValidationException = assertThrows(
+            ValidationException.class,
+            () -> tableFactory.createDynamicTableSink(tableContext)
+        );
+
+        ValidationException sourceValidationException = assertThrows(
+            ValidationException.class,
+            () -> tableFactory.createDynamicTableSource(tableContext)
+        );
+
+        assertThat(sinkValidationException.getMessage())
+            .isEqualTo(
+                "Currently no job specific options are allowed in INSERT SQL statements.\n"
+                    + "Invalid options used:\n"
+                    + "[spark.some.option, io.delta.storage.S3DynamoDBLogStore.ddb.region, "
+                    + "parquet.writer.max-padding, delta.logStore]"
+            );
+        assertThat(sourceValidationException.getMessage())
+            .isEqualTo(
+                "Only job specific options are allowed in INSERT SQL statement.\n"
+                    + "Invalid options used: \n"
+                    + "[spark.some.option, io.delta.storage.S3DynamoDBLogStore.ddb.region, "
+                    + "parquet.writer.max-padding, delta.logStore]\n"
+                    + "Allowed options:\n"
+                    + "[mode, startingTimestamp, ignoreDeletes, updateCheckIntervalMillis, "
+                    + "startingVersion, ignoreChanges, versionAsOf, updateCheckDelayMillis, "
+                    + "timestampAsOf]"
+            );
+
+    }
+
     private void assertThrowsNotUsingCatalog(RuntimeException exception) {
         assertThat(exception.getMessage())
-            .contains("Delta Table SQL/Table API was used without Delta Catalog");
+            .contains("Delta Table SQL/Table API was used without Delta Catalog.");
     }
 }
