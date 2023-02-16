@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Redirects calls to Delta Catalog or decorated catalog depends on table type.
  */
-public class CatalogProxy extends BaseDeltaCatalog {
+public class CatalogProxy extends BaseCatalog {
 
     private final DeltaCatalog deltaCatalog;
 
@@ -55,10 +55,8 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
-            // it's a Delta table, redirect to delta catalog.
             return this.deltaCatalog.tableExists(catalogTable);
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.tableExists(tablePath);
         }
     }
@@ -69,10 +67,8 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
         DeltaCatalogBaseTable catalogTable = new DeltaCatalogBaseTable(tablePath, table);
         if (catalogTable.isDeltaTable()) {
-            // it's a Delta table, redirect to delta catalog.
             this.deltaCatalog.createTable(catalogTable, ignoreIfExists);
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.createTable(tablePath, table, ignoreIfExists);
         }
     }
@@ -85,10 +81,8 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
         DeltaCatalogBaseTable catalogTable = new DeltaCatalogBaseTable(tablePath, newTable);
         if (catalogTable.isDeltaTable()) {
-            // it's a Delta table, redirect to delta catalog.
             this.deltaCatalog.alterTable(catalogTable);
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.alterTable(tablePath, newTable, ignoreIfNotExists);
         }
     }
@@ -104,7 +98,6 @@ public class CatalogProxy extends BaseDeltaCatalog {
             throw new CatalogException(
                 "Delta table connector does not support partition listing.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.listPartitions(tablePath);
         }
     }
@@ -123,7 +116,6 @@ public class CatalogProxy extends BaseDeltaCatalog {
             throw new CatalogException(
                 "Delta table connector does not support partition listing.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.listPartitions(tablePath, partitionSpec);
         }
     }
@@ -141,7 +133,6 @@ public class CatalogProxy extends BaseDeltaCatalog {
             throw new CatalogException(
                 "Delta table connector does not support partition listing by filter.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.listPartitionsByFilter(tablePath, filters);
         }
     }
@@ -157,7 +148,6 @@ public class CatalogProxy extends BaseDeltaCatalog {
             throw new CatalogException(
                 "Delta table connector does not support partition listing.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.getPartition(tablePath, partitionSpec);
         }
     }
@@ -173,7 +163,6 @@ public class CatalogProxy extends BaseDeltaCatalog {
             throw new CatalogException(
                 "Delta table connector does not support partition listing.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.partitionExists(tablePath, partitionSpec);
         }
     }
@@ -188,11 +177,9 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
-            // Delta standalone does not provide partition create option.
             throw new CatalogException(
                 "Delta table connector does not support partition creation.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.createPartition(
                 tablePath,
                 partitionSpec,
@@ -210,11 +197,9 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
-            // Delta standalone does not provide partition drop option.
             throw new CatalogException(
                 "Delta table connector does not support partition drop operation.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.dropPartition(
                 tablePath,
                 partitionSpec,
@@ -232,11 +217,9 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
-            // Delta standalone does not provide alter partition option.
             throw new CatalogException(
                 "Delta table connector does not support alter partition operation.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             this.decoratedCatalog.alterPartition(
                 tablePath,
                 partitionSpec,
@@ -251,11 +234,10 @@ public class CatalogProxy extends BaseDeltaCatalog {
         throws TableNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // Table statistic call is used by calcite to get Table schema, so we cannot throw
-            // from this method.
+            // Table statistic call is used by flink-table-planner module to get Table schema, so
+            // we cannot throw from this method.
             return CatalogTableStatistics.UNKNOWN;
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.getTableStatistics(tablePath);
         }
     }
@@ -265,11 +247,10 @@ public class CatalogProxy extends BaseDeltaCatalog {
         throws TableNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // Table statistic call is used by calcite to get Table schema, so we cannot throw
-            // from this method.
+            // Table statistic call is used by flink-table-planner module to get Table schema, so
+            // we cannot throw from this method.
             return CatalogColumnStatistics.UNKNOWN;
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.getTableColumnStatistics(tablePath);
         }
     }
@@ -281,11 +262,9 @@ public class CatalogProxy extends BaseDeltaCatalog {
         throws PartitionNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support partition statistics.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.getPartitionStatistics(tablePath, partitionSpec);
         }
     }
@@ -297,11 +276,9 @@ public class CatalogProxy extends BaseDeltaCatalog {
         throws PartitionNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support partition column statistics.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
             return this.decoratedCatalog.getPartitionColumnStatistics(tablePath, partitionSpec);
         }
     }
@@ -313,13 +290,14 @@ public class CatalogProxy extends BaseDeltaCatalog {
             boolean ignoreIfNotExists) throws TableNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter table statistics.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
-            this.decoratedCatalog.alterTableStatistics(tablePath, tableStatistics,
-                ignoreIfNotExists);
+            this.decoratedCatalog.alterTableStatistics(
+                tablePath,
+                tableStatistics,
+                ignoreIfNotExists
+            );
         }
     }
 
@@ -331,13 +309,14 @@ public class CatalogProxy extends BaseDeltaCatalog {
             throws TableNotExistException, CatalogException, TablePartitionedException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter table column statistics.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
-            this.decoratedCatalog.alterTableColumnStatistics(tablePath, columnStatistics,
-                ignoreIfNotExists);
+            this.decoratedCatalog.alterTableColumnStatistics(
+                tablePath,
+                columnStatistics,
+                ignoreIfNotExists
+            );
         }
     }
 
@@ -349,13 +328,15 @@ public class CatalogProxy extends BaseDeltaCatalog {
             boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter partition statistics.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
-            this.decoratedCatalog.alterPartitionStatistics(tablePath, partitionSpec,
-                partitionStatistics, ignoreIfNotExists);
+            this.decoratedCatalog.alterPartitionStatistics(
+                tablePath,
+                partitionSpec,
+                partitionStatistics,
+                ignoreIfNotExists
+            );
         }
     }
 
@@ -367,13 +348,15 @@ public class CatalogProxy extends BaseDeltaCatalog {
             boolean ignoreIfNotExists) throws PartitionNotExistException, CatalogException {
 
         if (getCatalogTable(tablePath).isDeltaTable()) {
-            // it's a Delta table and this operation is not supported.
             throw new CatalogException(
                 "Delta table connector does not support alter partition column statistics.");
         } else {
-            // it's not a Delta table, redirect to decorated catalog.
-            this.decoratedCatalog.alterPartitionColumnStatistics(tablePath, partitionSpec,
-                columnStatistics, ignoreIfNotExists);
+            this.decoratedCatalog.alterPartitionColumnStatistics(
+                tablePath,
+                partitionSpec,
+                columnStatistics,
+                ignoreIfNotExists
+            );
         }
     }
 
@@ -387,7 +370,7 @@ public class CatalogProxy extends BaseDeltaCatalog {
 
     /**
      * In some cases like {@link Catalog#getTable(ObjectPath)} Flink runtime expects
-     * TableNotExistException In those cases we cannot throw checked exception because it could
+     * TableNotExistException. In those cases we cannot throw checked exception because it could
      * break some table planner logic.
      */
     private DeltaCatalogBaseTable getCatalogTableUnchecked(ObjectPath tablePath)

@@ -28,7 +28,6 @@ public class DeltaCatalogFactory implements CatalogFactory {
 
     @Override
     public Catalog createCatalog(Context context) {
-
         Map<String, String> originalOptions = context.getOptions();
         Map<String, String> deltaContextOptions = new HashMap<>(originalOptions);
 

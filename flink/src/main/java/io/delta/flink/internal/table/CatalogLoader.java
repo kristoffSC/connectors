@@ -46,7 +46,6 @@ public interface CatalogLoader extends Serializable {
 
         @Override
         public Catalog createCatalog(Context context) {
-
             Context newContext = filterDeltaCatalogOptions(context);
 
             // We had to add extra dependency to have access to HiveCatalogFactory.

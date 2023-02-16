@@ -16,6 +16,7 @@ import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 import io.delta.standalone.DeltaLog;
@@ -53,6 +54,17 @@ public class DeltaCatalog {
         this.catalogName = catalogName;
         this.decoratedCatalog = decoratedCatalog;
         this.hadoopConfiguration = hadoopConfiguration;
+
+        checkArgument(
+            !StringUtils.isNullOrWhitespaceOnly(catalogName),
+            "Catalog name cannot be null or empty."
+        );
+        checkArgument(decoratedCatalog != null,
+            "The decoratedCatalog cannot be null."
+        );
+        checkArgument(hadoopConfiguration != null,
+            "The Hadoop Configuration object - 'hadoopConfiguration' cannot be null."
+        );
     }
 
     public CatalogBaseTable getTable(DeltaCatalogBaseTable catalogTable) {
@@ -200,12 +212,12 @@ public class DeltaCatalog {
         }
     }
 
-    public void alterTable(DeltaCatalogBaseTable catalogTable) throws CatalogException {
+    public void alterTable(DeltaCatalogBaseTable newCatalogTable) throws CatalogException {
 
         // Flink's Default SQL dialect support ALTER statements ONLY for changing table name
         // (Catalog::renameTable(...) and for changing/setting table properties. Schema/partition
         // change for Flink default SQL dialect is not supported.
-        Map<String, String> alterTableDdlOptions = catalogTable.getOptions();
+        Map<String, String> alterTableDdlOptions = newCatalogTable.getOptions();
         String deltaTablePath =
             alterTableDdlOptions.get(DeltaTableConnectorOptions.TABLE_PATH.key());
 
@@ -227,7 +239,7 @@ public class DeltaCatalog {
         Map<String, String> deltaLogProperties =
             DeltaCatalogTableHelper.prepareDeltaTableProperties(
                 deltaAlterTableDdlOptions,
-                catalogTable.getTableCatalogPath(),
+                newCatalogTable.getTableCatalogPath(),
                 originalMetaData,
                 true // allowOverride = true
             );

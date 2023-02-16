@@ -16,7 +16,7 @@ public class DeltaCatalogBaseTable {
     @Nonnull
     private final CatalogBaseTable catalogTable;
 
-    private final boolean deltaTable;
+    private final boolean isDeltaTable;
 
     public DeltaCatalogBaseTable(ObjectPath tableCatalogPath, CatalogBaseTable catalogTable) {
         checkNotNull(tableCatalogPath, "Object path cannot be null for DeltaCatalogBaseTable.");
@@ -26,7 +26,7 @@ public class DeltaCatalogBaseTable {
         this.catalogTable = catalogTable;
 
         String connectorType = catalogTable.getOptions().get(FactoryUtil.CONNECTOR.key());
-        this.deltaTable = DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType);
+        this.isDeltaTable = DeltaDynamicTableFactory.IDENTIFIER.equals(connectorType);
     }
 
     public ObjectPath getTableCatalogPath() {
@@ -38,7 +38,7 @@ public class DeltaCatalogBaseTable {
     }
 
     public boolean isDeltaTable() {
-        return deltaTable;
+        return isDeltaTable;
     }
 
     public Map<String, String> getOptions() {

@@ -18,17 +18,25 @@ import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
 import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.factories.Factory;
 
-public abstract class BaseDeltaCatalog extends AbstractCatalog {
+public abstract class BaseCatalog extends AbstractCatalog {
 
     protected final Catalog decoratedCatalog;
 
-    public BaseDeltaCatalog(
+    public BaseCatalog(
             String name,
             String defaultDatabase,
             Catalog decoratedCatalog) {
         super(name, defaultDatabase);
 
         this.decoratedCatalog = decoratedCatalog;
+    }
+
+    // By design, we will remove only metastore information during drop table.
+    // No filesystem information (for example _delta_log folder) will be removed.
+    @Override
+    public void dropTable(ObjectPath tablePath, boolean ignoreIfNotExists)
+        throws TableNotExistException, CatalogException {
+        this.decoratedCatalog.dropTable(tablePath, ignoreIfNotExists);
     }
 
     @Override
@@ -86,13 +94,6 @@ public abstract class BaseDeltaCatalog extends AbstractCatalog {
     public void renameTable(ObjectPath tablePath, String newTableName, boolean ignoreIfNotExists)
         throws TableNotExistException, TableAlreadyExistException, CatalogException {
         this.decoratedCatalog.renameTable(tablePath, newTableName, ignoreIfNotExists);
-    }
-
-    // By design, we will remove only metastore information during drop table.
-    @Override
-    public void dropTable(ObjectPath tablePath, boolean ignoreIfNotExists)
-        throws TableNotExistException, CatalogException {
-        this.decoratedCatalog.dropTable(tablePath, ignoreIfNotExists);
     }
 
     @Override
