@@ -31,8 +31,8 @@ public final class CatalogExceptionHelper {
             String.format(
                 " Delta table [%s] from filesystem path [%s] has different schema or partition "
                     + "spec that one defined in CREATE TABLE DDL.\n"
-                    + "DDL schema:\n[%s],\n_delta_log schema:\n[%s]\n"
-                    + "DDL partition spec:\n[%s],\n_delta_log partition spec\n[%s]\n",
+                    + "DDL schema:\n[%s],\nDelta table schema:\n[%s]\n"
+                    + "DDL partition spec:\n[%s],\nDelta table partition spec:\n[%s]\n",
                 catalogTablePath,
                 deltaTablePath,
                 ddlDeltaSchema.getTreeString(),
@@ -60,18 +60,18 @@ public final class CatalogExceptionHelper {
         return new CatalogException(message);
     }
 
-    public static CatalogException ddlAndDeltaLogOptionMismatchException(
-            ObjectPath catalogTablePath,
-            List<DDLAndDeltaLogMismatchedOption> invalidOptions) {
+    public static CatalogException mismatchedDdlOptionAndDeltaTablePropertyException(
+                ObjectPath catalogTablePath,
+                List<MismatchedDdlOptionAndDeltaTableProperty> invalidOptions) {
 
         StringJoiner invalidOptionsString = new StringJoiner("\n");
-        for (DDLAndDeltaLogMismatchedOption invalidOption : invalidOptions) {
+        for (MismatchedDdlOptionAndDeltaTableProperty invalidOption : invalidOptions) {
             invalidOptionsString.add(
                 String.join(
                     " | ",
                     invalidOption.optionName,
                     invalidOption.ddlOptionValue,
-                    invalidOption.deltaLogOptionValue
+                    invalidOption.deltaLogPropertyValue
                 )
             );
         }
@@ -88,21 +88,21 @@ public final class CatalogExceptionHelper {
         );
     }
 
-    public static class DDLAndDeltaLogMismatchedOption {
+    public static class MismatchedDdlOptionAndDeltaTableProperty {
 
         private final String optionName;
 
         private final String ddlOptionValue;
 
-        private final String deltaLogOptionValue;
+        private final String deltaLogPropertyValue;
 
-        public DDLAndDeltaLogMismatchedOption(
+        public MismatchedDdlOptionAndDeltaTableProperty(
                 String optionName,
                 String ddlOptionValue,
-                String deltaLogOptionValue) {
+                String deltaLogPropertyValue) {
             this.optionName = optionName;
             this.ddlOptionValue = ddlOptionValue;
-            this.deltaLogOptionValue = deltaLogOptionValue;
+            this.deltaLogPropertyValue = deltaLogPropertyValue;
         }
     }
 }

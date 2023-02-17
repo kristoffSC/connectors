@@ -22,7 +22,7 @@ import static org.apache.flink.util.Preconditions.checkArgument;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 import io.delta.standalone.DeltaLog;
-import io.delta.standalone.Operation.Name;
+import io.delta.standalone.Operation;
 import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.StructType;
 
@@ -38,7 +38,7 @@ public class DeltaCatalog {
      */
     private final Catalog decoratedCatalog;
 
-    private final Configuration hadoopConfiguration;
+    private final Configuration hadoopConf;
 
     /**
      * Creates instance of {@link DeltaCatalog} for given decorated catalog and catalog name.
@@ -49,13 +49,13 @@ public class DeltaCatalog {
      *                            not call {@link Catalog#open()} on this instance. If it is
      *                            required to call this method it should be done before passing this
      *                            reference to {@link DeltaCatalog}.
-     * @param hadoopConfiguration The {@link Configuration} object that will be used for {@link
+     * @param hadoopConf The {@link Configuration} object that will be used for {@link
      *                            DeltaLog} initialization.
      */
-    DeltaCatalog(String catalogName, Catalog decoratedCatalog, Configuration hadoopConfiguration) {
+    DeltaCatalog(String catalogName, Catalog decoratedCatalog, Configuration hadoopConf) {
         this.catalogName = catalogName;
         this.decoratedCatalog = decoratedCatalog;
-        this.hadoopConfiguration = hadoopConfiguration;
+        this.hadoopConf = hadoopConf;
 
         checkArgument(
             !StringUtils.isNullOrWhitespaceOnly(catalogName),
@@ -64,7 +64,7 @@ public class DeltaCatalog {
         checkArgument(decoratedCatalog != null,
             "The decoratedCatalog cannot be null."
         );
-        checkArgument(hadoopConfiguration != null,
+        checkArgument(hadoopConf != null,
             "The Hadoop Configuration object - 'hadoopConfiguration' cannot be null."
         );
     }
@@ -77,7 +77,7 @@ public class DeltaCatalog {
         String tablePath =
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
 
-        DeltaLog deltaLog = DeltaLog.forTable(this.hadoopConfiguration, tablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(this.hadoopConf, tablePath);
         if (!deltaLog.tableExists()) {
             // TableNotExistException does not accept custom message, but we would like to meet
             // API contracts from Flink's Catalog::getTable interface and throw
@@ -116,13 +116,18 @@ public class DeltaCatalog {
         CatalogBaseTable metastoreTable = catalogTable.getCatalogTable();
         String deltaTablePath =
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
-        return DeltaLog.forTable(hadoopConfiguration, deltaTablePath).tableExists();
+        return DeltaLog.forTable(hadoopConf, deltaTablePath).tableExists();
     }
 
     public void createTable(DeltaCatalogBaseTable catalogTable, boolean ignoreIfExists)
             throws TableAlreadyExistException, DatabaseNotExistException, CatalogException {
 
         checkNotNull(catalogTable);
+        ObjectPath tableCatalogPath = catalogTable.getTableCatalogPath();
+        // First we need to check if table exists in Metastore and if so, throw exception.
+        if (this.decoratedCatalog.tableExists(tableCatalogPath) && !ignoreIfExists) {
+            throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
+        }
 
         Map<String, String> ddlOptions = catalogTable.getOptions();
         if (!databaseExists(catalogTable.getDatabaseName())) {
@@ -147,7 +152,6 @@ public class DeltaCatalog {
             DeltaCatalogTableHelper.filterMetastoreDdlOptions(ddlOptions);
 
         CatalogBaseTable table = catalogTable.getCatalogTable();
-        ObjectPath tableCatalogPath = catalogTable.getTableCatalogPath();
 
         // Get Partition columns from DDL;
         List<String> ddlPartitionColumns = ((CatalogTable) table).getPartitionKeys();
@@ -161,7 +165,7 @@ public class DeltaCatalog {
             throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
         }
 
-        DeltaLog deltaLog = DeltaLog.forTable(hadoopConfiguration, deltaTablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(hadoopConf, deltaTablePath);
         if (deltaLog.tableExists()) {
             // Table was not present in metastore however it is present on Filesystem, we have to
             // verify if schema, partition spec and properties stored in _delta_log match with DDL.
@@ -196,8 +200,11 @@ public class DeltaCatalog {
                     .build();
 
                 // add properties to _delta_log
-                DeltaCatalogTableHelper
-                    .commitToDeltaLog(deltaLog, updatedMetadata, Name.SET_TABLE_PROPERTIES);
+                DeltaCatalogTableHelper.commitToDeltaLog(
+                    deltaLog,
+                    updatedMetadata,
+                    Operation.Name.SET_TABLE_PROPERTIES
+                );
             }
 
             // Add table to metastore
@@ -213,7 +220,11 @@ public class DeltaCatalog {
                 .build();
 
             // create _delta_log
-            DeltaCatalogTableHelper.commitToDeltaLog(deltaLog, metadata, Name.CREATE_TABLE);
+            DeltaCatalogTableHelper.commitToDeltaLog(
+                deltaLog,
+                metadata,
+                Operation.Name.CREATE_TABLE
+            );
 
             DeltaMetastoreTable metastoreTable =
                 DeltaCatalogTableHelper.prepareMetastoreTable(table, deltaTablePath);
@@ -241,7 +252,7 @@ public class DeltaCatalog {
         Map<String, String> deltaAlterTableDdlOptions =
             DeltaCatalogTableHelper.filterMetastoreDdlOptions(alterTableDdlOptions);
 
-        DeltaLog deltaLog = DeltaLog.forTable(hadoopConfiguration, deltaTablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(hadoopConf, deltaTablePath);
         Metadata originalMetaData = deltaLog.update().getMetadata();
 
         // Add new properties to metadata.
@@ -261,7 +272,7 @@ public class DeltaCatalog {
 
         // add properties to _delta_log
         DeltaCatalogTableHelper
-            .commitToDeltaLog(deltaLog, updatedMetadata, Name.SET_TABLE_PROPERTIES);
+            .commitToDeltaLog(deltaLog, updatedMetadata, Operation.Name.SET_TABLE_PROPERTIES);
     }
 
     private boolean databaseExists(String databaseName) {

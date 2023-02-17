@@ -309,6 +309,46 @@ public abstract class DeltaCatalogTestSuite {
         assertThat(metadata.getConfiguration()).isEmpty();
     }
 
+    @Test
+    public void shouldThrowIfTableSchemaAndPartitionSpecDoNotMatch() throws IOException {
+        // GIVEN
+        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage(
+                "There should be Delta table files in test folder before calling DeltaCatalog.")
+            .isTrue();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "bogusColumn VARCHAR," // this column does not exist in _delta_log
+                    + "surname VARCHAR,"
+                    + "age INT"
+                    + ") "
+                    + "PARTITIONED BY (surname)"
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
+
+        // THEN
+        assertThat(exception.getCause().getMessage()).contains(
+            "has different schema or partition spec that one defined in CREATE TABLE DDL");
+
+        // Check if there were no changes made to existing _delta_log
+        Metadata metadata = deltaLog.update().getMetadata();
+        verifyThatDeltaLogWasNotChanged(metadata);
+        assertThat(metadata.getConfiguration()).isEmpty();
+    }
+
     /**
      * Verifies that CREATE TABLE will throw exception when _delta_log exists under table-path but
      * has different delta table properties that specified in DDL.

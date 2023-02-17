@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
-import io.delta.flink.internal.table.CatalogExceptionHelper.DDLAndDeltaLogMismatchedOption;
+import io.delta.flink.internal.table.CatalogExceptionHelper.MismatchedDdlOptionAndDeltaTableProperty;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.TableSchema;
@@ -31,7 +31,6 @@ import org.apache.flink.table.types.utils.LogicalTypeDataTypeConverter;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Operation;
-import io.delta.standalone.Operation.Name;
 import io.delta.standalone.OptimisticTransaction;
 import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.StructField;
@@ -45,7 +44,7 @@ public final class DeltaCatalogTableHelper {
 
         // contains physical, computed and metadata columns that were defined in DDL
         List<Column> columns = table.getResolvedSchema().getColumns();
-        validateDuplicateColumns(columns);
+        validateNoDuplicateColumns(columns);
 
         List<String> names = new LinkedList<>();
         List<LogicalType> types = new LinkedList<>();
@@ -81,7 +80,7 @@ public final class DeltaCatalogTableHelper {
         return Pair.of(columnNames, columnTypes);
     }
 
-    public static void validateDuplicateColumns(List<Column> columns) {
+    public static void validateNoDuplicateColumns(List<Column> columns) {
         final List<String> names =
             columns.stream().map(Column::getName).collect(Collectors.toList());
         final List<String> duplicates =
@@ -99,15 +98,15 @@ public final class DeltaCatalogTableHelper {
 
     public static void commitToDeltaLog(
             DeltaLog deltaLog,
-            Metadata updatedMetadata,
-            Name setTableProperties) {
+            Metadata newMetadata,
+            Operation.Name setTableProperties) {
 
         OptimisticTransaction transaction = deltaLog.startTransaction();
-        transaction.updateMetadata(updatedMetadata);
+        transaction.updateMetadata(newMetadata);
         Operation opName =
-            prepareDeltaLogOperation(setTableProperties, updatedMetadata);
+            prepareDeltaLogOperation(setTableProperties, newMetadata);
         transaction.commit(
-            Collections.singletonList(updatedMetadata),
+            Collections.singletonList(newMetadata),
             opName,
             ConnectorUtils.ENGINE_INFO
         );
@@ -120,7 +119,7 @@ public final class DeltaCatalogTableHelper {
      * @param metadata Delta Table Metadata action.
      * @return {@link Operation} object for current transaction.
      */
-    public static Operation prepareDeltaLogOperation(Name opName, Metadata metadata) {
+    public static Operation prepareDeltaLogOperation(Operation.Name opName, Metadata metadata) {
         Map<String, String> operationParameters = new HashMap<>();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -163,7 +162,7 @@ public final class DeltaCatalogTableHelper {
         Metadata deltaMetadata,
         boolean allowOverride) {
 
-        List<DDLAndDeltaLogMismatchedOption> invalidDdlOptions = new LinkedList<>();
+        List<MismatchedDdlOptionAndDeltaTableProperty> invalidDdlOptions = new LinkedList<>();
         Map<String, String> deltaLogProperties = new HashMap<>(deltaMetadata.getConfiguration());
         for (Entry<String, String> ddlOption : deltaDdlOptions.entrySet()) {
             String deltaLogPropertyValue =
@@ -171,10 +170,10 @@ public final class DeltaCatalogTableHelper {
 
             if (!allowOverride
                 && deltaLogPropertyValue != null
-                && !deltaLogPropertyValue.equalsIgnoreCase(ddlOption.getValue())) {
+                && !deltaLogPropertyValue.equals(ddlOption.getValue())) {
                 // _delta_log contains property defined in ddl but with different value.
                 invalidDdlOptions.add(
-                    new DDLAndDeltaLogMismatchedOption(
+                    new MismatchedDdlOptionAndDeltaTableProperty(
                         ddlOption.getKey(),
                         ddlOption.getValue(),
                         deltaLogPropertyValue
@@ -186,7 +185,7 @@ public final class DeltaCatalogTableHelper {
         // TODO DC - create test for this now we have only IT test in
         //  DeltaCatalogITTestSuite::shouldThrowIfDeltaTablePropertiesDoNotMatch
         if (!invalidDdlOptions.isEmpty()) {
-            throw CatalogExceptionHelper.ddlAndDeltaLogOptionMismatchException(
+            throw CatalogExceptionHelper.mismatchedDdlOptionAndDeltaTablePropertyException(
                 tableCatalogPath,
                 invalidDdlOptions
             );
