@@ -3,6 +3,7 @@ package io.delta.flink.internal.table;
 import java.util.List;
 import java.util.Map;
 
+import io.delta.flink.internal.table.DeltaCatalogTableHelper.DeltaMetastoreTable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.catalog.Catalog;
@@ -13,6 +14,7 @@ import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 import org.apache.flink.table.catalog.exceptions.DatabaseNotExistException;
 import org.apache.flink.table.catalog.exceptions.TableAlreadyExistException;
+import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +69,8 @@ public class DeltaCatalog {
         );
     }
 
-    public CatalogBaseTable getTable(DeltaCatalogBaseTable catalogTable) {
+    public CatalogBaseTable getTable(DeltaCatalogBaseTable catalogTable)
+            throws TableNotExistException {
 
         CatalogBaseTable metastoreTable = catalogTable.getCatalogTable();
 
@@ -75,6 +78,22 @@ public class DeltaCatalog {
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
 
         DeltaLog deltaLog = DeltaLog.forTable(this.hadoopConfiguration, tablePath);
+        if (!deltaLog.tableExists()) {
+            // TableNotExistException does not accept custom message, but we would like to meet
+            // API contracts from Flink's Catalog::getTable interface and throw
+            // TableNotExistException but with information that what was missing was _delta_log.
+            throw new TableNotExistException(
+                this.catalogName,
+                catalogTable.getTableCatalogPath(),
+                new CatalogException(
+                    String.format(
+                        "Table %s exists in metastore but _delta_log was not found under path %s",
+                        catalogTable.getTableCatalogPath().getFullName(),
+                        tablePath
+                    )
+                )
+            );
+        }
         Metadata deltaMetadata = deltaLog.update().getMetadata();
         StructType deltaSchema = deltaMetadata.getSchema();
 
@@ -137,14 +156,13 @@ public class DeltaCatalog {
         StructType ddlDeltaSchema =
             DeltaCatalogTableHelper.resolveDeltaSchemaFromDdl((ResolvedCatalogTable) table);
 
+        // We need to check if table exists in Metastore and if so, throw exception.
+        if (this.decoratedCatalog.tableExists(tableCatalogPath) && !ignoreIfExists) {
+            throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
+        }
+
         DeltaLog deltaLog = DeltaLog.forTable(hadoopConfiguration, deltaTablePath);
         if (deltaLog.tableExists()) {
-            // Table exists on filesystem, now we need to check if table exists in Metastore and
-            // if so, throw exception.
-            if (this.decoratedCatalog.tableExists(tableCatalogPath)) {
-                throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
-            }
-
             // Table was not present in metastore however it is present on Filesystem, we have to
             // verify if schema, partition spec and properties stored in _delta_log match with DDL.
             // TODO DC - handle case when deltaSchema is null.
@@ -183,12 +201,8 @@ public class DeltaCatalog {
             }
 
             // Add table to metastore
-            CatalogTable metastoreTable =
-                DeltaCatalogTableHelper.prepareMetastoreTable(
-                    table,
-                    deltaTablePath,
-                    ddlPartitionColumns
-                );
+            DeltaMetastoreTable metastoreTable =
+                DeltaCatalogTableHelper.prepareMetastoreTable(table, deltaTablePath);
             this.decoratedCatalog.createTable(tableCatalogPath, metastoreTable, ignoreIfExists);
         } else {
             // Table does not exist on filesystem, we have to create a new _delta_log
@@ -201,11 +215,8 @@ public class DeltaCatalog {
             // create _delta_log
             DeltaCatalogTableHelper.commitToDeltaLog(deltaLog, metadata, Name.CREATE_TABLE);
 
-            CatalogTable metastoreTable = DeltaCatalogTableHelper.prepareMetastoreTable(
-                table,
-                deltaTablePath,
-                ddlPartitionColumns
-            );
+            DeltaMetastoreTable metastoreTable =
+                DeltaCatalogTableHelper.prepareMetastoreTable(table, deltaTablePath);
 
             // add table to metastore
             this.decoratedCatalog.createTable(tableCatalogPath, metastoreTable, ignoreIfExists);

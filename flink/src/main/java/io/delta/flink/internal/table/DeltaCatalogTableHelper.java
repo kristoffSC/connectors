@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
+import io.delta.flink.internal.table.CatalogExceptionHelper.DDLAndDeltaLogMismatchedOption;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.TableSchema;
@@ -162,6 +163,7 @@ public final class DeltaCatalogTableHelper {
         Metadata deltaMetadata,
         boolean allowOverride) {
 
+        List<DDLAndDeltaLogMismatchedOption> invalidDdlOptions = new LinkedList<>();
         Map<String, String> deltaLogProperties = new HashMap<>(deltaMetadata.getConfiguration());
         for (Entry<String, String> ddlOption : deltaDdlOptions.entrySet()) {
             String deltaLogPropertyValue =
@@ -171,12 +173,23 @@ public final class DeltaCatalogTableHelper {
                 && deltaLogPropertyValue != null
                 && !deltaLogPropertyValue.equalsIgnoreCase(ddlOption.getValue())) {
                 // _delta_log contains property defined in ddl but with different value.
-                throw CatalogExceptionHelper.ddlAndDeltaLogOptionMismatchException(
-                    tableCatalogPath,
-                    ddlOption,
-                    deltaLogPropertyValue
+                invalidDdlOptions.add(
+                    new DDLAndDeltaLogMismatchedOption(
+                        ddlOption.getKey(),
+                        ddlOption.getValue(),
+                        deltaLogPropertyValue
+                    )
                 );
             }
+        }
+
+        // TODO DC - create test for this now we have only IT test in
+        //  DeltaCatalogITTestSuite::shouldThrowIfDeltaTablePropertiesDoNotMatch
+        if (!invalidDdlOptions.isEmpty()) {
+            throw CatalogExceptionHelper.ddlAndDeltaLogOptionMismatchException(
+                tableCatalogPath,
+                invalidDdlOptions
+            );
         }
         return deltaLogProperties;
     }
@@ -211,10 +224,10 @@ public final class DeltaCatalogTableHelper {
             ).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
 
-    public static CatalogTable prepareMetastoreTable(
+    public static DeltaMetastoreTable prepareMetastoreTable(
             CatalogBaseTable table,
-            String deltaTablePath,
-            List<String> ddlPartitionColumns) {
+            String deltaTablePath) {
+
         // Store only path, table name and connector type in metastore.
         // For computed and meta columns are not supported.
         Map<String, String> optionsToStoreInMetastore = new HashMap<>();
@@ -231,14 +244,14 @@ public final class DeltaCatalogTableHelper {
         // returned by CatalogTable.of( ) does not override it,
         // hence we need to have our own wrapper that will return empty TableSchema when
         // getSchema method is called.
-        return new DeltaBaseTable(
+        return new DeltaMetastoreTable(
             CatalogTable.of(
                 // by design don't store schema in metastore. Also watermark and primary key will
                 // not be stored in metastore and for now it will not be supported by Delta
                 // connector SQL.
                 Schema.newBuilder().build(),
                 table.getComment(),
-                ddlPartitionColumns,
+                Collections.emptyList(),
                 optionsToStoreInMetastore
             )
         );
@@ -266,11 +279,11 @@ public final class DeltaCatalogTableHelper {
         }
     }
 
-    private static class DeltaBaseTable implements CatalogTable {
+    public static class DeltaMetastoreTable implements CatalogTable {
 
         private final CatalogTable decoratedTable;
 
-        private DeltaBaseTable(CatalogTable decoratedTable) {
+        private DeltaMetastoreTable(CatalogTable decoratedTable) {
             this.decoratedTable = decoratedTable;
         }
 
@@ -281,7 +294,7 @@ public final class DeltaCatalogTableHelper {
 
         @Override
         public List<String> getPartitionKeys() {
-            return decoratedTable.getPartitionKeys();
+            return Collections.emptyList();
         }
 
         @Override

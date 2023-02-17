@@ -2,7 +2,7 @@ package io.delta.flink.internal.table;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.StringJoiner;
 
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
@@ -16,7 +16,7 @@ public final class CatalogExceptionHelper {
 
     private CatalogExceptionHelper() {}
 
-    static CatalogException deltaLogAndDdlSchemaMismatchException(
+    public static CatalogException deltaLogAndDdlSchemaMismatchException(
             ObjectPath catalogTablePath,
             String deltaTablePath,
             Metadata deltaMetadata,
@@ -42,7 +42,7 @@ public final class CatalogExceptionHelper {
         );
     }
 
-    static CatalogException jobSpecificOptionInDdlException(String ddlOption) {
+    public static CatalogException jobSpecificOptionInDdlException(String ddlOption) {
         String message = String.format(
             "DDL contains Job Specific option %s. Job specific options can be used only via Query"
                 + " hints.\nJob specific options are:\n%s",
@@ -52,7 +52,7 @@ public final class CatalogExceptionHelper {
         return new CatalogException(message);
     }
 
-    static CatalogException invalidOptionInDdl(Collection<String> invalidOptions) {
+    public static CatalogException invalidOptionInDdl(Collection<String> invalidOptions) {
         String message = String.format(
             "DDL contains invalid options. DDL can have delta table properties or "
                 + "arbitrary user options only.\nInvalid options used:\n%s",
@@ -60,16 +60,49 @@ public final class CatalogExceptionHelper {
         return new CatalogException(message);
     }
 
-    static CatalogException ddlAndDeltaLogOptionMismatchException(
+    public static CatalogException ddlAndDeltaLogOptionMismatchException(
             ObjectPath catalogTablePath,
-            Entry<String, String> ddlOption,
-            String deltaLogPropertyValue) {
+            List<DDLAndDeltaLogMismatchedOption> invalidOptions) {
+
+        StringJoiner invalidOptionsString = new StringJoiner("\n");
+        for (DDLAndDeltaLogMismatchedOption invalidOption : invalidOptions) {
+            invalidOptionsString.add(
+                String.join(
+                    " | ",
+                    invalidOption.optionName,
+                    invalidOption.ddlOptionValue,
+                    invalidOption.deltaLogOptionValue
+                )
+            );
+        }
+
         return new CatalogException(
             String.format(
-                "DDL option %s for table %s has different value than _delta_log table "
-                    + "property.\n"
-                    + "Value from DDL: %s, value from _delta_log %s",
-                ddlOption.getKey(), catalogTablePath.getFullName(),
-                ddlOption.getValue(), deltaLogPropertyValue));
+                "Invalid DDL options for table [%s]. "
+                    + "DDL options for Delta table connector cannot override table properties "
+                    + "already defined in _delta_log.\n"
+                    + "DDL option name | DDL option value | Delta option value \n%s",
+                catalogTablePath.getFullName(),
+                invalidOptionsString
+            )
+        );
+    }
+
+    public static class DDLAndDeltaLogMismatchedOption {
+
+        private final String optionName;
+
+        private final String ddlOptionValue;
+
+        private final String deltaLogOptionValue;
+
+        public DDLAndDeltaLogMismatchedOption(
+                String optionName,
+                String ddlOptionValue,
+                String deltaLogOptionValue) {
+            this.optionName = optionName;
+            this.ddlOptionValue = ddlOptionValue;
+            this.deltaLogOptionValue = deltaLogOptionValue;
+        }
     }
 }

@@ -360,9 +360,11 @@ public abstract class DeltaCatalogTestSuite {
 
         // THEN
         assertThat(exception.getCause().getMessage())
-            .contains(
-                "DDL option delta.appendOnly for table default.sourceTable has different value "
-                    + "than _delta_log table property");
+            .isEqualTo(""
+                + "Invalid DDL options for table [default.sourceTable]. DDL options for Delta table"
+                + " connector cannot override table properties already defined in _delta_log.\n"
+                + "DDL option name | DDL option value | Delta option value \n"
+                + "delta.appendOnly | true | false");
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
