@@ -123,26 +123,40 @@ public final class DeltaCatalogTableHelper {
         Map<String, String> operationParameters = new HashMap<>();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            // TODO DC - consult with Scott this "mode" thing. This is what Sink's
-            //  GlobalCommitter does.
-            //operationParameters.put("mode", objectMapper.writeValueAsString(APPEND_MODE));
-            // we need to perform mapping to JSON object twice for partition columns. First to map
-            // the list to string type and then again to make this string JSON encoded
-            // e.g. java array of ["a", "b"] will be mapped as string "[\"a\",\"c\"]"
-            operationParameters.put("isManaged", objectMapper.writeValueAsString(false));
-            operationParameters.put("description",
-                objectMapper.writeValueAsString(metadata.getDescription()));
+            switch (opName) {
+                case CREATE_TABLE:
+                    // We need to perform mapping to JSON object twice for partition columns.
+                    // First to map the list to string type and then again to make this string
+                    // JSON encoded e.g. java array of ["a", "b"] will be mapped as string
+                    // "[\"a\",\"c\"]". Delta seems to expect "[]" and "{} rather then [] and {}.
+                    operationParameters.put("isManaged", objectMapper.writeValueAsString(false));
+                    operationParameters.put("description",
+                        objectMapper.writeValueAsString(metadata.getDescription()));
+                    operationParameters.put("properties",
+                        objectMapper.writeValueAsString(
+                            objectMapper.writeValueAsString(metadata.getConfiguration()))
+                    );
+                    operationParameters.put("partitionBy", objectMapper.writeValueAsString(
+                        objectMapper.writeValueAsString(metadata.getPartitionColumns()))
+                    );
+                    break;
+                case SET_TABLE_PROPERTIES:
+                    operationParameters.put("properties",
+                        objectMapper.writeValueAsString(
+                            objectMapper.writeValueAsString(metadata.getConfiguration()))
+                    );
+                    break;
+                default:
+                    throw new CatalogException(String.format(
+                        "Trying to use unsupported Delta Operation [%s]",
+                        opName.name())
+                    );
+            }
 
-            // TODO DC - consult this with Scott, Delta seems to expect "[]" and "{}" rather then
-            //  [] and {}.
-            operationParameters.put("properties",
-                objectMapper.writeValueAsString(
-                    objectMapper.writeValueAsString(metadata.getConfiguration())));
-            operationParameters.put("partitionBy", objectMapper.writeValueAsString(
-                objectMapper.writeValueAsString(metadata.getPartitionColumns())));
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Cannot map object to JSON", e);
+            throw new CatalogException("Cannot map object to JSON", e);
         }
+
         return new Operation(opName, operationParameters, Collections.emptyMap());
     }
 
