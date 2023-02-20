@@ -5,9 +5,9 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.StringJoiner;
 
-import io.delta.flink.internal.ConnectorUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -28,9 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.delta.standalone.DeltaLog;
-import io.delta.standalone.Operation;
-import io.delta.standalone.Operation.Name;
-import io.delta.standalone.OptimisticTransaction;
 import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.IntegerType;
 import io.delta.standalone.types.LongType;
@@ -359,22 +356,12 @@ public abstract class DeltaCatalogTestSuite {
         // GIVEN
         DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
 
+        Map<String, String> configuration = Collections.singletonMap("delta.appendOnly", "false");
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
 
         // Set delta table property. DDL will try to override it with different value
-        OptimisticTransaction transaction = deltaLog.startTransaction();
-        Metadata updatedMetadata = transaction.metadata()
-            .copyBuilder()
-            .configuration(Collections.singletonMap("delta.appendOnly", "false"))
-            .build();
-
-        transaction.updateMetadata(updatedMetadata);
-        transaction.commit(
-            Collections.singletonList(updatedMetadata),
-            new Operation(Name.SET_TABLE_PROPERTIES),
-            ConnectorUtils.ENGINE_INFO
-        );
+        DeltaTestUtils.setupDeltaTableWithProperty(tablePath, configuration);
 
         assertThat(deltaLog.tableExists())
             .withFailMessage(

@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.delta.flink.internal.ConnectorUtils;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.common.JobID;
@@ -63,8 +64,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.Operation;
+import io.delta.standalone.Operation.Name;
+import io.delta.standalone.OptimisticTransaction;
 import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
+import io.delta.standalone.actions.Metadata;
 
 public class DeltaTestUtils {
 
@@ -655,5 +660,27 @@ public class DeltaTestUtils {
         }
         Collections.sort(data);
         return data;
+    }
+
+    public static DeltaLog setupDeltaTableWithProperty(
+            String tablePath,
+            Map<String, String> configuration) {
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        // Set delta table property. DDL will try to override it with different value
+        OptimisticTransaction transaction = deltaLog.startTransaction();
+        Metadata updatedMetadata = transaction.metadata()
+            .copyBuilder()
+            .configuration(configuration)
+            .build();
+
+        transaction.updateMetadata(updatedMetadata);
+        transaction.commit(
+            Collections.singletonList(updatedMetadata),
+            new Operation(Name.SET_TABLE_PROPERTIES),
+            ConnectorUtils.ENGINE_INFO
+        );
+        return deltaLog;
     }
 }

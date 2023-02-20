@@ -7,11 +7,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.catalog.Catalog;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.GenericInMemoryCatalog;
 import org.apache.flink.table.catalog.ObjectPath;
+import org.apache.flink.table.catalog.ResolvedCatalogTable;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 import org.apache.flink.table.types.AtomicDataType;
 import org.apache.flink.table.types.DataType;
@@ -31,6 +34,8 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import io.delta.standalone.DeltaLog;
 
 @ExtendWith(MockitoExtension.class)
 class DeltaCatalogTest {
@@ -138,6 +143,55 @@ class DeltaCatalogTest {
             );
     }
 
+    @Test
+    public void testThrowIfMismatchedDdlOptionAndDeltaTableProperty() throws IOException {
+
+        String tablePath = this.ddlOptions.get(
+            DeltaTableConnectorOptions.TABLE_PATH.key()
+        );
+
+        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+
+        Map<String, String> configuration = Collections.singletonMap("delta.appendOnly", "false");
+
+        DeltaLog deltaLog = DeltaTestUtils.setupDeltaTableWithProperty(tablePath, configuration);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage(
+                "There should be Delta table files in test folder before calling DeltaCatalog.")
+            .isTrue();
+
+        Map<String, String> mismatchedOptions =
+            Collections.singletonMap("delta.appendOnly", "true");
+
+        ddlOptions.putAll(mismatchedOptions);
+
+        String[] columnNames = new String[] {"name", "surname", "age"};
+        DataType[] columnTypes = new DataType[] {
+            new AtomicDataType(new VarCharType()),
+            new AtomicDataType(new VarCharType()),
+            new AtomicDataType(new IntType())
+        };
+
+        DeltaCatalogBaseTable deltaCatalogTable = setUpCatalogTable(
+            columnNames,
+            columnTypes,
+            ddlOptions
+        );
+
+        CatalogException exception = assertThrows(CatalogException.class, () ->
+            deltaCatalog.createTable(deltaCatalogTable, ignoreIfExists)
+        );
+
+        assertThat(exception.getMessage())
+            .isEqualTo(""
+                + "Invalid DDL options for table [default.testTable]. DDL options for Delta table"
+                + " connector cannot override table properties already defined in _delta_log.\n"
+                + "DDL option name | DDL option value | Delta option value \n"
+                + "delta.appendOnly | true | false");
+
+    }
+
     private DeltaCatalogBaseTable setUpCatalogTable(
             String[] columnNames,
             DataType[] columnTypes,
@@ -154,7 +208,10 @@ class DeltaCatalogTest {
 
         return new DeltaCatalogBaseTable(
             new ObjectPath(DATABASE, "testTable"),
-            catalogTable
+            new ResolvedCatalogTable(
+                catalogTable,
+                ResolvedSchema.physical(columnNames, columnTypes)
+            )
         );
     }
 }
