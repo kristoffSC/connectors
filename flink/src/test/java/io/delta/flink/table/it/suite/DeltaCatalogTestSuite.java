@@ -114,6 +114,7 @@ public abstract class DeltaCatalogTestSuite {
             );
 
         assertThat(metadata.getPartitionColumns()).containsExactly("col1");
+        assertThat(metadata.getName()).isEqualTo("sourceTable");
         assertThat(metadata.getConfiguration())
             .containsExactly(
                 new SimpleEntry<>("delta.appendOnly", "false"),
@@ -164,6 +165,7 @@ public abstract class DeltaCatalogTestSuite {
             );
 
         assertThat(metadata.getPartitionColumns()).isEmpty();
+        assertThat(metadata.getName()).isNull();
     }
 
     /**

@@ -225,6 +225,7 @@ public class DeltaCatalog {
                 .schema(ddlDeltaSchema)
                 .partitionColumns(ddlPartitionColumns)
                 .configuration(deltaDdlOptions)
+                .name(tableCatalogPath.getObjectName())
                 .build();
 
             // create _delta_log
