@@ -96,8 +96,17 @@ public class DeltaCatalog {
         }
         Metadata deltaMetadata = deltaLog.update().getMetadata();
         StructType deltaSchema = deltaMetadata.getSchema();
+        if (deltaSchema == null) {
+            // This should not happen, but if it did for some reason it mens there is something
+            // wong with _delta_log.
+            throw new CatalogException(String.format(""
+                    + "Delta schema is null for table %s and table path %s. Please contact your "
+                    + "administrator.",
+                catalogTable.getCatalogTable(),
+                tablePath
+            ));
+        }
 
-        // TODO DC - handle case when deltaSchema is null.
         Pair<String[], DataType[]> flinkTypesFromDelta =
             DeltaCatalogTableHelper.resolveFlinkTypesFromDelta(deltaSchema);
 
@@ -169,7 +178,6 @@ public class DeltaCatalog {
         if (deltaLog.tableExists()) {
             // Table was not present in metastore however it is present on Filesystem, we have to
             // verify if schema, partition spec and properties stored in _delta_log match with DDL.
-            // TODO DC - handle case when deltaSchema is null.
             Metadata deltaMetadata = deltaLog.update().getMetadata();
 
             // Validate ddl schema and partition spec matches _delta_log's.

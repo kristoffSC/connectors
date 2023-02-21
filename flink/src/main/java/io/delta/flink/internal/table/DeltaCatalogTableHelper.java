@@ -164,33 +164,33 @@ public final class DeltaCatalogTableHelper {
      * Validate DDL Delta table properties if they match properties from _delta_log add new
      * properties to metadata.
      *
-     * @param deltaDdlOptions DDL options that should be added to _delta_log.
+     * @param filteredDdlOptions DDL options that should be added to _delta_log.
      * @param tableCatalogPath
      * @param deltaMetadata
      * @return a map of deltaLogProperties that will have same properties than original metadata
      * plus new ones that were defined in DDL.
      */
     public static Map<String, String> prepareDeltaTableProperties(
-        Map<String, String> deltaDdlOptions,
-        ObjectPath tableCatalogPath,
-        Metadata deltaMetadata,
-        boolean allowOverride) {
+            Map<String, String> filteredDdlOptions,
+            ObjectPath tableCatalogPath,
+            Metadata deltaMetadata,
+            boolean allowOverride) {
 
         List<MismatchedDdlOptionAndDeltaTableProperty> invalidDdlOptions = new LinkedList<>();
         Map<String, String> deltaLogProperties = new HashMap<>(deltaMetadata.getConfiguration());
-        for (Entry<String, String> ddlOption : deltaDdlOptions.entrySet()) {
-            String deltaLogPropertyValue =
+        for (Entry<String, String> ddlOption : filteredDdlOptions.entrySet()) {
+            String existingDeltaPropertyValue =
                 deltaLogProperties.putIfAbsent(ddlOption.getKey(), ddlOption.getValue());
 
             if (!allowOverride
-                && deltaLogPropertyValue != null
-                && !deltaLogPropertyValue.equals(ddlOption.getValue())) {
+                && existingDeltaPropertyValue != null
+                && !existingDeltaPropertyValue.equals(ddlOption.getValue())) {
                 // _delta_log contains property defined in ddl but with different value.
                 invalidDdlOptions.add(
                     new MismatchedDdlOptionAndDeltaTableProperty(
                         ddlOption.getKey(),
                         ddlOption.getValue(),
-                        deltaLogPropertyValue
+                        existingDeltaPropertyValue
                     )
                 );
             }
@@ -213,10 +213,11 @@ public final class DeltaCatalogTableHelper {
         Metadata deltaMetadata) {
 
         StructType deltaSchema = deltaMetadata.getSchema();
-        if (!(ddlDeltaSchema.equals(deltaSchema)
-            && ConnectorUtils.listEqualsIgnoreOrder(
+        boolean isEqualPartitionSpec = ConnectorUtils.listEqualsIgnoreOrder(
             ddlPartitionColumns,
-            deltaMetadata.getPartitionColumns()))) {
+            deltaMetadata.getPartitionColumns()
+        );
+        if (!(ddlDeltaSchema.equals(deltaSchema) && isEqualPartitionSpec)) {
             throw CatalogExceptionHelper.deltaLogAndDdlSchemaMismatchException(
                 tableCatalogPath,
                 deltaTablePath,
