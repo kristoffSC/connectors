@@ -196,8 +196,6 @@ public final class DeltaCatalogTableHelper {
             }
         }
 
-        // TODO DC - create test for this now we have only IT test in
-        //  DeltaCatalogITTestSuite::shouldThrowIfDeltaTablePropertiesDoNotMatch
         if (!invalidDdlOptions.isEmpty()) {
             throw CatalogExceptionHelper.mismatchedDdlOptionAndDeltaTablePropertyException(
                 tableCatalogPath,

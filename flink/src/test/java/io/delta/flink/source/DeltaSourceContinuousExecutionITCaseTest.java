@@ -429,7 +429,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // Delta standalone uses "last modification time" file attribute for providing commits
         // before/after or at timestamp. It Does not use an actually commits creation timestamp
         // from Delta's log.
-        changeDeltaLogLastModifyTimestamp(sourceTablePath, startingTimestampValues);
+        DeltaTestUtils.changeDeltaLogLastModifyTimestamp(sourceTablePath, startingTimestampValues);
 
         DeltaSource<RowData> deltaSource = DeltaSource
             .forContinuousRowData(

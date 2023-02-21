@@ -90,7 +90,6 @@ public class DeltaDynamicTableSource implements ScanTableSource {
 
         sourceBuilder.columnNames(columns);
 
-        // TODO DC - add tests for this
         for (Entry<String, String> queryOption : queryOptions.getJobSpecificOptions().entrySet()) {
             sourceBuilder.option(queryOption.getKey(), queryOption.getValue());
         }
