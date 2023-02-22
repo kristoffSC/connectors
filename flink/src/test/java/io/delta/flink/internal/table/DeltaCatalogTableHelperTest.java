@@ -4,8 +4,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.flink.table.api.Schema;
+import org.apache.flink.table.catalog.CatalogTable;
+import org.apache.flink.table.catalog.Column;
+import org.apache.flink.table.catalog.ResolvedCatalogTable;
+import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
+import org.apache.flink.table.expressions.ResolvedExpression;
+import org.apache.flink.table.types.AtomicDataType;
+import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -19,7 +28,7 @@ import io.delta.standalone.types.StructType;
 class DeltaCatalogTableHelperTest {
 
     @Test
-    public void testCreateTableOp() {
+    public void testCreateTableOperation() {
 
         Metadata metadata = Metadata.builder()
             .schema(
@@ -43,7 +52,7 @@ class DeltaCatalogTableHelperTest {
     }
 
     @Test
-    public void testAlterPropertiesTableOp() {
+    public void testAlterPropertiesTableOperation() {
 
         Metadata metadata = Metadata.builder()
             .schema(
@@ -80,6 +89,67 @@ class DeltaCatalogTableHelperTest {
         assertThat(catalogException.getMessage())
             .isEqualTo("Trying to use unsupported Delta Operation [DELETE]");
 
+    }
+
+    @Test
+    public void testThrowOnWhenResolvingFlinkSchemaWithComputedColumns() {
+
+        ResolvedSchema schema = ResolvedSchema.of(
+            Column.computed("col1", Mockito.mock(ResolvedExpression.class))
+        );
+
+        ResolvedCatalogTable table = new ResolvedCatalogTable(
+            CatalogTable.of(
+                Schema.newBuilder().fromResolvedSchema(schema).build(),
+                "mock context",
+                Collections.emptyList(),
+                Collections.singletonMap("table-path", "file://some/path")),
+            schema
+            );
+
+        CatalogException exception =
+            assertThrows(CatalogException.class,
+                () -> DeltaCatalogTableHelper.resolveDeltaSchemaFromDdl(table));
+
+        assertThat(exception.getMessage())
+            .isEqualTo(""
+                + "Table definition contains unsupported column types. Currently, only physical "
+                + "columns are supported by Delta Flink connector.\n"
+                + "Invalid columns and types:\n"
+                + "col1 -> ComputedColumn"
+            );
+    }
+
+    @Test
+    public void testThrowOnWhenResolvingFlinkSchemaWithMetadataColumns() {
+
+        ResolvedSchema schema = ResolvedSchema.of(
+            Column.metadata(
+                "col1",
+                // isVirtual == true;
+                new AtomicDataType(new VarCharType()), "metadataKey", true)
+        );
+
+        ResolvedCatalogTable table = new ResolvedCatalogTable(
+            CatalogTable.of(
+                Schema.newBuilder().fromResolvedSchema(schema).build(),
+                "mock context",
+                Collections.emptyList(),
+                Collections.singletonMap("table-path", "file://some/path")),
+            schema
+        );
+
+        CatalogException exception =
+            assertThrows(CatalogException.class,
+                () -> DeltaCatalogTableHelper.resolveDeltaSchemaFromDdl(table));
+
+        assertThat(exception.getMessage())
+            .isEqualTo(""
+                + "Table definition contains unsupported column types. Currently, only physical "
+                + "columns are supported by Delta Flink connector.\n"
+                + "Invalid columns and types:\n"
+                + "col1 -> MetadataColumn"
+            );
     }
 }
 

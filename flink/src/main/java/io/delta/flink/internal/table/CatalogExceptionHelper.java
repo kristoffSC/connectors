@@ -90,9 +90,7 @@ public final class CatalogExceptionHelper {
     }
 
     public static CatalogException unsupportedColumnType(Collection<Column> unsupportedColumns) {
-
         StringJoiner sj = new StringJoiner("\n");
-
         for (Column unsupportedColumn : unsupportedColumns) {
             sj.add(
                 String.join(

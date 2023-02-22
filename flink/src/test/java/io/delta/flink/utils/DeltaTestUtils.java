@@ -539,7 +539,8 @@ public class DeltaTestUtils {
     }
 
     public static DynamicTableFactory.Context createTableContext(
-        ResolvedSchema schema, Map<String, String> options) {
+            ResolvedSchema schema,
+            Map<String, String> options) {
 
         return new FactoryUtil.DefaultDynamicTableContext(
             ObjectIdentifier.of("default", "default", "context_1"),

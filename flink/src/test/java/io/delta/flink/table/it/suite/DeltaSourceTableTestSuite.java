@@ -382,39 +382,6 @@ public abstract class DeltaSourceTableTestSuite {
         assertNoMoreColumns(resultData, 3);
     }
 
-    /**
-     * Currently computed columns are not supported.
-     */
-    @Test
-    public void testThrowOnSelectComputedColumns() {
-
-        // GIVEN
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(false) // streamingMode = false
-        );
-
-        setupDeltaCatalog(tableEnv);
-
-        String computedColumnsSchema = ""
-            + "col1 BIGINT,"
-            + "col2 BIGINT,"
-            + "col3 VARCHAR,"
-            + "col4 AS col1 * col2";
-
-        // CREATE Source TABLE
-        tableEnv.executeSql(
-            buildSourceTableSql(nonPartitionedLargeTablePath, computedColumnsSchema)
-        );
-
-        // WHEN
-        String selectSql = "SELECT col1, col2, col4 FROM sourceTable";
-        //Column 'col4' not found in any table
-        RuntimeException exception =
-            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(selectSql));
-
-        assertThat(exception.getMessage()).contains("Column 'col4' not found in any table");
-    }
-
     @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"batch", "streaming"})
     public void testThrowOnInvalidQueryHints(String queryMode) {
