@@ -115,10 +115,9 @@ public abstract class DeltaEndToEndTableTestSuite {
         verifyDeltaTable(sinkTablePath, rowType, 1100);
     }
 
-    // TODO DC - work on this one
+    // TODO DC - work on this one when feature branch will have Flink version update to 1.16
     @Test
-    public void testWriteAndReadNestedStructures()
-        throws Exception {
+    public void testWriteAndReadNestedStructures() throws Exception {
 
         String sourceTableSql = "CREATE TABLE sourceTable ("
             + " col1 INT,"

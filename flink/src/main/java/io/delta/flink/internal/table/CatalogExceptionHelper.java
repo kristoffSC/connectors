@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.StringJoiner;
 
+import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 
@@ -85,6 +86,27 @@ public final class CatalogExceptionHelper {
                 catalogTablePath.getFullName(),
                 invalidOptionsString
             )
+        );
+    }
+
+    public static CatalogException unsupportedColumnType(Collection<Column> unsupportedColumns) {
+
+        StringJoiner sj = new StringJoiner("\n");
+
+        for (Column unsupportedColumn : unsupportedColumns) {
+            sj.add(
+                String.join(
+                    " -> ",
+                    unsupportedColumn.getName(),
+                    unsupportedColumn.getClass().getSimpleName()
+                )
+            );
+        }
+
+        return new CatalogException(String.format(
+            "Table definition contains unsupported column types. "
+                + "Currently, only physical columns are supported by Delta Flink connector.\n"
+                + "Invalid columns and types:\n%s", sj)
         );
     }
 

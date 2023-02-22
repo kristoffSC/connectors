@@ -83,10 +83,7 @@ public abstract class DeltaCatalogTestSuite {
             String.format("CREATE TABLE sourceTable ("
                     + "col1 BIGINT,"
                     + "col2 BIGINT,"
-                    + "col3 VARCHAR,"
-                    + "col4 AS col1 * col2," // computed column, should not be added to _delta_log
-                    + "col5 AS CONCAT(col3, '_hello')," // computed column
-                    + "col6 AS CAST(col1 AS VARCHAR)" // computed column
+                    + "col3 VARCHAR"
                     + ") "
                     + "PARTITIONED BY (col1)"
                     + "WITH ("
@@ -168,6 +165,86 @@ public abstract class DeltaCatalogTestSuite {
         assertThat(metadata.getName()).isNull();
     }
 
+    @Test
+    public void shouldThrowOnCreateTableWithComputedColumns() {
+
+        // GIVEN
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage("There should be no Delta table files in test folder before test.")
+            .isFalse();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "col1 BIGINT,"
+                    + "col2 BIGINT,"
+                    + "col3 VARCHAR,"
+                    + "col4 AS col1 * col2," // computed column, should not be added to _delta_log
+                    + "col5 AS CONCAT(col3, '_hello')," // computed column
+                    + "col6 AS CAST(col1 AS VARCHAR)" // computed column
+                    + ") "
+                    + "PARTITIONED BY (col1)"
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
+
+        assertThat(exception.getCause().getMessage())
+            .isEqualTo(""
+                + "Table definition contains unsupported column types. Currently, only physical "
+                + "columns are supported by Delta Flink connector.\n"
+                + "Invalid columns and types:\n"
+                + "col4 -> ComputedColumn\n"
+                + "col5 -> ComputedColumn\n"
+                + "col6 -> ComputedColumn"
+            );
+    }
+
+    @Test
+    public void shouldThrowOnCreateTableWithMetadataColumns() {
+
+        // GIVEN
+        DeltaLog deltaLog =
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage("There should be no Delta table files in test folder before test.")
+            .isFalse();
+
+        String deltaTable =
+            String.format("CREATE TABLE sourceTable ("
+                    + "col1 BIGINT,"
+                    + "col2 BIGINT,"
+                    + "col3 VARCHAR,"
+                    + "record_time TIMESTAMP_LTZ(3) METADATA FROM 'timestamp' " // metadata column
+                    + ") "
+                    + "PARTITIONED BY (col1)"
+                    + "WITH ("
+                    + " 'connector' = 'delta',"
+                    + " 'table-path' = '%s'"
+                    + ")",
+                tablePath);
+
+        // WHEN
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
+
+        assertThat(exception.getCause().getMessage())
+            .isEqualTo(""
+                + "Table definition contains unsupported column types. Currently, only physical "
+                + "columns are supported by Delta Flink connector.\n"
+                + "Invalid columns and types:\n"
+                + "record_time -> MetadataColumn"
+            );
+    }
+
     /**
      * Verifies that CREATE TABLE will throw exception when _delta_log exists under table-path but
      * has different schema that specified in DDL.
@@ -176,7 +253,6 @@ public abstract class DeltaCatalogTestSuite {
     @ValueSource(strings = {
         "name VARCHAR, surname VARCHAR", // missing column
         "name VARCHAR, surname VARCHAR, age INT, extraCol INT", // extra column
-        "name VARCHAR NOT NULL, surname VARCHAR, age INT, col AS age * 2",// extra computed column
         "name VARCHAR, surname VARCHAR, differentName INT", // different name for third column
         "name INT, surname VARCHAR, age INT", // different type for first column
         "name VARCHAR NOT NULL, surname VARCHAR, age INT" // all columns should be nullable

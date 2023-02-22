@@ -19,6 +19,8 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.catalog.CatalogBaseTable;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.Column;
+import org.apache.flink.table.catalog.Column.ComputedColumn;
+import org.apache.flink.table.catalog.Column.MetadataColumn;
 import org.apache.flink.table.catalog.Column.PhysicalColumn;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
@@ -48,6 +50,7 @@ public final class DeltaCatalogTableHelper {
 
         List<String> names = new LinkedList<>();
         List<LogicalType> types = new LinkedList<>();
+        List<Column> invalidColumns = new LinkedList<>();
 
         for (Column column : columns) {
             // We care only about physical columns. As stated in Flink doc - metadata columns and
@@ -57,11 +60,19 @@ public final class DeltaCatalogTableHelper {
                 names.add(column.getName());
                 types.add(column.getDataType().getLogicalType());
             }
+
+            if (column instanceof ComputedColumn || column instanceof MetadataColumn) {
+                invalidColumns.add(column);
+            }
         }
 
-        return io.delta.flink.sink.internal.SchemaConverter.toDeltaDataType(
-            RowType.of(types.toArray(new LogicalType[0]), names.toArray(new String[0]))
-        );
+        if (invalidColumns.isEmpty()) {
+            return io.delta.flink.sink.internal.SchemaConverter.toDeltaDataType(
+                RowType.of(types.toArray(new LogicalType[0]), names.toArray(new String[0]))
+            );
+        } else {
+            throw CatalogExceptionHelper.unsupportedColumnType(invalidColumns);
+        }
     }
 
     public static Pair<String[], DataType[]> resolveFlinkTypesFromDelta(StructType tableSchema) {
