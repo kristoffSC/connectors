@@ -31,6 +31,7 @@ import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.utils.LogicalTypeDataTypeConverter;
+import static org.apache.flink.util.Preconditions.checkArgument;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.Operation;
@@ -173,12 +174,20 @@ public final class DeltaCatalogTableHelper {
     }
 
     /**
-     * Validate DDL Delta table properties if they match properties from _delta_log add new
-     * properties to metadata.
+     * Validates DDL options against existing delta table properties. If there is any mismatch (i.e.
+     * same key, different value) and `allowOverride` is set to false throws an exception. Else,
+     * returns a Map of the union of the existing delta table properties along with any new table
+     * properties taken from the DDL options.
      *
-     * @param filteredDdlOptions DDL options that should be added to _delta_log.
-     * @param tableCatalogPath
-     * @param deltaMetadata
+     * @param filteredDdlOptions DDL options that should be added to _delta_log. It is expected that
+     *                           this options will not contain "table-path" nor "connector" options
+     *                           since those should not be added to _delta_log.
+     * @param tableCatalogPath   a database name and object name combo in a catalog.
+     * @param deltaMetadata      the {@link Metadata} object to be stored in _delta_log.
+     * @param allowOverride      if set to true, allows overriding table properties in Delta's table
+     *                           metadata if filteredDdlOptions contains same key. Such case would
+     *                           happen for example in ALTER statement. Throw Exception if set to
+     *                           false.
      * @return a map of deltaLogProperties that will have same properties than original metadata
      * plus new ones that were defined in DDL.
      */
@@ -187,6 +196,18 @@ public final class DeltaCatalogTableHelper {
             ObjectPath tableCatalogPath,
             Metadata deltaMetadata,
             boolean allowOverride) {
+
+        //TODO DC - Add test for this.
+        checkArgument(
+            !filteredDdlOptions.containsKey(DeltaTableConnectorOptions.TABLE_PATH.key()),
+            String.format("Filtered ddl options should not contain %s option",
+                DeltaTableConnectorOptions.TABLE_PATH.key())
+        );
+        checkArgument(
+            !filteredDdlOptions.containsKey(FactoryUtil.CONNECTOR.key()),
+            String.format("Filtered ddl options should not contain %s option",
+                FactoryUtil.CONNECTOR.key())
+        );
 
         List<MismatchedDdlOptionAndDeltaTableProperty> invalidDdlOptions = new LinkedList<>();
         Map<String, String> deltaLogProperties = new HashMap<>(deltaMetadata.getConfiguration());

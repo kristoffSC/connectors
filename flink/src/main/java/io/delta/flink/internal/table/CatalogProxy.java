@@ -29,10 +29,10 @@ public class CatalogProxy extends BaseCatalog {
     private final DeltaCatalog deltaCatalog;
 
     public CatalogProxy(
-        String catalogName,
-        String defaultDatabase,
-        Catalog decoratedCatalog,
-        Configuration hadoopConfiguration) {
+            String catalogName,
+            String defaultDatabase,
+            Catalog decoratedCatalog,
+            Configuration hadoopConfiguration) {
         super(catalogName, defaultDatabase, decoratedCatalog);
 
         this.deltaCatalog = new DeltaCatalog(catalogName, decoratedCatalog, hadoopConfiguration);
