@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.delta.flink.internal.ConnectorUtils;
+import io.delta.flink.internal.table.CatalogExceptionHelper.InvalidDdlOptions;
 import io.delta.flink.internal.table.CatalogExceptionHelper.MismatchedDdlOptionAndDeltaTableProperty;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
@@ -281,12 +282,12 @@ public final class DeltaCatalogTableHelper {
     }
 
     public static void validateDdlOptions(Map<String, String> ddlOptions) {
-        List<String> invalidOptions = new LinkedList<>();
+        InvalidDdlOptions invalidDdlOptions = new InvalidDdlOptions();
         for (String ddlOption : ddlOptions.keySet()) {
 
             // validate for Flink Job specific options in DDL
             if (DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS.contains(ddlOption)) {
-                throw CatalogExceptionHelper.jobSpecificOptionInDdlException(ddlOption);
+                invalidDdlOptions.addJobSpecificOption(ddlOption);
             }
 
             // validate for Delta log Store config and parquet config.
@@ -294,11 +295,11 @@ public final class DeltaCatalogTableHelper {
                 ddlOption.startsWith("delta.logStore") ||
                 ddlOption.startsWith("io.delta") ||
                 ddlOption.startsWith("parquet.")) {
-                invalidOptions.add(ddlOption);
+                invalidDdlOptions.addInvalidTableProperty(ddlOption);
             }
         }
-        if (!invalidOptions.isEmpty()) {
-            throw CatalogExceptionHelper.invalidOptionInDdl(invalidOptions);
+        if (invalidDdlOptions.hasInvalidOptions()) {
+            throw CatalogExceptionHelper.invalidDdlOptionException(invalidDdlOptions);
         }
     }
 

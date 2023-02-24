@@ -103,6 +103,7 @@ class DeltaCatalogTest {
             .isEqualTo("Path to Delta table cannot be null or empty.");
     }
 
+    // TODO DC - add test to cover using JobSpecOptions and combination of both.
     @Test
     public void testThrowCreateTableInvalidTableOption() {
 
@@ -134,7 +135,9 @@ class DeltaCatalogTest {
         );
 
         assertThat(exception.getMessage())
-            .containsIgnoringWhitespaces(""
+            .isEqualTo(""
+                + "DDL contains invalid properties. DDL can have only delta table properties or "
+                + "arbitrary user options only.\n"
                 + "Invalid options used:\n"
                 + "spark.some.option\n"
                 + "delta.logStore\n"
