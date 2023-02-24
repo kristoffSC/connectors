@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.Column;
+import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
@@ -14,6 +15,8 @@ import org.apache.flink.table.expressions.ResolvedExpression;
 import org.apache.flink.table.types.AtomicDataType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,6 +28,8 @@ import io.delta.standalone.types.StringType;
 import io.delta.standalone.types.StructField;
 import io.delta.standalone.types.StructType;
 
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
+//  new test is added here.
 class DeltaCatalogTableHelperTest {
 
     @Test
@@ -49,6 +54,28 @@ class DeltaCatalogTableHelperTest {
 
         assertThat(operation.getParameters())
             .containsExactlyInAnyOrderEntriesOf(expectedOperationParameters);
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+        "table-path, Filtered DDL options should not contain table-path option.",
+        "connector, Filtered DDL options should not contain connector option."
+    })
+    public void testThrowPrepareDeltaTablePropertiesIfUsedNotFilteredDdlOptions(
+            String option,
+            String validationMessage) {
+
+        IllegalArgumentException exception = assertThrows(
+            IllegalArgumentException.class,
+            () -> DeltaCatalogTableHelper.prepareDeltaTableProperties(
+                Collections.singletonMap(option, "aValue"),
+                new ObjectPath("default", "testTable"),
+                Mockito.mock(Metadata.class),
+                true // allowOverride == true (value not relevant to the test)
+            )
+        );
+
+        assertThat(exception.getMessage()).isEqualTo(validationMessage);
     }
 
     @Test

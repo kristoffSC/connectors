@@ -197,15 +197,14 @@ public final class DeltaCatalogTableHelper {
             Metadata deltaMetadata,
             boolean allowOverride) {
 
-        //TODO DC - Add test for this.
         checkArgument(
             !filteredDdlOptions.containsKey(DeltaTableConnectorOptions.TABLE_PATH.key()),
-            String.format("Filtered ddl options should not contain %s option",
+            String.format("Filtered DDL options should not contain %s option.",
                 DeltaTableConnectorOptions.TABLE_PATH.key())
         );
         checkArgument(
             !filteredDdlOptions.containsKey(FactoryUtil.CONNECTOR.key()),
-            String.format("Filtered ddl options should not contain %s option",
+            String.format("Filtered DDL options should not contain %s option.",
                 FactoryUtil.CONNECTOR.key())
         );
 

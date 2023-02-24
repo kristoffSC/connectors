@@ -157,7 +157,7 @@ public class DeltaCatalog {
         // At this point what we should have in ddlOptions are only delta table
         // properties, connector type, table path and user defined options. We don't want to
         // store connector type or table path in _delta_log, so we will filter those
-        Map<String, String> deltaDdlOptions =
+        Map<String, String> filteredDdlOptions =
             DeltaCatalogTableHelper.filterMetastoreDdlOptions(ddlOptions);
 
         CatalogBaseTable table = catalogTable.getCatalogTable();
@@ -194,7 +194,7 @@ public class DeltaCatalog {
             // _delta_log.
             Map<String, String> deltaLogProperties =
                 DeltaCatalogTableHelper.prepareDeltaTableProperties(
-                    deltaDdlOptions,
+                    filteredDdlOptions,
                     tableCatalogPath,
                     deltaMetadata,
                     false // allowOverride = false
@@ -224,7 +224,7 @@ public class DeltaCatalog {
             Metadata metadata = Metadata.builder()
                 .schema(ddlDeltaSchema)
                 .partitionColumns(ddlPartitionColumns)
-                .configuration(deltaDdlOptions)
+                .configuration(filteredDdlOptions)
                 .name(tableCatalogPath.getObjectName())
                 .build();
 

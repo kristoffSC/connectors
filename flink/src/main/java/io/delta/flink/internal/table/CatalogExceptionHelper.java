@@ -50,12 +50,12 @@ public final class CatalogExceptionHelper {
 
         StringJoiner invalidTablePropertiesUsed = new StringJoiner("\n");
         for (String invalidTableProperty : invalidOptions.getInvalidTableProperties()) {
-            invalidTablePropertiesUsed.add(invalidTableProperty);
+            invalidTablePropertiesUsed.add(" - " + invalidTableProperty);
         }
 
         StringJoiner usedJobSpecificOptions = new StringJoiner("\n");
         for (String invalidTableProperty : invalidOptions.getUsedJobSpecificOptions()) {
-            usedJobSpecificOptions.add(invalidTableProperty);
+            usedJobSpecificOptions.add(" - " + invalidTableProperty);
         }
 
         String exceptionMessage = "DDL contains invalid properties. "
@@ -74,7 +74,7 @@ public final class CatalogExceptionHelper {
                 "\n",
                 exceptionMessage,
                 String.format(
-                    "Ddl contains job specific options. Job specific options can be used only via "
+                    "DDL contains job specific options. Job specific options can be used only via "
                         + "Query hints.\nUsed Job specific options:\n%s", usedJobSpecificOptions)
             );
         }

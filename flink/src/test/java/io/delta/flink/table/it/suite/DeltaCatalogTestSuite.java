@@ -295,12 +295,11 @@ public abstract class DeltaCatalogTestSuite {
     }
 
     /**
-     * Verifies that CREATE TABLE will throw exception when DDL contains not allowed options.
+     * Verifies that CREATE TABLE will throw exception when DDL contains not allowed table
+     * properties.
      */
     @Test
-    public void shouldThrowIfInvalidDdlOptions() throws Exception {
-
-        tablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+    public void shouldThrowIfCreateTableContainsInvalidTableProperties() throws Exception {
 
         String invalidOptions = ""
             + "'spark.some.option' = 'aValue',\n"
@@ -308,6 +307,103 @@ public abstract class DeltaCatalogTestSuite {
             + "'io.delta.storage.S3DynamoDBLogStore.ddb.region' = 'Poland',\n"
             + "'parquet.writer.max-padding' = '10'\n";
 
+        String expectedValidationMessage = ""
+            + "DDL contains invalid properties. DDL can have only delta table properties or "
+            + "arbitrary user options only.\n"
+            + "Invalid options used:\n"
+            + " - spark.some.option\n"
+            + " - delta.logStore\n"
+            + " - io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
+            + " - parquet.writer.max-padding";
+
+        testDdlOptionValidation(invalidOptions, expectedValidationMessage);
+    }
+
+    /**
+     * Verifies that CREATE TABLE will throw exception when DDL contains job specific options.
+     */
+    @Test
+    public void shouldThrowIfCreateTableContainsJobSpecificOptions() throws Exception {
+
+        // This test will not check if options are mutual excluded.
+        // This is covered by table Factory and Source builder tests.
+        String invalidOptions = ""
+            + "'startingVersion' = '10',\n"
+            + "'startingTimestamp' = '2022-02-24T04:55:00.001',\n"
+            + "'updateCheckIntervalMillis' = '1000',\n"
+            + "'updateCheckDelayMillis' = '1000',\n"
+            + "'ignoreDeletes' = 'true',\n"
+            + "'ignoreChanges' = 'true',\n"
+            + "'versionAsOf' = '10',\n"
+            + "'timestampAsOf' = '2022-02-24T04:55:00.001'";
+
+        String expectedValidationMessage = ""
+            + "DDL contains invalid properties. DDL can have only delta table properties or "
+            + "arbitrary user options only.\n"
+            + "DDL contains job specific options. Job specific options can be used only via Query "
+            + "hints.\n"
+            + "Used Job specific options:\n"
+            + " - startingTimestamp\n"
+            + " - ignoreDeletes\n"
+            + " - updateCheckIntervalMillis\n"
+            + " - startingVersion\n"
+            + " - ignoreChanges\n"
+            + " - versionAsOf\n"
+            + " - updateCheckDelayMillis\n"
+            + " - timestampAsOf";
+
+        testDdlOptionValidation(invalidOptions, expectedValidationMessage);
+    }
+
+    /**
+     * Verifies that CREATE TABLE will throw exception when DDL contains job specific options.
+     */
+    @Test
+    public void shouldThrowIfCreateTableContainsJobSpecificOptionsAndInvalidTableProperties()
+            throws Exception {
+
+        // This test will not check if options are mutual excluded.
+        // This is covered by table Factory and Source builder tests.
+        String invalidOptions = ""
+            + "'startingVersion' = '10',\n"
+            + "'startingTimestamp' = '2022-02-24T04:55:00.001',\n"
+            + "'updateCheckIntervalMillis' = '1000',\n"
+            + "'updateCheckDelayMillis' = '1000',\n"
+            + "'ignoreDeletes' = 'true',\n"
+            + "'ignoreChanges' = 'true',\n"
+            + "'versionAsOf' = '10',\n"
+            + "'timestampAsOf' = '2022-02-24T04:55:00.001',\n"
+            + "'spark.some.option' = 'aValue',\n"
+            + "'delta.logStore' = 'myLog',\n"
+            + "'io.delta.storage.S3DynamoDBLogStore.ddb.region' = 'Poland',\n"
+            + "'parquet.writer.max-padding' = '10'\n";
+
+        String expectedValidationMessage = ""
+            + "DDL contains invalid properties. DDL can have only delta table properties or "
+            + "arbitrary user options only.\n"
+            + "Invalid options used:\n"
+            + " - spark.some.option\n"
+            + " - delta.logStore\n"
+            + " - io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
+            + " - parquet.writer.max-padding\n"
+            + "DDL contains job specific options. Job specific options can be used only via Query"
+            + " hints.\n"
+            + "Used Job specific options:\n"
+            + " - startingTimestamp\n"
+            + " - ignoreDeletes\n"
+            + " - updateCheckIntervalMillis\n"
+            + " - startingVersion\n"
+            + " - ignoreChanges\n"
+            + " - versionAsOf\n"
+            + " - updateCheckDelayMillis\n"
+            + " - timestampAsOf";
+
+        testDdlOptionValidation(invalidOptions, expectedValidationMessage);
+    }
+
+    private void testDdlOptionValidation(String invalidOptions, String expectedValidationMessage)
+        throws IOException {
+        tablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
         String deltaTable =
             String.format("CREATE TABLE sourceTable ("
                     + "col1 INT,"
@@ -327,16 +423,12 @@ public abstract class DeltaCatalogTestSuite {
             assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
 
         // THEN
-        assertThat(exception.getCause().getMessage()).contains(""
-            + "Invalid options used:\n"
-            + "spark.some.option\n"
-            + "delta.logStore\n"
-            + "io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
-            + "parquet.writer.max-padding");
+        assertThat(exception.getCause().getMessage()).isEqualTo(expectedValidationMessage);
 
         // Check if there were no changes made to existing _delta_log
         assertThat(
-            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath).tableExists()).isFalse();
+            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath).tableExists())
+            .isFalse();
     }
 
     /**

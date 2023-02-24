@@ -104,6 +104,7 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
+    // TODO DC SQL_PR 8 - move this test to feature branch.
     void shouldThrowIfUsedUnexpectedOption() {
 
         options.put("table-path", "file://some/path");
@@ -139,6 +140,7 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
+    // TODO DC SQL_PR 7 - move this test to feature branch.
     public void shouldReturnNonDeltaSourceFactory() {
 
         this.options.put(FactoryUtil.CONNECTOR.key(), "datagen");
@@ -153,6 +155,7 @@ class DeltaDynamicTableFactoryTest {
     @Test
     // Test that for none Delta tables DeltaDynamicTableFactory will return table factory proper for
     // connector type.
+    // TODO DC SQL_PR 7 - move this test to feature branch.
     public void shouldReturnNonDeltaSinkFactory() {
 
         this.options.put(FactoryUtil.CONNECTOR.key(), "blackhole");
@@ -173,6 +176,7 @@ class DeltaDynamicTableFactoryTest {
     // This tests verifies if Table Factory throws exception when used for creation of Delta Sink
     // or source and factory instance was created from public default constructor. Factory should be
     @Test
+    // TODO DC SQL_PR 7 - move this test to feature branch.
     public void shouldThrowIfNotFromCatalog() {
         this.tableFactory = new DeltaDynamicTableFactory();
 
@@ -190,6 +194,7 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
+    // TODO DC SQL_PR 8 - move this test to feature branch.
     public void shouldThrowIfInvalidJobSpecificOptionsUsed() {
 
         options.put("table-path", "file://some/path");
