@@ -212,7 +212,7 @@ public final class DeltaCatalogTableHelper {
         Map<String, String> deltaLogProperties = new HashMap<>(deltaMetadata.getConfiguration());
         for (Entry<String, String> ddlOption : filteredDdlOptions.entrySet()) {
             String existingDeltaPropertyValue =
-                deltaLogProperties.putIfAbsent(ddlOption.getKey(), ddlOption.getValue());
+                deltaLogProperties.put(ddlOption.getKey(), ddlOption.getValue());
 
             if (!allowOverride
                 && existingDeltaPropertyValue != null

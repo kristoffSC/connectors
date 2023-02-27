@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.types.StructType;
 
 // TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
@@ -213,7 +214,9 @@ class DeltaCatalogTest {
         DeltaLog deltaLog = DeltaTestUtils.setupDeltaTable(
             tablePath,
             configuration,
-            new StructType(TestTableData.DELTA_FIELDS)
+            Metadata.builder()
+                .schema(new StructType(TestTableData.DELTA_FIELDS))
+                .build()
         );
 
         assertThat(deltaLog.tableExists())

@@ -4,10 +4,12 @@ import java.io.IOException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
+import io.delta.flink.internal.table.TestTableData;
 import io.delta.flink.utils.DeltaTestUtils;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -15,12 +17,14 @@ import org.apache.flink.table.api.TableResult;
 import org.apache.flink.test.junit5.MiniClusterExtension;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CloseableIterator;
+import org.apache.flink.util.StringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.rules.TemporaryFolder;
 import static io.delta.flink.utils.DeltaTestUtils.buildClusterResourceConfig;
@@ -119,14 +123,33 @@ public abstract class DeltaCatalogTestSuite {
             );
     }
 
-    @Test
-    public void shouldCreateTableIfDeltaLogExists() throws Exception {
+    @ParameterizedTest(name = "table property = {0}, partition column = {1}")
+    @CsvSource( value = {
+        ",", // no extra table properties and no partition columns.
+        "delta.appendOnly, ", // table property but no partition columns.
+        ", col1", // no extra table properties and one partition column.
+        "delta.appendOnly, col1", // one extra table property and one partition column.
+        "user.option,", // user defined table property but no partition columns.
+        "user.option, col1", // one extra user defined table property and one partition column.
+    })
+    public void shouldCreateTableIfDeltaLogExists(
+            String tableProperty,
+            String partitionColumn) throws Exception {
 
-        // GIVEN
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+        Map<String, String> tableProperties = (StringUtils.isNullOrWhitespaceOnly(tableProperty))
+            ? Collections.emptyMap() : Collections.singletonMap(tableProperty, "true");
 
-        DeltaLog deltaLog =
-            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+        List<String> partitionColumns = (StringUtils.isNullOrWhitespaceOnly(partitionColumn))
+            ? Collections.emptyList() : Collections.singletonList(partitionColumn);
+
+        DeltaLog deltaLog = DeltaTestUtils.setupDeltaTable(
+            tablePath,
+            tableProperties,
+            Metadata.builder()
+                .schema(new StructType(TestTableData.DELTA_FIELDS))
+                .partitionColumns(partitionColumns)
+                .build()
+        );
 
         assertThat(deltaLog.tableExists())
             .withFailMessage(
@@ -135,10 +158,13 @@ public abstract class DeltaCatalogTestSuite {
 
         String deltaTable =
             String.format("CREATE TABLE sourceTable ("
-                    + "name VARCHAR,"
-                    + "surname VARCHAR,"
-                    + "age INT"
+                    + "col1 BOOLEAN,"
+                    + "col2 INT,"
+                    + "col3 VARCHAR"
                     + ") "
+                    + ((partitionColumns.isEmpty())
+                        ? ""
+                        : String.format("PARTITIONED BY (%s)", String.join(", ", partitionColumns)))
                     + "WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s'"
@@ -155,13 +181,10 @@ public abstract class DeltaCatalogTestSuite {
         assertThat(schema).isNotNull();
         assertThat(schema.getFields())
             .withFailMessage(() -> schemaDoesNotMatchMessage(schema))
-            .containsExactly(
-                new StructField("name", new StringType()),
-                new StructField("surname", new StringType()),
-                new StructField("age", new IntegerType())
-            );
-
-        assertThat(metadata.getPartitionColumns()).isEmpty();
+            .containsExactly(TestTableData.DELTA_FIELDS);
+        assertThat(metadata.getConfiguration()).containsExactlyEntriesOf(tableProperties);
+        assertThat(metadata.getPartitionColumns())
+            .containsExactlyInAnyOrderElementsOf(partitionColumns);
         assertThat(metadata.getName()).isNull();
     }
 
@@ -316,7 +339,7 @@ public abstract class DeltaCatalogTestSuite {
             + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
             + " - 'parquet.writer.max-padding'";
 
-        testDdlOptionValidation(invalidOptions, expectedValidationMessage);
+        ddlOptionValidation(invalidOptions, expectedValidationMessage);
     }
 
     /**
@@ -352,7 +375,7 @@ public abstract class DeltaCatalogTestSuite {
             + " - 'updateCheckDelayMillis'\n"
             + " - 'timestampAsOf'";
 
-        testDdlOptionValidation(invalidOptions, expectedValidationMessage);
+        ddlOptionValidation(invalidOptions, expectedValidationMessage);
     }
 
     /**
@@ -398,10 +421,10 @@ public abstract class DeltaCatalogTestSuite {
             + " - 'updateCheckDelayMillis'\n"
             + " - 'timestampAsOf'";
 
-        testDdlOptionValidation(invalidOptions, expectedValidationMessage);
+        ddlOptionValidation(invalidOptions, expectedValidationMessage);
     }
 
-    private void testDdlOptionValidation(String invalidOptions, String expectedValidationMessage)
+    private void ddlOptionValidation(String invalidOptions, String expectedValidationMessage)
         throws IOException {
         tablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
         String deltaTable =
@@ -526,7 +549,10 @@ public abstract class DeltaCatalogTestSuite {
         // GIVEN
         DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
 
-        Map<String, String> configuration = Collections.singletonMap("delta.appendOnly", "false");
+        Map<String, String> configuration = new HashMap<>();
+        configuration.put("delta.appendOnly", "false");
+        configuration.put("user.property", "false");
+
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
 
@@ -547,7 +573,8 @@ public abstract class DeltaCatalogTestSuite {
                     + "WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s',"
-                    + " 'delta.appendOnly' = 'true'"
+                    + " 'delta.appendOnly' = 'true',"
+                    + " 'user.property' = 'true'"
                     + ")",
                 tablePath);
 
@@ -558,16 +585,17 @@ public abstract class DeltaCatalogTestSuite {
         // THEN
         assertThat(exception.getCause().getMessage())
             .isEqualTo(""
-                + "Invalid DDL options for table [default.sourceTable]. DDL options for Delta table"
-                + " connector cannot override table properties already defined in _delta_log.\n"
+                + "Invalid DDL options for table [default.sourceTable]. DDL options for Delta "
+                + "table connector cannot override table properties already defined in _delta_log"
+                + ".\n"
                 + "DDL option name | DDL option value | Delta option value \n"
-                + "delta.appendOnly | true | false");
+                + "delta.appendOnly | true | false\n"
+                + "user.property | true | false");
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
         verifyThatDeltaLogWasNotChanged(metadata);
-        assertThat(metadata.getConfiguration())
-            .containsExactlyEntriesOf(Collections.singletonMap("delta.appendOnly", "false"));
+        assertThat(metadata.getConfiguration()).containsExactlyEntriesOf(configuration);
     }
 
     @Test
@@ -670,11 +698,14 @@ public abstract class DeltaCatalogTestSuite {
     @Test
     public void shouldAlterTableProperties() throws Exception {
 
-        // GIVEN
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
-
-        DeltaLog deltaLog =
-            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+        DeltaLog deltaLog = DeltaTestUtils.setupDeltaTable(
+            tablePath,
+            Collections.emptyMap(),
+            Metadata.builder()
+                .schema(new StructType(TestTableData.DELTA_FIELDS))
+                .partitionColumns(Collections.emptyList())
+                .build()
+        );
 
         assertThat(deltaLog.tableExists())
             .withFailMessage("There should be Delta table files in test folder before test.")
@@ -682,9 +713,9 @@ public abstract class DeltaCatalogTestSuite {
 
         String deltaTable =
             String.format("CREATE TABLE sourceTable ("
-                    + "name VARCHAR,"
-                    + "surname VARCHAR,"
-                    + "age INT"
+                    + "col1 BOOLEAN,"
+                    + "col2 INT,"
+                    + "col3 VARCHAR"
                     + ") "
                     + "WITH ("
                     + " 'connector' = 'delta',"
@@ -694,10 +725,16 @@ public abstract class DeltaCatalogTestSuite {
 
         // WHEN
         tableEnv.executeSql(deltaTable).await();
-        tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal')").await();
 
+        // Add new property.
+        tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal')").await();
         assertThat(deltaLog.update().getMetadata().getConfiguration())
             .containsExactlyEntriesOf(Collections.singletonMap("userCustomProp", "myVal"));
+
+        // Change existing property.
+        tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal2')").await();
+        assertThat(deltaLog.update().getMetadata().getConfiguration())
+            .containsExactlyEntriesOf(Collections.singletonMap("userCustomProp", "myVal2"));
     }
 
     private void verifyThatDeltaLogWasNotChanged(Metadata metadata) {

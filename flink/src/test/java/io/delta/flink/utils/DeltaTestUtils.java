@@ -72,7 +72,6 @@ import io.delta.standalone.Snapshot;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.actions.Metadata;
 import io.delta.standalone.actions.Metadata.Builder;
-import io.delta.standalone.types.StructType;
 
 public class DeltaTestUtils {
 
@@ -692,18 +691,18 @@ public class DeltaTestUtils {
      * @param tablePath     path for Delta table.
      * @param configuration configuration with table properties that should be added to Delta
      *                      table.
-     * @param schema        schema for Delta table. Can be null if Delta table already exists.
+     * @param metadata      metadata for Delta table. Can be null if Delta table already exists.
      * @return {@link DeltaLog} instance for created or updated Delta table.
      */
     public static DeltaLog setupDeltaTable(
             String tablePath,
             Map<String, String> configuration,
-            StructType schema) {
+            Metadata metadata) {
 
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
 
-        if (!deltaLog.tableExists() && (schema == null || schema.getFieldNames().length == 0)) {
+        if (!deltaLog.tableExists() && (metadata == null || metadata.getSchema() == null)) {
             throw new IllegalArgumentException(
                 String.format(
                     "Schema cannot be null/empty if table does not exists under given path %s",
@@ -716,8 +715,10 @@ public class DeltaTestUtils {
             .copyBuilder()
             .configuration(configuration);
 
-        if (schema != null) {
-            newMetadataBuilder.schema(schema);
+        if (metadata != null) {
+            newMetadataBuilder
+                .schema(metadata.getSchema())
+                .partitionColumns(metadata.getPartitionColumns());
         }
 
         Metadata updatedMetadata = newMetadataBuilder
