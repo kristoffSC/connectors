@@ -47,15 +47,7 @@ public final class DeltaTableFactoryHelper {
         }
 
         if (!invalidOptions.isEmpty()) {
-            String message = String.format(
-                "Only job specific options are allowed in INSERT SQL statement.\n"
-                    + "Invalid options used: \n[%s]\n"
-                    + "Allowed options:\n[%s]",
-                String.join(", ", invalidOptions),
-                String.join(", ", DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS)
-            );
-
-            throw new ValidationException(message);
+            throw CatalogExceptionHelper.invalidSelectJobPropertyException(invalidOptions);
         }
 
         return new QueryOptions(
@@ -85,12 +77,7 @@ public final class DeltaTableFactoryHelper {
         }
 
         if (!invalidOptions.isEmpty()) {
-            String message = String.format(
-                "Currently no job specific options are allowed in INSERT SQL statements.\n"
-                    + "Invalid options used:\n[%s]",
-                String.join(", ", invalidOptions)
-            );
-            throw new ValidationException(message);
+            throw CatalogExceptionHelper.invalidInsertJobPropertyException(invalidOptions);
         }
 
         return new QueryOptions(

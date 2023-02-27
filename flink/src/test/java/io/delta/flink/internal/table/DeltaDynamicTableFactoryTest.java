@@ -122,20 +122,26 @@ class DeltaDynamicTableFactoryTest {
         );
 
         assertThat(sinkValidationException.getMessage())
-            .isEqualTo(
-                "Currently no job specific options are allowed in INSERT SQL statements.\n"
-                    + "Invalid options used:\n"
-                    + "[invalid-Option]"
+            .isEqualTo(""
+                + "Currently no job specific options are allowed in INSERT SQL statements.\n"
+                + "Invalid options used:\n"
+                + " - 'invalid-Option'"
             );
         assertThat(sourceValidationException.getMessage())
-            .isEqualTo(
-                "Only job specific options are allowed in INSERT SQL statement.\n"
-                    + "Invalid options used: \n"
-                    + "[invalid-Option]\n"
-                    + "Allowed options:\n"
-                    + "[mode, startingTimestamp, ignoreDeletes, updateCheckIntervalMillis, "
-                    + "startingVersion, ignoreChanges, versionAsOf, updateCheckDelayMillis, "
-                    + "timestampAsOf]"
+            .isEqualTo(""
+                + "Only job specific options are allowed in SELECT SQL statement.\n"
+                + "Invalid options used: \n"
+                + " - 'invalid-Option'\n"
+                + "Allowed options:\n"
+                + " - 'mode'\n"
+                + " - 'startingTimestamp'\n"
+                + " - 'ignoreDeletes'\n"
+                + " - 'updateCheckIntervalMillis'\n"
+                + " - 'startingVersion'\n"
+                + " - 'ignoreChanges'\n"
+                + " - 'versionAsOf'\n"
+                + " - 'updateCheckDelayMillis'\n"
+                + " - 'timestampAsOf'"
             );
     }
 
@@ -199,6 +205,7 @@ class DeltaDynamicTableFactoryTest {
 
         options.put("table-path", "file://some/path");
         Map<String, String> invalidOptions = Stream.of(
+                "SPARK.some.option",
                 "spark.some.option",
                 "delta.logStore",
                 "io.delta.storage.S3DynamoDBLogStore.ddb.region",
@@ -219,22 +226,34 @@ class DeltaDynamicTableFactoryTest {
         );
 
         assertThat(sinkValidationException.getMessage())
-            .isEqualTo(
-                "Currently no job specific options are allowed in INSERT SQL statements.\n"
-                    + "Invalid options used:\n"
-                    + "[spark.some.option, io.delta.storage.S3DynamoDBLogStore.ddb.region, "
-                    + "parquet.writer.max-padding, delta.logStore]"
+            .isEqualTo(""
+                + "Currently no job specific options are allowed in INSERT SQL statements.\n"
+                + "Invalid options used:\n"
+                + " - 'SPARK.some.option'\n"
+                + " - 'spark.some.option'\n"
+                + " - 'delta.logStore'\n"
+                + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+                + " - 'parquet.writer.max-padding'"
             );
         assertThat(sourceValidationException.getMessage())
-            .isEqualTo(
-                "Only job specific options are allowed in INSERT SQL statement.\n"
-                    + "Invalid options used: \n"
-                    + "[spark.some.option, io.delta.storage.S3DynamoDBLogStore.ddb.region, "
-                    + "parquet.writer.max-padding, delta.logStore]\n"
-                    + "Allowed options:\n"
-                    + "[mode, startingTimestamp, ignoreDeletes, updateCheckIntervalMillis, "
-                    + "startingVersion, ignoreChanges, versionAsOf, updateCheckDelayMillis, "
-                    + "timestampAsOf]"
+            .isEqualTo(""
+                + "Only job specific options are allowed in SELECT SQL statement.\n"
+                + "Invalid options used: \n"
+                + " - 'SPARK.some.option'\n"
+                + " - 'spark.some.option'\n"
+                + " - 'delta.logStore'\n"
+                + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+                + " - 'parquet.writer.max-padding'\n"
+                + "Allowed options:\n"
+                + " - 'mode'\n"
+                + " - 'startingTimestamp'\n"
+                + " - 'ignoreDeletes'\n"
+                + " - 'updateCheckIntervalMillis'\n"
+                + " - 'startingVersion'\n"
+                + " - 'ignoreChanges'\n"
+                + " - 'versionAsOf'\n"
+                + " - 'updateCheckDelayMillis'\n"
+                + " - 'timestampAsOf'"
             );
 
     }

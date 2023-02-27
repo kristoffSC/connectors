@@ -311,10 +311,10 @@ public abstract class DeltaCatalogTestSuite {
             + "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "Invalid options used:\n"
-            + " - spark.some.option\n"
-            + " - delta.logStore\n"
-            + " - io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
-            + " - parquet.writer.max-padding";
+            + " - 'spark.some.option'\n"
+            + " - 'delta.logStore'\n"
+            + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+            + " - 'parquet.writer.max-padding'";
 
         testDdlOptionValidation(invalidOptions, expectedValidationMessage);
     }
@@ -340,17 +340,17 @@ public abstract class DeltaCatalogTestSuite {
         String expectedValidationMessage = ""
             + "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
-            + "DDL contains job specific options. Job specific options can be used only via Query "
-            + "hints.\n"
+            + "DDL contains job specific options. Job specific options can be used only via Query"
+            + " hints.\n"
             + "Used Job specific options:\n"
-            + " - startingTimestamp\n"
-            + " - ignoreDeletes\n"
-            + " - updateCheckIntervalMillis\n"
-            + " - startingVersion\n"
-            + " - ignoreChanges\n"
-            + " - versionAsOf\n"
-            + " - updateCheckDelayMillis\n"
-            + " - timestampAsOf";
+            + " - 'startingTimestamp'\n"
+            + " - 'ignoreDeletes'\n"
+            + " - 'updateCheckIntervalMillis'\n"
+            + " - 'startingVersion'\n"
+            + " - 'ignoreChanges'\n"
+            + " - 'versionAsOf'\n"
+            + " - 'updateCheckDelayMillis'\n"
+            + " - 'timestampAsOf'";
 
         testDdlOptionValidation(invalidOptions, expectedValidationMessage);
     }
@@ -382,21 +382,21 @@ public abstract class DeltaCatalogTestSuite {
             + "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "Invalid options used:\n"
-            + " - spark.some.option\n"
-            + " - delta.logStore\n"
-            + " - io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
-            + " - parquet.writer.max-padding\n"
+            + " - 'spark.some.option'\n"
+            + " - 'delta.logStore'\n"
+            + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+            + " - 'parquet.writer.max-padding'\n"
             + "DDL contains job specific options. Job specific options can be used only via Query"
             + " hints.\n"
             + "Used Job specific options:\n"
-            + " - startingTimestamp\n"
-            + " - ignoreDeletes\n"
-            + " - updateCheckIntervalMillis\n"
-            + " - startingVersion\n"
-            + " - ignoreChanges\n"
-            + " - versionAsOf\n"
-            + " - updateCheckDelayMillis\n"
-            + " - timestampAsOf";
+            + " - 'startingTimestamp'\n"
+            + " - 'ignoreDeletes'\n"
+            + " - 'updateCheckIntervalMillis'\n"
+            + " - 'startingVersion'\n"
+            + " - 'ignoreChanges'\n"
+            + " - 'versionAsOf'\n"
+            + " - 'updateCheckDelayMillis'\n"
+            + " - 'timestampAsOf'";
 
         testDdlOptionValidation(invalidOptions, expectedValidationMessage);
     }
@@ -531,7 +531,7 @@ public abstract class DeltaCatalogTestSuite {
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
 
         // Set delta table property. DDL will try to override it with different value
-        DeltaTestUtils.setupDeltaTableWithProperty(tablePath, configuration);
+        DeltaTestUtils.setupDeltaTableWithProperties(tablePath, configuration);
 
         assertThat(deltaLog.tableExists())
             .withFailMessage(

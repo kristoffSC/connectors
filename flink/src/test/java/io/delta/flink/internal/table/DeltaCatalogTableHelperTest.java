@@ -33,7 +33,7 @@ import io.delta.standalone.types.StructType;
 class DeltaCatalogTableHelperTest {
 
     @Test
-    public void testCreateTableOperation() {
+    public void shouldCreateTableOperation() {
 
         Metadata metadata = Metadata.builder()
             .schema(
@@ -61,7 +61,7 @@ class DeltaCatalogTableHelperTest {
         "table-path, Filtered DDL options should not contain table-path option.",
         "connector, Filtered DDL options should not contain connector option."
     })
-    public void testThrowPrepareDeltaTablePropertiesIfUsedNotFilteredDdlOptions(
+    public void shouldThrow_prepareDeltaTableProperties_filteredOptions(
             String option,
             String validationMessage) {
 
@@ -79,7 +79,7 @@ class DeltaCatalogTableHelperTest {
     }
 
     @Test
-    public void testAlterPropertiesTableOperation() {
+    public void shouldAlterProperties() {
 
         Metadata metadata = Metadata.builder()
             .schema(
@@ -100,7 +100,7 @@ class DeltaCatalogTableHelperTest {
     }
 
     @Test
-    public void testThrowOnNotCreateTableNorSetTblPropOperation() {
+    public void shouldThrow_prepareDeltaLogOperation_unsupportedOperationName() {
 
         Metadata metadata = Metadata.builder()
             .schema(
@@ -110,8 +110,9 @@ class DeltaCatalogTableHelperTest {
             .configuration(Collections.singletonMap("customKey", "myVal"))
             .description("test description").build();
 
+        // Trying to use unsupported Operation name Operation.Name.DELETE.
         CatalogException catalogException = assertThrows(CatalogException.class, () ->
-            DeltaCatalogTableHelper.prepareDeltaLogOperation(Name.DELETE, metadata));
+            DeltaCatalogTableHelper.prepareDeltaLogOperation(Operation.Name.DELETE, metadata));
 
         assertThat(catalogException.getMessage())
             .isEqualTo("Trying to use unsupported Delta Operation [DELETE]");
@@ -119,7 +120,7 @@ class DeltaCatalogTableHelperTest {
     }
 
     @Test
-    public void testThrowOnWhenResolvingFlinkSchemaWithComputedColumns() {
+    public void shouldThrow_resolveDeltaSchemaFromDdl_computedColumns() {
 
         ResolvedSchema schema = ResolvedSchema.of(
             Column.computed("col1", Mockito.mock(ResolvedExpression.class))
@@ -148,7 +149,7 @@ class DeltaCatalogTableHelperTest {
     }
 
     @Test
-    public void testThrowOnWhenResolvingFlinkSchemaWithMetadataColumns() {
+    public void shouldThrow_resolveDeltaSchemaFromDdl_metadataColumns() {
 
         ResolvedSchema schema = ResolvedSchema.of(
             Column.metadata(

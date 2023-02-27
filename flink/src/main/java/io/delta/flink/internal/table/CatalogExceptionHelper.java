@@ -6,7 +6,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
+import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
@@ -17,6 +19,13 @@ import io.delta.standalone.types.StructType;
 // TODO DC - consider extending CatalogException for more concrete types like
 //  "DeltaSchemaMismatchException" etc.
 public final class CatalogExceptionHelper {
+
+    private static final String INVALID_PROPERTY_TEMPLATE = " - '%s'";
+
+    private static final String ALLOWED_SELECT_JOB_SPECIFIC_OPTIONS =
+        DeltaFlinkJobSpecificOptions.SOURCE_JOB_OPTIONS.stream()
+        .map(tableProperty -> String.format(INVALID_PROPERTY_TEMPLATE, tableProperty))
+        .collect(Collectors.joining("\n"));
 
     private CatalogExceptionHelper() {}
 
@@ -48,15 +57,13 @@ public final class CatalogExceptionHelper {
 
     public static CatalogException invalidDdlOptionException(InvalidDdlOptions invalidOptions) {
 
-        StringJoiner invalidTablePropertiesUsed = new StringJoiner("\n");
-        for (String invalidTableProperty : invalidOptions.getInvalidTableProperties()) {
-            invalidTablePropertiesUsed.add(" - " + invalidTableProperty);
-        }
+        String invalidTablePropertiesUsed = invalidOptions.getInvalidTableProperties().stream()
+            .map(tableProperty -> String.format(INVALID_PROPERTY_TEMPLATE, tableProperty))
+            .collect(Collectors.joining("\n"));
 
-        StringJoiner usedJobSpecificOptions = new StringJoiner("\n");
-        for (String invalidTableProperty : invalidOptions.getUsedJobSpecificOptions()) {
-            usedJobSpecificOptions.add(" - " + invalidTableProperty);
-        }
+        String usedJobSpecificOptions = invalidOptions.getJobSpecificOptions().stream()
+            .map(jobProperty -> String.format(INVALID_PROPERTY_TEMPLATE, jobProperty))
+            .collect(Collectors.joining("\n"));
 
         String exceptionMessage = "DDL contains invalid properties. "
             + "DDL can have only delta table properties or arbitrary user options only.";
@@ -129,6 +136,37 @@ public final class CatalogExceptionHelper {
         );
     }
 
+    public static ValidationException invalidInsertJobPropertyException(
+            Collection<String> invalidOptions) {
+        String insertJobSpecificOptions = invalidOptions.stream()
+            .map(tableProperty -> String.format(INVALID_PROPERTY_TEMPLATE, tableProperty))
+            .collect(Collectors.joining("\n"));
+
+        String message = String.format(
+            "Currently no job specific options are allowed in INSERT SQL statements.\n"
+                + "Invalid options used:\n%s",
+            insertJobSpecificOptions);
+
+        return new ValidationException(message);
+    }
+
+    public static ValidationException invalidSelectJobPropertyException(
+            Collection<String> invalidOptions) {
+        String selectJobSpecificOptions = invalidOptions.stream()
+            .map(tableProperty -> String.format(INVALID_PROPERTY_TEMPLATE, tableProperty))
+            .collect(Collectors.joining("\n"));
+
+        String message = String.format(
+            "Only job specific options are allowed in SELECT SQL statement.\n"
+                + "Invalid options used: \n%s\n"
+                + "Allowed options:\n%s",
+            selectJobSpecificOptions,
+            ALLOWED_SELECT_JOB_SPECIFIC_OPTIONS
+        );
+
+        return new ValidationException(message);
+    }
+
     public static class MismatchedDdlOptionAndDeltaTableProperty {
 
         private final String optionName;
@@ -165,7 +203,7 @@ public final class CatalogExceptionHelper {
             return !(jobSpecificOptions.isEmpty() && invalidTableProperties.isEmpty());
         }
 
-        public Collection<String> getUsedJobSpecificOptions() {
+        public Collection<String> getJobSpecificOptions() {
             return Collections.unmodifiableSet(this.jobSpecificOptions);
         }
 

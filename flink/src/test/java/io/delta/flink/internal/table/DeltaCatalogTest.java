@@ -16,11 +16,6 @@ import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.ResolvedCatalogTable;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
-import org.apache.flink.table.types.AtomicDataType;
-import org.apache.flink.table.types.DataType;
-import org.apache.flink.table.types.logical.BooleanType;
-import org.apache.flink.table.types.logical.IntType;
-import org.apache.flink.table.types.logical.VarCharType;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,19 +31,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.types.StructType;
 
 // TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
 //  new test is added here.
 @ExtendWith(MockitoExtension.class)
 class DeltaCatalogTest {
 
-    public static final String[] COLUMN_NAMES = new String[] {"col1", "col2", "col3"};
-
-    public static final DataType[] COLUMN_TYPES = new DataType[] {
-        new AtomicDataType(new BooleanType()),
-        new AtomicDataType(new IntType()),
-        new AtomicDataType(new VarCharType())
-    };
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
     private static final boolean ignoreIfExists = false;
@@ -59,6 +48,7 @@ class DeltaCatalogTest {
 
     private DeltaCatalog deltaCatalog;
 
+    // Resets every test.
     private Map<String, String> ddlOptions;
 
     @BeforeAll
@@ -89,8 +79,6 @@ class DeltaCatalogTest {
     public void testThrowCreateTableInvalidTablePath(String deltaTablePath) {
 
         DeltaCatalogBaseTable deltaCatalogTable = setUpCatalogTable(
-            COLUMN_NAMES,
-            COLUMN_TYPES,
             (deltaTablePath == null) ? Collections.emptyMap() : Collections.singletonMap(
                 DeltaTableConnectorOptions.TABLE_PATH.key(),
                 deltaTablePath
@@ -109,6 +97,7 @@ class DeltaCatalogTest {
     public void testThrowCreateTableIfInvalidTableOptionUsed() {
 
         Map<String, String> invalidOptions = Stream.of(
+                "SPARK.some.option", // we are not doing case-insensitive checks.
                 "spark.some.option",
                 "delta.logStore",
                 "io.delta.storage.S3DynamoDBLogStore.ddb.region",
@@ -120,12 +109,12 @@ class DeltaCatalogTest {
             + "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "Invalid options used:\n"
-            + " - spark.some.option\n"
-            + " - delta.logStore\n"
-            + " - io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
-            + " - parquet.writer.max-padding";
+            + " - 'spark.some.option'\n"
+            + " - 'delta.logStore'\n"
+            + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+            + " - 'parquet.writer.max-padding'";
 
-        testCreateTableOptionValidation(invalidOptions, expectedValidationMessage);
+        validateCreateTableOptions(invalidOptions, expectedValidationMessage);
     }
 
     @Test
@@ -141,26 +130,30 @@ class DeltaCatalogTest {
                 "ignoreDeletes",
                 "ignoreChanges",
                 "versionAsOf",
-                "timestampAsOf"
+                "timestampAsOf",
+                // This will be treated as arbitrary user-defined table property and will not be
+                // part of the exception message since we don't
+                // do case-sensitive checks.
+                "TIMESTAMPASOF"
             )
             .collect(Collectors.toMap(optionName -> optionName, s -> "aValue"));
 
         String expectedValidationMessage = ""
             + "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
-            + "DDL contains job specific options. Job specific options can be used only via "
-            + "Query hints.\n"
+            + "DDL contains job specific options. Job specific options can be used only via Query"
+            + " hints.\n"
             + "Used Job specific options:\n"
-            + " - ignoreDeletes\n"
-            + " - startingTimestamp\n"
-            + " - updateCheckIntervalMillis\n"
-            + " - startingVersion\n"
-            + " - ignoreChanges\n"
-            + " - versionAsOf\n"
-            + " - updateCheckDelayMillis\n"
-            + " - timestampAsOf";
+            + " - 'ignoreDeletes'\n"
+            + " - 'startingTimestamp'\n"
+            + " - 'updateCheckIntervalMillis'\n"
+            + " - 'startingVersion'\n"
+            + " - 'ignoreChanges'\n"
+            + " - 'versionAsOf'\n"
+            + " - 'updateCheckDelayMillis'\n"
+            + " - 'timestampAsOf'";
 
-        testCreateTableOptionValidation(invalidOptions, expectedValidationMessage);
+        validateCreateTableOptions(invalidOptions, expectedValidationMessage);
     }
 
     @Test
@@ -169,6 +162,7 @@ class DeltaCatalogTest {
         // This test will not check if options are mutual excluded.
         // This is covered by table Factory and Source builder tests.
         Map<String, String> invalidOptions = Stream.of(
+                "SPARK.some.option", // we are not doing case-insensitive checks.
                 "spark.some.option",
                 "delta.logStore",
                 "io.delta.storage.S3DynamoDBLogStore.ddb.region",
@@ -188,32 +182,63 @@ class DeltaCatalogTest {
             + "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "Invalid options used:\n"
-            + " - spark.some.option\n"
-            + " - delta.logStore\n"
-            + " - io.delta.storage.S3DynamoDBLogStore.ddb.region\n"
-            + " - parquet.writer.max-padding\n"
-            + "DDL contains job specific options. Job specific options can be used only via "
-            + "Query hints.\n"
+            + " - 'spark.some.option'\n"
+            + " - 'delta.logStore'\n"
+            + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+            + " - 'parquet.writer.max-padding'\n"
+            + "DDL contains job specific options. Job specific options can be used only via Query"
+            + " hints.\n"
             + "Used Job specific options:\n"
-            + " - startingTimestamp\n"
-            + " - ignoreDeletes\n"
-            + " - updateCheckIntervalMillis\n"
-            + " - startingVersion\n"
-            + " - ignoreChanges\n"
-            + " - versionAsOf\n"
-            + " - updateCheckDelayMillis\n"
-            + " - timestampAsOf";
+            + " - 'startingTimestamp'\n"
+            + " - 'ignoreDeletes'\n"
+            + " - 'updateCheckIntervalMillis'\n"
+            + " - 'startingVersion'\n"
+            + " - 'ignoreChanges'\n"
+            + " - 'versionAsOf'\n"
+            + " - 'updateCheckDelayMillis'\n"
+            + " - 'timestampAsOf'";
 
-        testCreateTableOptionValidation(invalidOptions, expectedValidationMessage);
+        validateCreateTableOptions(invalidOptions, expectedValidationMessage);
     }
 
-    private void testCreateTableOptionValidation(
+    @Test
+    public void testThrowIfMismatchedDdlOptionAndDeltaTableProperty() {
+
+        String tablePath = this.ddlOptions.get(
+            DeltaTableConnectorOptions.TABLE_PATH.key()
+        );
+
+        Map<String, String> configuration = Collections.singletonMap("delta.appendOnly", "false");
+
+        DeltaLog deltaLog = DeltaTestUtils.setupDeltaTable(
+            tablePath,
+            configuration,
+            new StructType(TestTableData.DELTA_FIELDS)
+        );
+
+        assertThat(deltaLog.tableExists())
+            .withFailMessage(
+                "There should be Delta table files in test folder before calling DeltaCatalog.")
+            .isTrue();
+
+        Map<String, String> mismatchedOptions =
+            Collections.singletonMap("delta.appendOnly", "true");
+
+
+        String expectedValidationMessage = ""
+            + "Invalid DDL options for table [default.testTable]. DDL options for Delta table"
+            + " connector cannot override table properties already defined in _delta_log.\n"
+            + "DDL option name | DDL option value | Delta option value \n"
+            + "delta.appendOnly | true | false";
+
+        validateCreateTableOptions(mismatchedOptions, expectedValidationMessage);
+    }
+
+    private void validateCreateTableOptions(
             Map<String, String> invalidOptions,
             String expectedValidationMessage) {
         ddlOptions.putAll(invalidOptions);
         DeltaCatalogBaseTable deltaCatalogTable = setUpCatalogTable(
-            COLUMN_NAMES,
-            COLUMN_TYPES,
             ddlOptions
         );
 
@@ -224,63 +249,11 @@ class DeltaCatalogTest {
         assertThat(exception.getMessage()).isEqualTo(expectedValidationMessage);
     }
 
-    @Test
-    public void testThrowIfMismatchedDdlOptionAndDeltaTableProperty() throws IOException {
-
-        String tablePath = this.ddlOptions.get(
-            DeltaTableConnectorOptions.TABLE_PATH.key()
-        );
-
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
-
-        Map<String, String> configuration = Collections.singletonMap("delta.appendOnly", "false");
-
-        DeltaLog deltaLog = DeltaTestUtils.setupDeltaTableWithProperty(tablePath, configuration);
-
-        assertThat(deltaLog.tableExists())
-            .withFailMessage(
-                "There should be Delta table files in test folder before calling DeltaCatalog.")
-            .isTrue();
-
-        Map<String, String> mismatchedOptions =
-            Collections.singletonMap("delta.appendOnly", "true");
-
-        ddlOptions.putAll(mismatchedOptions);
-
-        String[] columnNames = new String[] {"name", "surname", "age"};
-        DataType[] columnTypes = new DataType[] {
-            new AtomicDataType(new VarCharType()),
-            new AtomicDataType(new VarCharType()),
-            new AtomicDataType(new IntType())
-        };
-
-        DeltaCatalogBaseTable deltaCatalogTable = setUpCatalogTable(
-            columnNames,
-            columnTypes,
-            ddlOptions
-        );
-
-        CatalogException exception = assertThrows(CatalogException.class, () ->
-            deltaCatalog.createTable(deltaCatalogTable, ignoreIfExists)
-        );
-
-        assertThat(exception.getMessage())
-            .isEqualTo(""
-                + "Invalid DDL options for table [default.testTable]. DDL options for Delta table"
-                + " connector cannot override table properties already defined in _delta_log.\n"
-                + "DDL option name | DDL option value | Delta option value \n"
-                + "delta.appendOnly | true | false");
-
-    }
-
-    private DeltaCatalogBaseTable setUpCatalogTable(
-            String[] columnNames,
-            DataType[] columnTypes,
-            Map<String, String> options) {
+    private DeltaCatalogBaseTable setUpCatalogTable(Map<String, String> options) {
 
         CatalogTable catalogTable = CatalogTable.of(
             Schema.newBuilder()
-                .fromFields(columnNames, columnTypes)
+                .fromFields(TestTableData.COLUMN_NAMES, TestTableData.COLUMN_TYPES)
                 .build(),
             "comment",
             Collections.emptyList(), // partitionKeys
@@ -291,7 +264,7 @@ class DeltaCatalogTest {
             new ObjectPath(DATABASE, "testTable"),
             new ResolvedCatalogTable(
                 catalogTable,
-                ResolvedSchema.physical(columnNames, columnTypes)
+                ResolvedSchema.physical(TestTableData.COLUMN_NAMES, TestTableData.COLUMN_TYPES)
             )
         );
     }

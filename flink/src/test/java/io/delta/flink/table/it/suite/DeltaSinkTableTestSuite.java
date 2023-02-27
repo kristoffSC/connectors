@@ -345,9 +345,13 @@ public abstract class DeltaSinkTableTestSuite {
             .isEqualTo(""
                 + "Currently no job specific options are allowed in INSERT SQL statements.\n"
                 + "Invalid options used:\n"
-                + "[delta.appendOnly, spark.some.option, delta.logStore, customOption, "
-                + "versionAsOf, io.delta.storage.S3DynamoDBLogStore.ddb.region, parquet.writer"
-                + ".max-padding]");
+                + " - 'delta.appendOnly'\n"
+                + " - 'spark.some.option'\n"
+                + " - 'delta.logStore'\n"
+                + " - 'customOption'\n"
+                + " - 'versionAsOf'\n"
+                + " - 'io.delta.storage.S3DynamoDBLogStore.ddb.region'\n"
+                + " - 'parquet.writer.max-padding'");
     }
 
     private String buildInsertAllFieldsSql(boolean useStaticPartition) {
