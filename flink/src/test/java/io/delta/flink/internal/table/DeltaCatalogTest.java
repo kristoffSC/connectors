@@ -77,7 +77,7 @@ class DeltaCatalogTest {
     @ParameterizedTest
     @NullSource  // pass a null value
     @ValueSource(strings = {"", " "})
-    public void testThrowCreateTableInvalidTablePath(String deltaTablePath) {
+    public void shouldThrow_createTable_invalidTablePath(String deltaTablePath) {
 
         DeltaCatalogBaseTable deltaCatalogTable = setUpCatalogTable(
             (deltaTablePath == null) ? Collections.emptyMap() : Collections.singletonMap(
@@ -95,7 +95,7 @@ class DeltaCatalogTest {
     }
 
     @Test
-    public void testThrowCreateTableIfInvalidTableOptionUsed() {
+    public void shouldThrow_createTable_invalidTableOption() {
 
         Map<String, String> invalidOptions = Stream.of(
                 "SPARK.some.option", // we are not doing case-insensitive checks.
@@ -119,7 +119,7 @@ class DeltaCatalogTest {
     }
 
     @Test
-    public void testThrowCreateTableIfJobSpecificOptionUsed() {
+    public void shouldThrow_createTable_jobSpecificOption() {
 
         // This test will not check if options are mutual excluded.
         // This is covered by table Factory and Source builder tests.
@@ -158,7 +158,7 @@ class DeltaCatalogTest {
     }
 
     @Test
-    public void testThrowCreateTableIfJobSpecificOptionAndInvalidTableOptionsAreUsed() {
+    public void shouldThrow_createTable_jobSpecificOption_and_invalidTableOptions() {
 
         // This test will not check if options are mutual excluded.
         // This is covered by table Factory and Source builder tests.
@@ -203,7 +203,7 @@ class DeltaCatalogTest {
     }
 
     @Test
-    public void testThrowIfMismatchedDdlOptionAndDeltaTableProperty() {
+    public void shouldThrow_mismatchedDdlOption_and_deltaTableProperty() {
 
         String tablePath = this.ddlOptions.get(
             DeltaTableConnectorOptions.TABLE_PATH.key()

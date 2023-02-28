@@ -120,7 +120,7 @@ public class DeltaCatalog {
         );
     }
 
-    public boolean tableExists(DeltaCatalogBaseTable catalogTable) throws CatalogException {
+    public boolean tableExists(DeltaCatalogBaseTable catalogTable) {
 
         CatalogBaseTable metastoreTable = catalogTable.getCatalogTable();
         String deltaTablePath =
@@ -138,14 +138,16 @@ public class DeltaCatalog {
             throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
         }
 
-        Map<String, String> ddlOptions = catalogTable.getOptions();
-        if (!databaseExists(catalogTable.getDatabaseName())) {
+        boolean databaseExists =
+            this.decoratedCatalog.databaseExists(catalogTable.getDatabaseName());
+        if (!databaseExists) {
             throw new DatabaseNotExistException(
                 this.catalogName,
                 catalogTable.getDatabaseName()
             );
         }
 
+        Map<String, String> ddlOptions = catalogTable.getOptions();
         String deltaTablePath = ddlOptions.get(DeltaTableConnectorOptions.TABLE_PATH.key());
         if (StringUtils.isNullOrWhitespaceOnly(deltaTablePath)) {
             throw new CatalogException("Path to Delta table cannot be null or empty.");
@@ -282,9 +284,5 @@ public class DeltaCatalog {
         // add properties to _delta_log
         DeltaCatalogTableHelper
             .commitToDeltaLog(deltaLog, updatedMetadata, Operation.Name.SET_TABLE_PROPERTIES);
-    }
-
-    private boolean databaseExists(String databaseName) {
-        return this.decoratedCatalog.databaseExists(databaseName);
     }
 }

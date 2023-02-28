@@ -33,12 +33,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.Metadata;
+import io.delta.standalone.types.BinaryType;
+import io.delta.standalone.types.BooleanType;
+import io.delta.standalone.types.DecimalType;
+import io.delta.standalone.types.DoubleType;
+import io.delta.standalone.types.FloatType;
 import io.delta.standalone.types.IntegerType;
 import io.delta.standalone.types.LongType;
+import io.delta.standalone.types.ShortType;
 import io.delta.standalone.types.StringType;
 import io.delta.standalone.types.StructField;
 import io.delta.standalone.types.StructType;
+import io.delta.standalone.types.TimestampType;
 
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
+//  new test is added here.
 public abstract class DeltaCatalogTestSuite {
 
     private static final int PARALLELISM = 2;
@@ -72,7 +81,7 @@ public abstract class DeltaCatalogTestSuite {
     }
 
     @Test
-    public void shouldCreateTableIfDeltaLogDoesNotExists() throws Exception {
+    public void shouldCreateTable_deltaLogExists() throws Exception {
 
         // GIVEN
         DeltaLog deltaLog =
@@ -82,12 +91,18 @@ public abstract class DeltaCatalogTestSuite {
             .withFailMessage("There should be no Delta table files in test folder before test.")
             .isFalse();
 
-        // TODO DC - add all types here
         String deltaTable =
             String.format("CREATE TABLE sourceTable ("
-                    + "col1 BIGINT,"
-                    + "col2 BIGINT,"
-                    + "col3 VARCHAR"
+                    + "col1 BYTES,"
+                    + "col2 SMALLINT,"
+                    + "col3 INT,"
+                    + "col4 DOUBLE,"
+                    + "col5 FLOAT,"
+                    + "col6 BIGINT,"
+                    + "col7 DECIMAL,"
+                    + "col8 TIMESTAMP,"
+                    + "col9 VARCHAR,"
+                    + "col10 BOOLEAN"
                     + ") "
                     + "PARTITIONED BY (col1)"
                     + "WITH ("
@@ -109,9 +124,16 @@ public abstract class DeltaCatalogTestSuite {
         assertThat(actualSchema.getFields())
             .withFailMessage(() -> schemaDoesNotMatchMessage(actualSchema))
             .containsExactly(
-                new StructField("col1", new LongType()),
-                new StructField("col2", new LongType()),
-                new StructField("col3", new StringType())
+                new StructField("col1", new BinaryType()),
+                new StructField("col2", new ShortType()),
+                new StructField("col3", new IntegerType()),
+                new StructField("col4", new DoubleType()),
+                new StructField("col5", new FloatType()),
+                new StructField("col6", new LongType()),
+                new StructField("col7", DecimalType.USER_DEFAULT),
+                new StructField("col8", new TimestampType()),
+                new StructField("col9", new StringType()),
+                new StructField("col10", new BooleanType())
             );
 
         assertThat(metadata.getPartitionColumns()).containsExactly("col1");
@@ -132,7 +154,7 @@ public abstract class DeltaCatalogTestSuite {
         "user.option,", // user defined table property but no partition columns.
         "user.option, col1", // one extra user defined table property and one partition column.
     })
-    public void shouldCreateTableIfDeltaLogExists(
+    public void shouldCreateTable_deltaLogExists(
             String tableProperty,
             String partitionColumn) throws Exception {
 
@@ -189,7 +211,7 @@ public abstract class DeltaCatalogTestSuite {
     }
 
     @Test
-    public void shouldThrowOnCreateTableWithComputedColumns() {
+    public void shouldThrow_createTable_computedColumns() {
 
         // GIVEN
         DeltaLog deltaLog =
@@ -231,7 +253,7 @@ public abstract class DeltaCatalogTestSuite {
     }
 
     @Test
-    public void shouldThrowOnCreateTableWithMetadataColumns() {
+    public void shouldThrow_createTable_metadataColumns() {
 
         // GIVEN
         DeltaLog deltaLog =
@@ -322,7 +344,7 @@ public abstract class DeltaCatalogTestSuite {
      * properties.
      */
     @Test
-    public void shouldThrowIfCreateTableContainsInvalidTableProperties() throws Exception {
+    public void shouldThrow_createTable_invalidTableProperties() throws Exception {
 
         String invalidOptions = ""
             + "'spark.some.option' = 'aValue',\n"
@@ -346,7 +368,7 @@ public abstract class DeltaCatalogTestSuite {
      * Verifies that CREATE TABLE will throw exception when DDL contains job specific options.
      */
     @Test
-    public void shouldThrowIfCreateTableContainsJobSpecificOptions() throws Exception {
+    public void shouldThrow_createTable_jobSpecificOptions() throws Exception {
 
         // This test will not check if options are mutual excluded.
         // This is covered by table Factory and Source builder tests.
@@ -382,7 +404,7 @@ public abstract class DeltaCatalogTestSuite {
      * Verifies that CREATE TABLE will throw exception when DDL contains job specific options.
      */
     @Test
-    public void shouldThrowIfCreateTableContainsJobSpecificOptionsAndInvalidTableProperties()
+    public void shouldThrow_createTable_jobSpecificOptions_and_invalidTableProperties()
             throws Exception {
 
         // This test will not check if options are mutual excluded.
@@ -553,11 +575,8 @@ public abstract class DeltaCatalogTestSuite {
         configuration.put("delta.appendOnly", "false");
         configuration.put("user.property", "false");
 
-        DeltaLog deltaLog =
-            DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
-
         // Set delta table property. DDL will try to override it with different value
-        DeltaTestUtils.setupDeltaTableWithProperties(tablePath, configuration);
+        DeltaLog deltaLog = DeltaTestUtils.setupDeltaTableWithProperties(tablePath, configuration);
 
         assertThat(deltaLog.tableExists())
             .withFailMessage(

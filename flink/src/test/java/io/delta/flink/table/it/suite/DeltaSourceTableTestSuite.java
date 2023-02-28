@@ -66,6 +66,7 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.SURNAME_COLUMN_V
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+// TODO FlinkSQL_PR_7
 public abstract class DeltaSourceTableTestSuite {
 
     private static final int PARALLELISM = 2;

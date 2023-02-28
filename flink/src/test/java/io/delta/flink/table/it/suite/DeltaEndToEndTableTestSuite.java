@@ -27,6 +27,7 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
 import static org.assertj.core.api.Assertions.assertThat;
 
+// TODO FlinkSQL_PR_7
 public abstract class DeltaEndToEndTableTestSuite {
 
     private static final int PARALLELISM = 2;

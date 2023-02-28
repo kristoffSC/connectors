@@ -20,6 +20,7 @@ import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+// TODO FlinkSQL_PR_7
 public class FlinkSqlTestITCase {
 
     private static final int PARALLELISM = 2;

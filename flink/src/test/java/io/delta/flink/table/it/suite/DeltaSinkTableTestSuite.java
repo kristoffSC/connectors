@@ -77,6 +77,7 @@ import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
+// TODO FlinkSQL_PR_7
 public abstract class DeltaSinkTableTestSuite {
 
     private static final int PARALLELISM = 2;
