@@ -73,7 +73,7 @@ public abstract class DeltaEndToEndTableTestSuite {
     }
 
     @Test
-    public void testEndToEndTableJob() throws Exception {
+    public void shouldReadAndWriteDeltaTable() throws Exception {
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
             getTestStreamEnv(false) // streamingMode = false
@@ -86,8 +86,7 @@ public abstract class DeltaEndToEndTableTestSuite {
                     + "col1 BIGINT,"
                     + "col2 BIGINT,"
                     + "col3 VARCHAR"
-                    + ") "
-                    + "WITH ("
+                    + ") WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s'"
                     + ")",
@@ -98,8 +97,7 @@ public abstract class DeltaEndToEndTableTestSuite {
                     + "col1 BIGINT,"
                     + "col2 BIGINT,"
                     + "col3 VARCHAR"
-                    + ") "
-                    + "WITH ("
+                    + ") WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s'"
                     + ")",
@@ -118,7 +116,7 @@ public abstract class DeltaEndToEndTableTestSuite {
 
     // TODO DC - work on this one when feature branch will have Flink version update to 1.16
     @Test
-    public void testWriteAndReadNestedStructures() throws Exception {
+    public void shouldWriteAndReadNestedStructures() throws Exception {
 
         String sourceTableSql = "CREATE TABLE sourceTable ("
             + " col1 INT,"
@@ -133,10 +131,9 @@ public abstract class DeltaEndToEndTableTestSuite {
 
         String deltaSinkTable =
             String.format("CREATE TABLE deltaSinkTable ("
-                    + "innerA INT,"
-                    + "innerB INT"
-                    + ") "
-                    + "WITH ("
+                    + " col1 INT,"
+                    + " col2 ROW <a INT, b INT>"
+                    + ") WITH ("
                     + " 'connector' = 'delta',"
                     + " 'table-path' = '%s'"
                     + ")",
@@ -151,11 +148,11 @@ public abstract class DeltaEndToEndTableTestSuite {
         tableEnv.executeSql(sourceTableSql);
         tableEnv.executeSql(deltaSinkTable);
 
-        tableEnv
-            .executeSql("INSERT INTO deltaSinkTable SELECT col2.a, col2.b FROM sourceTable")
+        tableEnv.executeSql("INSERT INTO deltaSinkTable SELECT * FROM sourceTable")
             .await(10, TimeUnit.SECONDS);
 
-        TableResult tableResult = tableEnv.executeSql("SELECT * FROM deltaSinkTable");
+        TableResult tableResult =
+            tableEnv.executeSql("SELECT col2.a AS innerA, col2.b AS innerB FROM deltaSinkTable");
 
         List<Row> result = new ArrayList<>();
         try (CloseableIterator<Row> collect = tableResult.collect()) {
@@ -169,14 +166,6 @@ public abstract class DeltaEndToEndTableTestSuite {
             assertThat(row.getField("innerA")).isInstanceOf(Integer.class);
             assertThat(row.getField("innerB")).isInstanceOf(Integer.class);
         }
-
-        // tableEnv.executeSql("INSERT INTO deltaSinkTable SELECT * FROM sourceTable")
-        //    .await(10, TimeUnit.SECONDS);
-
-        // For Flink 1.15
-        // Caused by: java.lang.UnsupportedOperationException: Complex types not supported.
-        // tableEnv.executeSql("SELECT col2.a AS innerA, col2.b AS innerB FROM deltaSinkTable")
-        // .print();
     }
 
     public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
