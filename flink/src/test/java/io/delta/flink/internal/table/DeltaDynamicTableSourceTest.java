@@ -23,7 +23,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.rules.TemporaryFolder;
 import static org.assertj.core.api.Assertions.assertThat;
 
-// TODO DC PR 8 - move with DDL/Query hint validation
+// TODO DC SQL_PR 8 - move with DDL/Query hint validation
 class DeltaDynamicTableSourceTest {
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.delta.flink.utils.DeltaTestUtils;
-import io.delta.flink.utils.ExecutionITCaseTestConstants;
 import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
@@ -14,6 +13,7 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.test.junit5.MiniClusterExtension;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CloseableIterator;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,18 +34,12 @@ public abstract class DeltaEndToEndTableTestSuite {
 
     protected static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
+    private String sourceTableDdl;
+
     @RegisterExtension
     private static final MiniClusterExtension miniClusterResource =  new MiniClusterExtension(
         buildClusterResourceConfig(PARALLELISM)
     );
-
-    /**
-     * Schema for this table has only
-     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
-     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_TYPES} columns.
-     * Column types are long, long, String
-     */
-    private String nonPartitionedLargeTablePath;
 
     private String sinkTablePath;
 
@@ -61,15 +55,30 @@ public abstract class DeltaEndToEndTableTestSuite {
 
     @BeforeEach
     public void setUp() {
+
+        // Schema for this table has only
+        // {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
+        // {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_TYPES} columns.
+        // Column types are long, long, String
+        String nonPartitionedLargeTablePath;
         try {
             nonPartitionedLargeTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             sinkTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             DeltaTestUtils.initTestForNonPartitionedLargeTable(nonPartitionedLargeTablePath);
+            assertThat(sinkTablePath).isNotEqualToIgnoringCase(nonPartitionedLargeTablePath);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
 
-        assertThat(sinkTablePath).isNotEqualToIgnoringCase(nonPartitionedLargeTablePath);
+        sourceTableDdl = String.format("CREATE TABLE sourceTable ("
+                + "col1 BIGINT,"
+                + "col2 BIGINT,"
+                + "col3 VARCHAR"
+                + ") WITH ("
+                + " 'connector' = 'delta',"
+                + " 'table-path' = '%s'"
+                + ")",
+            nonPartitionedLargeTablePath);
     }
 
     @Test
@@ -81,18 +90,7 @@ public abstract class DeltaEndToEndTableTestSuite {
 
         setupDeltaCatalog(tableEnv);
 
-        String sourceTable =
-            String.format("CREATE TABLE sourceTable ("
-                    + "col1 BIGINT,"
-                    + "col2 BIGINT,"
-                    + "col3 VARCHAR"
-                    + ") WITH ("
-                    + " 'connector' = 'delta',"
-                    + " 'table-path' = '%s'"
-                    + ")",
-                nonPartitionedLargeTablePath);
-
-        String sinkTable =
+        String sinkTableDdl =
             String.format("CREATE TABLE sinkTable ("
                     + "col1 BIGINT,"
                     + "col2 BIGINT,"
@@ -103,22 +101,84 @@ public abstract class DeltaEndToEndTableTestSuite {
                     + ")",
                 sinkTablePath);
 
-        String selectToInsertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable;";
+        readWriteTable(tableEnv, sinkTableDdl);
 
-        tableEnv.executeSql(sourceTable);
-        tableEnv.executeSql(sinkTable);
-
-        tableEnv.executeSql(selectToInsertSql).await(10, TimeUnit.SECONDS);
-
-        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
-        verifyDeltaTable(sinkTablePath, rowType, 1100);
+        // Execute SELECT on sink table and validate TableResult.
+        TableResult tableResult = tableEnv.executeSql("SELECT * FROM sinkTable");
+        List<Row> result = readRowsFromQuery(tableResult, 1100);
+        for (Row row : result) {
+            assertThat(row.getField("col1")).isInstanceOf(Long.class);
+            assertThat(row.getField("col2")).isInstanceOf(Long.class);
+            assertThat(row.getField("col3")).isInstanceOf(String.class);
+        }
     }
 
-    // TODO DC - work on this one when feature branch will have Flink version update to 1.16
+    @Test
+    public void shouldReadAndWriteDeltaTable_LikeTable() throws Exception {
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
+            getTestStreamEnv(false) // streamingMode = false
+        );
+
+        setupDeltaCatalog(tableEnv);
+
+        String sinkTableDdl = String.format(""
+                + "CREATE TABLE sinkTable "
+                + "WITH ("
+                + "'connector' = 'delta',"
+                + "'table-path' = '%s'"
+                + ") LIKE sourceTable",
+            sinkTablePath);
+
+        readWriteTable(tableEnv, sinkTableDdl);
+
+        // Execute SELECT on sink table and validate TableResult.
+        TableResult tableResult = tableEnv.executeSql("SELECT * FROM sinkTable");
+        List<Row> result = readRowsFromQuery(tableResult, 1100);
+        for (Row row : result) {
+            assertThat(row.getField("col1")).isInstanceOf(Long.class);
+            assertThat(row.getField("col2")).isInstanceOf(Long.class);
+            assertThat(row.getField("col3")).isInstanceOf(String.class);
+        }
+    }
+
+    @Test
+    public void shouldReadAndWriteDeltaTable_AsSelect() throws Exception {
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
+            getTestStreamEnv(false) // streamingMode = false
+        );
+
+        setupDeltaCatalog(tableEnv);
+
+        String sinkTableDdl = String.format(""
+                + "CREATE TABLE sinkTable "
+                + "WITH ("
+                + "'connector' = 'delta',"
+                + "'table-path' = '%s'"
+                + ") AS SELECT * FROM sourceTable",
+            sinkTablePath);
+
+        tableEnv.executeSql(this.sourceTableDdl).await(10, TimeUnit.SECONDS);
+        tableEnv.executeSql(sinkTableDdl).await(10, TimeUnit.SECONDS);
+
+        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
+        verifyDeltaTable(this.sinkTablePath, rowType, 1100);
+
+        // Execute SELECT on sink table and validate TableResult.
+        TableResult tableResult = tableEnv.executeSql("SELECT * FROM sinkTable");
+        List<Row> result = readRowsFromQuery(tableResult, 1100);
+        for (Row row : result) {
+            assertThat(row.getField("col1")).isInstanceOf(Long.class);
+            assertThat(row.getField("col2")).isInstanceOf(Long.class);
+            assertThat(row.getField("col3")).isInstanceOf(String.class);
+        }
+    }
+
     @Test
     public void shouldWriteAndReadNestedStructures() throws Exception {
 
-        String sourceTableSql = "CREATE TABLE sourceTable ("
+        String sourceTableDdl = "CREATE TABLE sourceTable ("
             + " col1 INT,"
             + " col2 ROW <a INT, b INT>"
             + ") WITH ("
@@ -129,7 +189,7 @@ public abstract class DeltaEndToEndTableTestSuite {
             + "'fields.col1.end' = '5'"
             + ")";
 
-        String deltaSinkTable =
+        String deltaSinkTableDdl =
             String.format("CREATE TABLE deltaSinkTable ("
                     + " col1 INT,"
                     + " col2 ROW <a INT, b INT>"
@@ -145,14 +205,38 @@ public abstract class DeltaEndToEndTableTestSuite {
 
         setupDeltaCatalog(tableEnv);
 
-        tableEnv.executeSql(sourceTableSql);
-        tableEnv.executeSql(deltaSinkTable);
+        tableEnv.executeSql(sourceTableDdl).await(10, TimeUnit.SECONDS);
+        tableEnv.executeSql(deltaSinkTableDdl).await(10, TimeUnit.SECONDS);
 
         tableEnv.executeSql("INSERT INTO deltaSinkTable SELECT * FROM sourceTable")
             .await(10, TimeUnit.SECONDS);
 
+        // Execute SELECT on sink table and validate TableResult.
         TableResult tableResult =
             tableEnv.executeSql("SELECT col2.a AS innerA, col2.b AS innerB FROM deltaSinkTable");
+        List<Row> result = readRowsFromQuery(tableResult, 5);
+        for (Row row : result) {
+            assertThat(row.getField("innerA")).isInstanceOf(Integer.class);
+            assertThat(row.getField("innerB")).isInstanceOf(Integer.class);
+        }
+    }
+
+    private void readWriteTable(StreamTableEnvironment tableEnv, String sinkTableDdl)
+        throws Exception {
+
+        String selectToInsertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
+        tableEnv.executeSql(this.sourceTableDdl);
+        tableEnv.executeSql(sinkTableDdl);
+
+        tableEnv.executeSql(selectToInsertSql).await(10, TimeUnit.SECONDS);
+
+        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
+        verifyDeltaTable(this.sinkTablePath, rowType, 1100);
+    }
+
+    @NotNull
+    private List<Row> readRowsFromQuery(TableResult tableResult, int expectedRowsCount)
+            throws Exception {
 
         List<Row> result = new ArrayList<>();
         try (CloseableIterator<Row> collect = tableResult.collect()) {
@@ -161,11 +245,8 @@ public abstract class DeltaEndToEndTableTestSuite {
             }
         }
 
-        assertThat(result).hasSize(5);
-        for (Row row : result) {
-            assertThat(row.getField("innerA")).isInstanceOf(Integer.class);
-            assertThat(row.getField("innerB")).isInstanceOf(Integer.class);
-        }
+        assertThat(result).hasSize(expectedRowsCount);
+        return result;
     }
 
     public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
