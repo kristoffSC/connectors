@@ -171,3 +171,40 @@ You can also look at Task Manager logs for `ConsoleSink` output.
 ```shell
 > ./bin/stop-cluster.sh
 ```
+
+## Running Flink Delta Job using "thin" jar.
+Flink users have basically two approaches for creating Flink Job jars.
+1. Create an Uber Jar that contains user code, for example job's pipeline code created using Flink's data stream API and dependencies that are not in scope "provided".
+In this case, the uber jar contains everything that Job needs to run, and it is not marked as provided.
+
+2. Create a "thin" jar that contains only user code and submit this to the Flink cluster. 
+In this case it is expected that all necessary libraries, like connector libraries are available on Flink cluster.
+This is achieved by adding those libraries to Flink's lib folder.
+
+All examples above show to use `flink-example-<version>-jar-with-dependencies.jar` which is an uber jar (first option from the above).
+This uber jar contain all dependencies needed to run the code that are not marked as 'provided' for example,
+the 'flink-example-<version>-jar-with-dependencies.jar' will have `delta-standalone`, `delta-flink` and even `scala` libraries. 
+
+In order to use "thin jar" option, users have to provide all required dependencies to Flink's runtime and trying to do it straightforward, by simply adding all dependencies
+one by one to FLink's `lib` folder would be difficult task and prone to errors. In fact due to Scala dependency conflict between `delta-standalone` and Flink
+that was reported in issue [512](https://github.com/delta-io/connectors/issues/512) those dependencies must be properly shaded.
+
+### Using DeltaAllDep.jar
+To use the "thin" jar approach some extra actions are required to mitigate issues with dependency conflicts between Flink and Delta.
+For this, the `DeltaAllDep.jar` was introduced. This jar contains and properly shades all dependencies that are expected by Flink job that uses Delta connector.
+This artifact has to be shipped to Flink cluster into Flink's `lib` folder, both Task and Job Manager nodes.
+
+### Building DeltaAllDep.jar
+The `DeltaAllDep.jar` must be build manually by the user. The example `pom.xml` for this artifact is placed under `examples/delta-all-dep/`
+
+Steps to build `DeltaAllDep.jar' using Maven
+1. Create a new mvn project (TODO add commands).
+2. Use replace generated pom.xml with the one from `examples/delta-all-dep/pom.xml`
+3. Execute `mvn clean package`
+4. Navigate to `target` folder where `DeltaAllDep-1.0-SNAPSHOT-shaded.jar` artifact will be found. Mind that exact version may be differnet but what is important,
+is to use artifact with `shaded` postfix.
+5. Copy `DeltaAllDep-1.0-SNAPSHOT-shaded.jar` to Flink's lib folder on Task and Job managers, restart the cluster.
+
+
+
+
