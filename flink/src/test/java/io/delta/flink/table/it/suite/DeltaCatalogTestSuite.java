@@ -331,11 +331,11 @@ public abstract class DeltaCatalogTestSuite {
 
         // THEN
         assertThat(exception.getCause().getMessage()).contains(
-            "has different schema or partition spec that one defined in CREATE TABLE DDL");
+            "has different schema or partition spec than one defined in CREATE TABLE DDL");
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
-        verifyThatDeltaLogWasNotChanged(metadata);
+        verifyThatSchemaAndPartitionSpecNotChanged(metadata);
         assertThat(metadata.getConfiguration()).isEmpty();
     }
 
@@ -513,11 +513,11 @@ public abstract class DeltaCatalogTestSuite {
 
         // THEN
         assertThat(exception.getCause().getMessage()).contains(
-            "has different schema or partition spec that one defined in CREATE TABLE DDL");
+            "has different schema or partition spec than one defined in CREATE TABLE DDL");
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
-        verifyThatDeltaLogWasNotChanged(metadata);
+        verifyThatSchemaAndPartitionSpecNotChanged(metadata);
         assertThat(metadata.getConfiguration()).isEmpty();
     }
 
@@ -553,11 +553,11 @@ public abstract class DeltaCatalogTestSuite {
 
         // THEN
         assertThat(exception.getCause().getMessage()).contains(
-            "has different schema or partition spec that one defined in CREATE TABLE DDL");
+            "has different schema or partition spec than one defined in CREATE TABLE DDL");
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
-        verifyThatDeltaLogWasNotChanged(metadata);
+        verifyThatSchemaAndPartitionSpecNotChanged(metadata);
         assertThat(metadata.getConfiguration()).isEmpty();
     }
 
@@ -613,7 +613,7 @@ public abstract class DeltaCatalogTestSuite {
 
         // Check if there were no changes made to existing _delta_log
         Metadata metadata = deltaLog.update().getMetadata();
-        verifyThatDeltaLogWasNotChanged(metadata);
+        verifyThatSchemaAndPartitionSpecNotChanged(metadata);
         assertThat(metadata.getConfiguration()).containsExactlyEntriesOf(configuration);
     }
 
@@ -719,7 +719,7 @@ public abstract class DeltaCatalogTestSuite {
 
         DeltaLog deltaLog = DeltaTestUtils.setupDeltaTable(
             tablePath,
-            Collections.emptyMap(),
+            Collections.singletonMap("delta.appendOnly", "false"),
             Metadata.builder()
                 .schema(new StructType(TestTableData.DELTA_FIELDS))
                 .partitionColumns(Collections.emptyList())
@@ -729,6 +729,8 @@ public abstract class DeltaCatalogTestSuite {
         assertThat(deltaLog.tableExists())
             .withFailMessage("There should be Delta table files in test folder before test.")
             .isTrue();
+        assertThat(deltaLog.update().getMetadata().getConfiguration())
+            .containsEntry("delta.appendOnly", "false");
 
         String deltaTable =
             String.format("CREATE TABLE sourceTable ("
@@ -746,17 +748,25 @@ public abstract class DeltaCatalogTestSuite {
         tableEnv.executeSql(deltaTable).await();
 
         // Add new property.
-        tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal')").await();
+        tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal1')").await();
         assertThat(deltaLog.update().getMetadata().getConfiguration())
-            .containsExactlyEntriesOf(Collections.singletonMap("userCustomProp", "myVal"));
+            .containsEntry("userCustomProp", "myVal1")
+            .containsEntry("delta.appendOnly", "false");
 
         // Change existing property.
         tableEnv.executeSql("ALTER TABLE sourceTable SET ('userCustomProp'='myVal2')").await();
         assertThat(deltaLog.update().getMetadata().getConfiguration())
-            .containsExactlyEntriesOf(Collections.singletonMap("userCustomProp", "myVal2"));
+            .containsEntry("userCustomProp", "myVal2")
+            .containsEntry("delta.appendOnly", "false");
+
+        // Change existing Delta property.
+        tableEnv.executeSql("ALTER TABLE sourceTable SET ('delta.appendOnly'='true')").await();
+        assertThat(deltaLog.update().getMetadata().getConfiguration())
+            .containsEntry("userCustomProp", "myVal2")
+            .containsEntry("delta.appendOnly", "true");
     }
 
-    private void verifyThatDeltaLogWasNotChanged(Metadata metadata) {
+    private void verifyThatSchemaAndPartitionSpecNotChanged(Metadata metadata) {
         StructType schema = metadata.getSchema();
         assertThat(schema).isNotNull();
         assertThat(schema.getFields())

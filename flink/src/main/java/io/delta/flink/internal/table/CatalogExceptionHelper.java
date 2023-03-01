@@ -42,8 +42,8 @@ public final class CatalogExceptionHelper {
 
         return new CatalogException(
             String.format(
-                " Delta table [%s] from filesystem path [%s] has different schema or partition "
-                    + "spec that one defined in CREATE TABLE DDL.\n"
+                "Delta table [%s] from filesystem path [%s] has different schema or partition "
+                    + "spec than one defined in CREATE TABLE DDL.\n"
                     + "DDL schema:\n[%s],\nDelta table schema:\n[%s]\n"
                     + "DDL partition spec:\n[%s],\nDelta table partition spec:\n[%s]\n",
                 catalogTablePath,

@@ -138,9 +138,7 @@ public class DeltaCatalog {
             throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
         }
 
-        boolean databaseExists =
-            this.decoratedCatalog.databaseExists(catalogTable.getDatabaseName());
-        if (!databaseExists) {
+        if (!decoratedCatalog.databaseExists(catalogTable.getDatabaseName())) {
             throw new DatabaseNotExistException(
                 this.catalogName,
                 catalogTable.getDatabaseName()
@@ -260,7 +258,7 @@ public class DeltaCatalog {
         // At this point what we should have in ddlOptions are only delta table
         // properties, connector type, table path and user defined options. We don't want to
         // store connector type or table path in _delta_log, so we will filter those.
-        Map<String, String> deltaAlterTableDdlOptions =
+        Map<String, String> filteredDdlOptions =
             DeltaCatalogTableHelper.filterMetastoreDdlOptions(alterTableDdlOptions);
 
         DeltaLog deltaLog = DeltaLog.forTable(hadoopConf, deltaTablePath);
@@ -271,7 +269,7 @@ public class DeltaCatalog {
         // _delta_log.
         Map<String, String> deltaLogProperties =
             DeltaCatalogTableHelper.prepareDeltaTableProperties(
-                deltaAlterTableDdlOptions,
+                filteredDdlOptions,
                 newCatalogTable.getTableCatalogPath(),
                 originalMetaData,
                 true // allowOverride = true
