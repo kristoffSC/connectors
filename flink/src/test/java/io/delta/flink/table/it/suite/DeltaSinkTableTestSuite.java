@@ -77,7 +77,9 @@ import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.data.CloseableIterator;
 import io.delta.standalone.data.RowRecord;
 
-// TODO FlinkSQL_PR_7
+// TODO DC, FlinkSQL_PR_8 - This test class is almost moved to table_feature_branch
+//  with an exception of one test (tagged as `to-do'). Update feature branch if any
+//  new test is added here.
 public abstract class DeltaSinkTableTestSuite {
 
     private static final int PARALLELISM = 2;
@@ -304,6 +306,7 @@ public abstract class DeltaSinkTableTestSuite {
         assertThat(recordCount, equalTo(expectedNumberOfRows));
     }
 
+    // TODO FlinkSQL_PR_8
     @Test
     public void testThrowOnInvalidQueryHints() throws Exception {
 

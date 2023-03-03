@@ -66,7 +66,9 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.SURNAME_COLUMN_V
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// TODO FlinkSQL_PR_7
+// TODO DC, FlinkSQL_PR_8 - This test class is almost moved to table_feature_branch
+//  with an exception of one test (tagged as `to-do'). Update feature branch if any
+//  new test is added here.
 public abstract class DeltaSourceTableTestSuite {
 
     private static final int PARALLELISM = 2;
@@ -383,6 +385,7 @@ public abstract class DeltaSourceTableTestSuite {
         assertNoMoreColumns(resultData, 3);
     }
 
+    // TODO FlinkSQL_PR_8
     @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"batch", "streaming"})
     public void testThrowOnInvalidQueryHints(String queryMode) {
@@ -437,6 +440,7 @@ public abstract class DeltaSourceTableTestSuite {
                 + " - 'timestampAsOf'");
     }
 
+    // TODO FlinkSQL_PR_8
     @ParameterizedTest(name = "queryHint = {0}")
     @ValueSource(
         strings = {
@@ -470,6 +474,7 @@ public abstract class DeltaSourceTableTestSuite {
             .contains("Used mutually exclusive options for Source definition.");
     }
 
+    // TODO FlinkSQL_PR_8
     @ParameterizedTest(name = "queryHint = {0}")
     @ValueSource(
         strings = {
@@ -504,6 +509,7 @@ public abstract class DeltaSourceTableTestSuite {
             .contains("Used inapplicable option for source configuration.");
     }
 
+    // TODO FlinkSQL_PR_8
     @Test
     public void testJobSpecificOptionInBatch() throws Exception {
 

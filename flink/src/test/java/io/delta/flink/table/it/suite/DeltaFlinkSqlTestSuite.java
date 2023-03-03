@@ -47,7 +47,8 @@ import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// TODO FlinkSQL_PR_7
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
+//  new test is added here.
 public abstract class DeltaFlinkSqlTestSuite {
 
     private static final int PARALLELISM = 2;

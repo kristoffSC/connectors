@@ -1,4 +1,4 @@
-package io.delta.flink.table;
+package io.delta.flink.table.it;
 
 import java.io.IOException;
 
@@ -20,7 +20,8 @@ import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// TODO FlinkSQL_PR_7
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
+//  new test is added here.
 public class FlinkSqlTestITCase {
 
     private static final int PARALLELISM = 2;
@@ -57,7 +58,7 @@ public class FlinkSqlTestITCase {
     }
 
     @Test
-    public void testSelectDeltaTableWithoutDeltaCatalog() throws Exception {
+    public void shouldThrow_selectDeltaTable_noDeltaCatalog() throws Exception {
 
         // GIVEN
         String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
@@ -101,7 +102,7 @@ public class FlinkSqlTestITCase {
     }
 
     @Test
-    public void testInsertIntoDeltaTableWithoutDeltaCatalog() throws Exception {
+    public void shouldThrow_insertToDeltaTable_noDeltaCatalog() throws Exception {
 
         // GIVEN
         String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
