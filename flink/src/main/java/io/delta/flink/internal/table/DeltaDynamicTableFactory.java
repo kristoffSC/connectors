@@ -48,7 +48,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
 
     public static final String IDENTIFIER = "delta";
 
-    public final boolean fromCatalog;
+    public final boolean isFromCatalog;
 
     /**
      * This constructor is meant to be use by Flink Factory discovery mechanism. This constructor
@@ -63,15 +63,15 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
      * executing any SQL/Table call.
      */
     public DeltaDynamicTableFactory() {
-        this.fromCatalog = false;
+        this.isFromCatalog = false;
     }
 
-    private DeltaDynamicTableFactory(boolean fromCatalog) {
-        if (!fromCatalog) {
+    private DeltaDynamicTableFactory(boolean isFromCatalog) {
+        if (!isFromCatalog) {
             throw new RuntimeException("FromCatalog parameter must be set to true.");
         }
 
-        this.fromCatalog = true;
+        this.isFromCatalog = true;
     }
 
     static DeltaDynamicTableFactory fromCatalog() {
@@ -86,7 +86,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
 
-        if (!fromCatalog) {
+        if (!isFromCatalog) {
             throw throwIfNotFromDeltaCatalog();
         }
 
@@ -127,7 +127,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     @Override
     public DynamicTableSource createDynamicTableSource(Context context) {
 
-        if (!fromCatalog) {
+        if (!isFromCatalog) {
             throw throwIfNotFromDeltaCatalog();
         }
 
