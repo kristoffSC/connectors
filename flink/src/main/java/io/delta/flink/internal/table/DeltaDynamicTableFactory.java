@@ -46,7 +46,7 @@ import org.apache.flink.table.types.logical.RowType;
 public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     DynamicTableSourceFactory {
 
-    public static final String IDENTIFIER = "delta";
+    public static final String DELTA_CONNECTOR_IDENTIFIER = "delta";
 
     public final boolean isFromCatalog;
 
@@ -80,14 +80,14 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
 
     @Override
     public String factoryIdentifier() {
-        return IDENTIFIER;
+        return DELTA_CONNECTOR_IDENTIFIER;
     }
 
     @Override
     public DynamicTableSink createDynamicTableSink(Context context) {
 
         if (!isFromCatalog) {
-            throw throwIfNotFromDeltaCatalog();
+            throw notFromDeltaCatalogException();
         }
 
         // Check if requested table is Delta or not.
@@ -96,7 +96,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         Configuration options = (Configuration) helper.getOptions();
 
         String connectorType = options.get(FactoryUtil.CONNECTOR);
-        if (!IDENTIFIER.equals(connectorType)) {
+        if (!DELTA_CONNECTOR_IDENTIFIER.equals(connectorType)) {
 
             // Look for Table factory proper fort this table type.
             DynamicTableSinkFactory sinkFactory =
@@ -128,7 +128,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
     public DynamicTableSource createDynamicTableSource(Context context) {
 
         if (!isFromCatalog) {
-            throw throwIfNotFromDeltaCatalog();
+            throw notFromDeltaCatalogException();
         }
 
         // Check if requested table is Delta or not.
@@ -137,7 +137,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         Configuration options = (Configuration) helper.getOptions();
 
         String connectorType = options.get(FactoryUtil.CONNECTOR);
-        if (!IDENTIFIER.equals(connectorType)) {
+        if (!DELTA_CONNECTOR_IDENTIFIER.equals(connectorType)) {
 
             // Look for Table factory proper fort this table type.
             DynamicTableSourceFactory sourceFactory =
@@ -185,7 +185,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         return Collections.emptySet();
     }
 
-    private RuntimeException throwIfNotFromDeltaCatalog() {
+    private RuntimeException notFromDeltaCatalogException() {
         return new RuntimeException("Delta Table SQL/Table API was used without Delta Catalog. "
             + "It is required to use Delta Catalog with all Flink SQL operations that involve "
             + "Delta table. Please see documentation for details -> TODO DC add link to docs");

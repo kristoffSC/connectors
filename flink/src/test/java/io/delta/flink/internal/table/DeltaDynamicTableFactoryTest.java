@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.delta.flink.utils.DeltaTestUtils;
-import org.apache.flink.connector.datagen.table.DataGenTableSource;
 import org.apache.flink.core.testutils.CommonTestUtils;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.ValidationException;
@@ -146,23 +145,9 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
-    // TODO DC SQL_PR 7 - move this test to feature branch.
-    public void shouldReturnNonDeltaSourceFactory() {
-
-        this.options.put(FactoryUtil.CONNECTOR.key(), "datagen");
-        Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
-
-        DynamicTableSource dynamicTableSource =
-            tableFactory.createDynamicTableSource(tableContext);
-
-        assertThat(dynamicTableSource.getClass()).isEqualTo(DataGenTableSource.class);
-    }
-
-    @Test
     // Test that for none Delta tables DeltaDynamicTableFactory will return table factory proper for
     // connector type.
-    // TODO DC SQL_PR 7 - move this test to feature branch.
-    public void shouldReturnNonDeltaSinkFactory() {
+    public void shouldReturnNonDeltaSinkAndSourceFactory() {
 
         this.options.put(FactoryUtil.CONNECTOR.key(), "blackhole");
         Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
@@ -182,7 +167,6 @@ class DeltaDynamicTableFactoryTest {
     // This tests verifies if Table Factory throws exception when used for creation of Delta Sink
     // or source and factory instance was created from public default constructor. Factory should be
     @Test
-    // TODO DC SQL_PR 7 - move this test to feature branch.
     public void shouldThrowIfNotFromCatalog() {
         this.tableFactory = new DeltaDynamicTableFactory();
 

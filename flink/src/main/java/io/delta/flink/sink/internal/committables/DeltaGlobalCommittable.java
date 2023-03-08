@@ -62,7 +62,7 @@ public class DeltaGlobalCommittable {
     private final List<DeltaCommittable> deltaCommittables;
 
     public DeltaGlobalCommittable(List<DeltaCommittable> deltaCommittables) {
-        for (DeltaCommittable committable : deltaCommittables) {
+        for (DeltaCommittable committable : deltaCommittables) { // TODO PERF remove logging here
             LOG.info("Creating global committable object with committable for: " +
                 "appId=" + committable.getAppId() +
                 " checkpointId=" + committable.getCheckpointId() +

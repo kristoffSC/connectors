@@ -161,10 +161,10 @@ public abstract class DeltaSinkTableTestSuite {
             "useBoundedMode = {3}")
     @MethodSource("tableArguments")
     public void testInsertQueryWithAllFields(
-            boolean isPartitioned,
-            boolean includeOptionalOptions,
-            boolean useStaticPartition,
-            boolean useBoundedMode) throws Exception {
+                boolean isPartitioned,
+                boolean includeOptionalOptions,
+                boolean useStaticPartition,
+                boolean useBoundedMode) throws Exception {
 
         int expectedNumberOfRows = 20;
         String deltaTablePath = setupTestFolders(includeOptionalOptions);

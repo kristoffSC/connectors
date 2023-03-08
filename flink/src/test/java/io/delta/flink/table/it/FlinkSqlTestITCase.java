@@ -1,6 +1,10 @@
 package io.delta.flink.table.it;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.UUID;
 
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -99,6 +103,30 @@ public class FlinkSqlTestITCase {
             .withFailMessage(
                 "Query Delta table should not be possible without Delta catalog.")
             .contains("Delta Table SQL/Table API was used without Delta Catalog.");
+    }
+
+    @Test
+    public void foo() {
+        int size = 100_000;
+        int equalCounter = 0;
+        Set<String> aList = new HashSet<>(size);
+        Set<String> bList = new HashSet<>(size);
+        for (int i = 0; i < size; i++) {
+            aList.add(UUID.randomUUID().toString());
+            bList.add(UUID.randomUUID().toString());
+        }
+
+        long startTime = System.currentTimeMillis();
+        Iterator<String> firstIterator = aList.iterator();
+        Iterator<String> secondIterator = bList.iterator();
+        while (firstIterator.hasNext() && secondIterator.hasNext()) {
+            if (firstIterator.next().equals(secondIterator.next())) {
+                equalCounter++;
+            }
+        }
+        long totalTime = (System.currentTimeMillis() - startTime) / 1000;
+
+        System.out.println(equalCounter + " total time " + totalTime);
     }
 
     @Test
