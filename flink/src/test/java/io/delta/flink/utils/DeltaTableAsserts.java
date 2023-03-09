@@ -11,7 +11,6 @@ import java.util.StringJoiner;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static org.hamcrest.core.IsEqual.equalTo;
 
 import io.delta.standalone.DeltaLog;
 import io.delta.standalone.VersionLog;
@@ -66,16 +65,13 @@ public class DeltaTableAsserts {
             }
 
             LOG.info("Number of entries " + data.size());
-            org.hamcrest.MatcherAssert.assertThat(
-                "Delta table has no data.",
-                data.size() > 0,
-                equalTo(true)
-            );
-            org.hamcrest.MatcherAssert.assertThat(
-                "Data loss",
-                maxValue,
-                equalTo(data.size() - 1)
-            );
+            org.assertj.core.api.Assertions.assertThat(data)
+                .withFailMessage("Delta table has no data.")
+                .isNotEmpty();
+
+            org.assertj.core.api.Assertions.assertThat(maxValue)
+                .withFailMessage("Data loss")
+                .isEqualTo(data.size() - 1);
             return this;
         }
 
@@ -120,20 +116,15 @@ public class DeltaTableAsserts {
                 );
             }
 
-            org.hamcrest.MatcherAssert.assertThat(
-                "Delta table has no data.",
-                hadData,
-                equalTo(true)
-            );
-            org.hamcrest.MatcherAssert.assertThat(
-                "Seems there was a duplicated AddFile in Delta log",
-                wasDuplicate,
-                equalTo(false)
-            );
+            org.assertj.core.api.Assertions.assertThat(hadData)
+                .withFailMessage("Delta table has no data.")
+                .isTrue();
+            org.assertj.core.api.Assertions.assertThat(wasDuplicate)
+                .withFailMessage("Seems there was a duplicated AddFile in Delta log")
+                .isFalse();
 
             return this;
         }
-
     }
 
 }
