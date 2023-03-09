@@ -55,6 +55,20 @@ public abstract class DeltaFlinkSqlTestSuite {
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
+    private static final String DATAGEN_SOURCE_DDL = ""
+        + "CREATE TABLE sourceTable ("
+        + " col1 VARCHAR,"
+        + " col2 VARCHAR,"
+        + " col3 INT,"
+        + " col4 AS col3 * 2"
+        + ") WITH ("
+        + "'connector' = 'datagen',"
+        + "'rows-per-second' = '1',"
+        + "'fields.col3.kind' = 'sequence',"
+        + "'fields.col3.start' = '1',"
+        + "'fields.col3.end' = '5'"
+        + ")";
+
     private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
     public TableEnvironment tableEnv;
@@ -85,23 +99,14 @@ public abstract class DeltaFlinkSqlTestSuite {
         miniClusterResource.after();
     }
 
+    /**
+     * Test that Delta Catalog and Delta Table Factory can support Flink SQL pipeline that does
+     * not use Delta Table connector.
+     * <p>
+     * Tested Source - Sink connectors: datagen -> blackhole
+     */
     @Test
     public void testPipelineWithoutDeltaTables_1() throws Exception {
-
-        String sourceTableSql = "CREATE TABLE sourceTable ("
-            + " col1 VARCHAR,"
-            + " col2 VARCHAR,"
-            + " col3 INT,"
-            + " col4 AS col3 * 2"
-            + ") WITH ("
-            + "'connector' = 'datagen',"
-            + "'rows-per-second' = '1',"
-            + "'fields.col3.kind' = 'sequence',"
-            + "'fields.col3.start' = '1',"
-            + "'fields.col3.end' = '5'"
-            + ")";
-
-        tableEnv.executeSql(sourceTableSql);
 
         String sinkTableSql = "CREATE TABLE sinkTable ("
             + " col1 VARCHAR,"
@@ -112,6 +117,7 @@ public abstract class DeltaFlinkSqlTestSuite {
             + "  'connector' = 'blackhole'"
             + ");";
 
+        tableEnv.executeSql(DATAGEN_SOURCE_DDL);
         tableEnv.executeSql(sinkTableSql);
 
         String querySql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
@@ -126,30 +132,23 @@ public abstract class DeltaFlinkSqlTestSuite {
         assertThat(results.get(0).getKind()).isEqualTo(RowKind.INSERT);
     }
 
+    /**
+     * Test that Delta Catalog and Delta Table Factory can support Flink SQL pipeline that does
+     * not use Delta Table connector.
+     * <p>
+     * Tested Source - Sink connectors: datagen -> filesystem
+     */
     @Test
     public void testPipelineWithoutDeltaTables_2() throws Exception {
 
         String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
 
-        String sourceTableSql = "CREATE TABLE sourceTable ("
-            + " col1 VARCHAR,"
-            + " col2 VARCHAR,"
-            + " col3 INT"
-            + ") WITH ("
-            + "'connector' = 'datagen',"
-            + "'rows-per-second' = '1',"
-            + "'fields.col3.kind' = 'sequence',"
-            + "'fields.col3.start' = '1',"
-            + "'fields.col3.end' = '5'"
-            + ")";
-
-        tableEnv.executeSql(sourceTableSql);
-
         String sinkTableSql = String.format(
             "CREATE TABLE sinkTable ("
                 + " col1 VARCHAR,"
                 + " col2 VARCHAR,"
-                + " col3 INT"
+                + " col3 INT,"
+                + " col4 INT"
                 + ") WITH ("
                 + " 'connector' = 'filesystem',"
                 + " 'path' = '%s',"
@@ -159,28 +158,19 @@ public abstract class DeltaFlinkSqlTestSuite {
                 + ")",
             targetTablePath);
 
-        tableEnv.executeSql(sinkTableSql);
-
-        String insertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
-        tableEnv.executeSql(insertSql).await(10, TimeUnit.SECONDS);
-
-        String selectSql = "SELECT * FROM sinkTable";
-        TableResult selectResult = tableEnv.executeSql(selectSql);
-
-        List<Row> sinkRows = new ArrayList<>();
-        try (org.apache.flink.util.CloseableIterator<Row> collect = selectResult.collect()) {
-            collect.forEachRemaining(sinkRows::add);
-        }
-
-        long uniqueValues =
-            sinkRows.stream()
-                .map((Function<Row, Integer>) row -> row.getFieldAs("col3"))
-                .distinct().count();
+        List<Row> sinkRows= executeSqlJob(DATAGEN_SOURCE_DDL, sinkTableSql);
+        long uniqueValues = getUniqueValues(sinkRows);
 
         assertThat(sinkRows).hasSize(5);
         assertThat(uniqueValues).isEqualTo(5L);
     }
 
+    /**
+     * Test that Delta Catalog and Delta Table Factory can support Flink SQL pipeline that does
+     * not use Delta Table connector.
+     * <p>
+     * Tested Source - Sink connectors: filesystem -> filesystem with partitions
+     */
     @Test
     public void testPipelineWithoutDeltaTables_3() throws Exception {
 
@@ -189,19 +179,18 @@ public abstract class DeltaFlinkSqlTestSuite {
 
         DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
 
-        String sourceTableSql = String.format("CREATE TABLE sourceTable ("
-            + " col1 VARCHAR,"
-            + " col2 VARCHAR,"
-            + " col3 INT"
-            + ") WITH ("
-            + " 'connector' = 'filesystem',"
-            + " 'path' = '%s',"
-            + " 'format' = 'parquet'"
-            + ")",
+        String sourceTableSql = String.format(""
+                + "CREATE TABLE sourceTable ("
+                + " col1 VARCHAR,"
+                + " col2 VARCHAR,"
+                + " col3 INT"
+                + ") WITH ("
+                + " 'connector' = 'filesystem',"
+                + " 'path' = '%s',"
+                + " 'format' = 'parquet'"
+                + ")",
             sourceTablePath
-            );
-
-        tableEnv.executeSql(sourceTableSql);
+        );
 
         String sinkTableSql = String.format(
             "CREATE TABLE sinkTable ("
@@ -219,23 +208,8 @@ public abstract class DeltaFlinkSqlTestSuite {
                 + ")",
             targetTablePath);
 
-        tableEnv.executeSql(sinkTableSql);
-
-        String insertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
-        tableEnv.executeSql(insertSql).await(120, TimeUnit.SECONDS);
-
-        String selectSql = "SELECT * FROM sinkTable";
-        TableResult selectResult = tableEnv.executeSql(selectSql);
-
-        List<Row> sinkRows = new ArrayList<>();
-        try (org.apache.flink.util.CloseableIterator<Row> collect = selectResult.collect()) {
-            collect.forEachRemaining(sinkRows::add);
-        }
-
-        long uniqueValues =
-            sinkRows.stream()
-                .map((Function<Row, Integer>) row -> row.getFieldAs("col3"))
-                .distinct().count();
+        List<Row> sinkRows = executeSqlJob(sourceTableSql, sinkTableSql);
+        long uniqueValues = getUniqueValues(sinkRows);
 
         assertThat(sinkRows).hasSize(1);
         assertThat(uniqueValues).isEqualTo(1L);
@@ -377,5 +351,32 @@ public abstract class DeltaFlinkSqlTestSuite {
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
         env.enableCheckpointing(100, CheckpointingMode.EXACTLY_ONCE);
         return env;
+    }
+
+    private List<Row> executeSqlJob(String sourceTableSql, String sinkTableSql) {
+        try {
+            tableEnv.executeSql(sourceTableSql);
+            tableEnv.executeSql(sinkTableSql);
+
+            String insertSql = "INSERT INTO sinkTable SELECT * FROM sourceTable";
+            tableEnv.executeSql(insertSql).await(10, TimeUnit.SECONDS);
+
+            String selectSql = "SELECT * FROM sinkTable";
+            TableResult selectResult = tableEnv.executeSql(selectSql);
+
+            List<Row> sinkRows = new ArrayList<>();
+            try (org.apache.flink.util.CloseableIterator<Row> collect = selectResult.collect()) {
+                collect.forEachRemaining(sinkRows::add);
+                return sinkRows;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private long getUniqueValues(List<Row> sinkRows) {
+        return sinkRows.stream()
+            .map((Function<Row, Integer>) row -> row.getFieldAs("col3"))
+            .distinct().count();
     }
 }

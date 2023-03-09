@@ -32,6 +32,7 @@ import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
+import org.apache.flink.table.factories.FactoryUtil.TableFactoryHelper;
 import org.apache.flink.table.types.logical.RowType;
 
 /**
@@ -93,7 +94,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         // Check if requested table is Delta or not.
         FactoryUtil.TableFactoryHelper helper =
             FactoryUtil.createTableFactoryHelper(this, context);
-        Configuration options = (Configuration) helper.getOptions();
+        org.apache.flink.configuration.Configuration options = getQueryOptions(helper);
 
         String connectorType = options.get(FactoryUtil.CONNECTOR);
         if (!DELTA_CONNECTOR_IDENTIFIER.equals(connectorType)) {
@@ -134,7 +135,7 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         // Check if requested table is Delta or not.
         FactoryUtil.TableFactoryHelper helper =
             FactoryUtil.createTableFactoryHelper(this, context);
-        Configuration options = (Configuration) helper.getOptions();
+        org.apache.flink.configuration.Configuration options = getQueryOptions(helper);
 
         String connectorType = options.get(FactoryUtil.CONNECTOR);
         if (!DELTA_CONNECTOR_IDENTIFIER.equals(connectorType)) {
@@ -189,5 +190,17 @@ public class DeltaDynamicTableFactory implements DynamicTableSinkFactory,
         return new RuntimeException("Delta Table SQL/Table API was used without Delta Catalog. "
             + "It is required to use Delta Catalog with all Flink SQL operations that involve "
             + "Delta table. Please see documentation for details -> TODO DC add link to docs");
+    }
+
+    private Configuration getQueryOptions(TableFactoryHelper helper) {
+        // This cast is generally safe because FactoryUtil.TableFactoryHelper::getOptions()
+        // will always return an instance of org.apache.flink.configuration.Configuration.
+        // The Configuration type we are casting to, provide 'toMap()' method that allows us to get
+        // all properties provided by Catalog and Query Hints to the factory.
+        // The original 'ReadableConfig' type provide only `get(propertyName)` method.
+        // By doing this cast we can validate and throw an exception if any none allowed options
+        // were used. Without this cast, we could only verify known properties and silently ignore
+        // unknown ones.
+        return (Configuration) helper.getOptions();
     }
 }

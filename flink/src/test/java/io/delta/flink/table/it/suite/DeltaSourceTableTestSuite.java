@@ -533,11 +533,11 @@ public abstract class DeltaSourceTableTestSuite {
 
         // WHEN
         TableResult tableResultHint1 = tableEnv.executeSql(
-            String.format("SELECT * FROM sourceTable /*+ OPTIONS(%s) */ ORDER BY col1",
+            String.format("SELECT * FROM sourceTable /*+ OPTIONS(%s) */",
                 versionAsOf_1)
         );
         TableResult tableResultHint2 = tableEnv.executeSql(
-            String.format("SELECT * FROM sourceTable /*+ OPTIONS(%s) */ ORDER BY col1",
+            String.format("SELECT * FROM sourceTable /*+ OPTIONS(%s) */",
                 versionAsOf_5)
         );
 
@@ -546,9 +546,6 @@ public abstract class DeltaSourceTableTestSuite {
         assertVersionAsOfResult(tableResultHint2, 600);
     }
 
-    /**
-     * This method assumes that tableResult has sorted data (ORDER BY was used).
-     */
     private void assertVersionAsOfResult(TableResult tableResult, int expectedRowCount)
         throws Exception {
 
