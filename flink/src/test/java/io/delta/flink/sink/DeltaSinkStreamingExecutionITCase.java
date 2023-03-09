@@ -61,9 +61,6 @@ import org.apache.flink.api.connector.sink.GlobalCommitter;
 import org.apache.flink.api.connector.sink.Sink;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ExecutionOptions;
-import org.apache.flink.connector.file.sink.StreamingExecutionFileSinkITCase;
-import org.apache.flink.core.execution.JobClient;
-import org.apache.flink.core.execution.SavepointFormatType;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.SavepointConfigOptions;
 import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
@@ -86,14 +83,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.rules.TemporaryFolder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,14 +97,10 @@ import io.delta.standalone.DeltaLog;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.actions.CommitInfo;
 
-
 /**
  * Tests the functionality of the {@link DeltaSink} in STREAMING mode.
  */
 public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseBase {
-
-    private static final Logger LOG =
-        LoggerFactory.getLogger(DeltaSinkStreamingExecutionITCase.class);
 
     private static final int NUM_SOURCES = 4;
 
@@ -178,6 +168,13 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         runDeltaSinkTest(deltaTablePath, jobGraph, NUM_RECORDS);
     }
 
+    /**
+     * This test executes simple source -> sink job with multiple Flink cluster failures caused by
+     * an Exception thrown from {@link GlobalCommitter}. Depending on value of exceptionMode
+     * parameter, exception will be thrown before or after committing data to the Delta log.
+     *
+     * @param exceptionMode whether to throw an exception before or after Delta log commit.
+     */
     @ResourceLock("StreamingFailoverDeltaGlobalCommitter")
     @ParameterizedTest(name = "isPartitioned = {0}, exceptionMode = {1}")
     @CsvSource({
@@ -624,7 +621,7 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
     /**
      * Implementation idea and some functions is borrowed from 'StreamingExecutionTestSource' in
-     * {@link StreamingExecutionFileSinkITCase}
+     * {@code org.apache.flink.connector.file.sink.StreamingExecutionFileSinkITCase}
      */
     private static class DeltaStreamingExecutionTestSource
         extends RichParallelSourceFunction<RowData>
