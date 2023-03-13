@@ -66,8 +66,7 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.SURNAME_COLUMN_V
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-// TODO DC, FlinkSQL_PR_8 - This test class is almost moved to table_feature_branch
-//  with an exception of one test (tagged as `to-do'). Update feature branch if any
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
 //  new test is added here.
 public abstract class DeltaSourceTableTestSuite {
 
@@ -385,7 +384,6 @@ public abstract class DeltaSourceTableTestSuite {
         assertNoMoreColumns(resultData, 3);
     }
 
-    // TODO FlinkSQL_PR_8
     @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"batch", "streaming"})
     public void testThrowOnInvalidQueryHints(String queryMode) {
@@ -440,7 +438,6 @@ public abstract class DeltaSourceTableTestSuite {
                 + " - 'timestampAsOf'");
     }
 
-    // TODO FlinkSQL_PR_8
     @ParameterizedTest(name = "queryHint = {0}")
     @ValueSource(
         strings = {
@@ -448,7 +445,7 @@ public abstract class DeltaSourceTableTestSuite {
             "'startingVersion' = '10', 'startingTimestamp' = '2022-02-24T04:55:00.001', 'mode' = "
                 + "'streaming'"
         })
-    public void testThrowOnMutuallyExcludedQueryHints(String queryHints) {
+    public void testThrowOnMutuallyExclusiveQueryHints(String queryHints) {
 
         StreamExecutionEnvironment testStreamEnv =
             queryHints.contains(QueryMode.BATCH.name()) ? getTestStreamEnv(false)
@@ -474,7 +471,6 @@ public abstract class DeltaSourceTableTestSuite {
             .contains("Used mutually exclusive options for Source definition.");
     }
 
-    // TODO FlinkSQL_PR_8
     @ParameterizedTest(name = "queryHint = {0}")
     @ValueSource(
         strings = {
@@ -509,7 +505,6 @@ public abstract class DeltaSourceTableTestSuite {
             .contains("Used inapplicable option for source configuration.");
     }
 
-    // TODO FlinkSQL_PR_8
     @Test
     public void testJobSpecificOptionInBatch() throws Exception {
 

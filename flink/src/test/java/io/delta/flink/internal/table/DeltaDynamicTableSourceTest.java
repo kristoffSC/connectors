@@ -23,7 +23,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.rules.TemporaryFolder;
 import static org.assertj.core.api.Assertions.assertThat;
 
-// TODO DC SQL_PR 8 - move with DDL/Query hint validation
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
+//  new test is added here.
 class DeltaDynamicTableSourceTest {
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();

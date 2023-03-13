@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+// TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
+//  new test is added here.
 class DeltaDynamicTableFactoryTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeltaDynamicTableFactoryTest.class);
@@ -103,9 +105,7 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
-    // TODO DC SQL_PR 8 - move this test to feature branch.
     void shouldThrowIfUsedUnexpectedOption() {
-
         options.put("table-path", "file://some/path");
         options.put("invalid-Option", "MyTarget");
         Context tableContext = DeltaTestUtils.createTableContext(SCHEMA, options);
@@ -184,7 +184,6 @@ class DeltaDynamicTableFactoryTest {
     }
 
     @Test
-    // TODO DC SQL_PR 8 - move this test to feature branch.
     public void shouldThrowIfInvalidJobSpecificOptionsUsed() {
 
         options.put("table-path", "file://some/path");
@@ -239,7 +238,6 @@ class DeltaDynamicTableFactoryTest {
                 + " - 'updateCheckDelayMillis'\n"
                 + " - 'timestampAsOf'"
             );
-
     }
 
     private void assertThrowsNotUsingCatalog(RuntimeException exception) {

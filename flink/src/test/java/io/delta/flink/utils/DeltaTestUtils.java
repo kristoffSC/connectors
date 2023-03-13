@@ -736,14 +736,14 @@ public class DeltaTestUtils {
     /**
      * Changes last modification time for delta log .json files.
      *
-     * @param sourceTablePath  Path to delta log to change last modification time.
-     * @param lastModifyValues An array of times to which _delta_log .json files last modification
-     *                         time should be change to. If bigger than number of .json files under
-     *                         _delta_log, an exception will be thrown.
+     * @param sourceTablePath        Path to delta log to change last modification time.
+     * @param lastModifiedTimestamps An array of times to which _delta_log .json files last
+     *                               modification time should be change to. If bigger than number of
+     *                               .json files under _delta_log, an exception will be thrown.
      */
     public static void changeDeltaLogLastModifyTimestamp(
             String sourceTablePath,
-            String[] lastModifyValues) throws IOException {
+            String[] lastModifiedTimestamps) throws IOException {
 
         List<java.nio.file.Path> sortedLogFiles =
             Files.list(Paths.get(sourceTablePath + "/_delta_log"))
@@ -751,20 +751,20 @@ public class DeltaTestUtils {
                 .sorted()
                 .collect(Collectors.toList());
 
-        if (lastModifyValues.length > sortedLogFiles.size()) {
+        if (lastModifiedTimestamps.length > sortedLogFiles.size()) {
             throw new IllegalArgumentException(String.format(""
                     + "Delta log for table %s size, does not match"
                     + " test's last modify argument size %d",
-                sourceTablePath, lastModifyValues.length
+                sourceTablePath, lastModifiedTimestamps.length
             ));
         }
 
         int i = 0;
         for (java.nio.file.Path logFile : sortedLogFiles) {
-            if (i >= lastModifyValues.length) {
+            if (i >= lastModifiedTimestamps.length) {
                 break;
             }
-            String timestampAsOfValue = lastModifyValues[i++];
+            String timestampAsOfValue = lastModifiedTimestamps[i++];
             long toTimestamp = TimestampFormatConverter.convertToTimestamp(timestampAsOfValue);
             LOG.info(
                 "Changing Last Modified timestamp on file " + logFile
