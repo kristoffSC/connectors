@@ -258,8 +258,7 @@ public class DeltaTestUtils {
 
     public static <T> List<T> testBoundedStream(
             DataStream<T> stream,
-            MiniClusterWithClientResource miniClusterResource)
-        throws Exception {
+            MiniClusterWithClientResource miniClusterResource) throws Exception {
 
         return testBoundedStream(
             FailoverType.NONE,

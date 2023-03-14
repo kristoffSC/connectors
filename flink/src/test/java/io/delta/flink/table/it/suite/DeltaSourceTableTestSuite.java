@@ -352,11 +352,14 @@ public abstract class DeltaSourceTableTestSuite {
         // WHEN
         String selectSql = "SELECT * FROM sourceTable WHERE col1 > 500";
 
-        Table resultTable = tableEnv.sqlQuery(selectSql);
+        TableResult resultTable = tableEnv.executeSql(selectSql);
 
-        DataStream<Row> rowDataStream = tableEnv.toDataStream(resultTable);
-
-        List<Row> resultData = DeltaTestUtils.testBoundedStream(rowDataStream, miniClusterResource);
+        List<Row> resultData = new ArrayList<>();
+        try(CloseableIterator<Row> collect = resultTable.collect()) {
+            while (collect.hasNext()) {
+                resultData.add(collect.next());
+            }
+        }
 
         // THEN
         List<Long> readCol1Values =
