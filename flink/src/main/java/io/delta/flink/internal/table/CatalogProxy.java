@@ -1,5 +1,6 @@
 package io.delta.flink.internal.table;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.flink.table.catalog.Catalog;
@@ -91,12 +92,14 @@ public class CatalogProxy extends BaseCatalog {
     public List<CatalogPartitionSpec> listPartitions(ObjectPath tablePath)
         throws TableNotExistException, TableNotPartitionedException, CatalogException {
 
+        // TODO SQL_PR_10
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
             // Delta standalone Metadata does not provide information about partition value.
             // This information is needed to build CatalogPartitionSpec
-            throw new CatalogException(
-                "Delta table connector does not support partition listing.");
+            // However, to make SELECT queries with partition column filter to work, we cannot throw
+            // an exception here, since this method will be called by flink-table planner.
+            return Collections.emptyList();
         } else {
             return this.decoratedCatalog.listPartitions(tablePath);
         }
@@ -120,6 +123,7 @@ public class CatalogProxy extends BaseCatalog {
         }
     }
 
+    // TODO SQL_PR_10
     @Override
     public List<CatalogPartitionSpec> listPartitionsByFilter(
             ObjectPath tablePath,
@@ -129,7 +133,11 @@ public class CatalogProxy extends BaseCatalog {
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
             // Delta standalone Metadata does not provide information about partition value.
-            // This information is needed to build CatalogPartitionSpec
+            // This information is needed to build CatalogPartitionSpec.
+
+            // When implementing SupportsPartitionPushDown on DeltaDynamicTableSource,
+            // SupportsPartitionPushDown::listPartitions() should return empty optional and this
+            // method should be implemented since Catalog should be the source of though for Table.
             throw new CatalogException(
                 "Delta table connector does not support partition listing by filter.");
         } else {

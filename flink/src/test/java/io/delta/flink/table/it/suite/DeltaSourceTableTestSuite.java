@@ -19,11 +19,9 @@
 package io.delta.flink.table.it.suite;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import io.delta.flink.internal.options.DeltaOptionValidationException;
@@ -68,6 +66,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 // TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
 //  new test is added here.
+
+// TODO SQL_PR10 - this class was updated include changes in PR 10. New test + refactoring.
+//  Copy everything.
 public abstract class DeltaSourceTableTestSuite {
 
     private static final int PARALLELISM = 2;
@@ -87,6 +88,8 @@ public abstract class DeltaSourceTableTestSuite {
      * {@link ExecutionITCaseTestConstants#DATA_COLUMN_TYPES} columns.
      */
     private String nonPartitionedTablePath;
+
+    private String partitionedTablePath;
 
     // TODO would have been nice to make a TableInfo class that contained the path (maybe a
     //  generator so it is always random), column names, column types, so all this information
@@ -110,11 +113,11 @@ public abstract class DeltaSourceTableTestSuite {
         TEMPORARY_FOLDER.delete();
     }
 
-    public static void assertNoMoreColumns(List<Row> resultData, int extraColumnIndex) {
+    public static void assertNoMoreColumns(List<Row> resultData, int expectedNumberOfColumns) {
         resultData.forEach(rowData ->
             assertThrows(
                 ArrayIndexOutOfBoundsException.class,
-                () -> rowData.getField(extraColumnIndex),
+                () -> rowData.getField(expectedNumberOfColumns + 1),
                 "Found row with extra column."
             )
         );
@@ -126,9 +129,11 @@ public abstract class DeltaSourceTableTestSuite {
             miniClusterResource.before();
             nonPartitionedTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             nonPartitionedLargeTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+            partitionedTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
 
             DeltaTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
             DeltaTestUtils.initTestForNonPartitionedLargeTable(nonPartitionedLargeTablePath);
+            DeltaTestUtils.initTestForPartitionedTable(partitionedTablePath);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
@@ -145,12 +150,8 @@ public abstract class DeltaSourceTableTestSuite {
      */
     @Test
     public void testThrowIfUsingStreamingSourceInBatchEnv() {
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(false) // streamingMode = false
-        );
-
-        setupDeltaCatalog(tableEnv);
+        // streamingMode = false
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
 
         // CREATE Source TABLE
         tableEnv.executeSql(
@@ -176,12 +177,8 @@ public abstract class DeltaSourceTableTestSuite {
      */
     @Test
     public void testUsingBatchSourceInStreamingEnv() throws Exception {
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(true) // streamingMode = true
-        );
-
-        setupDeltaCatalog(tableEnv);
+        // streamingMode = true
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(true);
 
         // CREATE Source TABLE
         tableEnv.executeSql(
@@ -194,27 +191,17 @@ public abstract class DeltaSourceTableTestSuite {
         TableResult tableResult = tableEnv.executeSql(selectSql);
 
         // THEN
-        List<Row> results = new ArrayList<>();
-        tableResult.await(10, TimeUnit.SECONDS);
-        try (CloseableIterator<Row> collect = tableResult.collect()) {
-            while (collect.hasNext()) {
-                results.add(collect.next());
-            }
-        }
+        List<Row> resultData = DeltaTestUtils.readTableResult(tableResult);
 
         // A rough assertion on an actual data. Full assertions are done in other tests.
-        assertThat(results).hasSize(2);
+        assertThat(resultData).hasSize(2);
     }
 
     @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"", "batch", "BATCH", "baTCH"})
     public void testBatchTableJob(String jobMode) throws Exception {
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(false) // streamingMode = false
-        );
-
-        setupDeltaCatalog(tableEnv);
+        // streamingMode = false
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
 
         // CREATE Source TABLE
         tableEnv.executeSql(
@@ -226,14 +213,8 @@ public abstract class DeltaSourceTableTestSuite {
 
         String selectSql = String.format("SELECT * FROM sourceTable %s", connectorModeHint);
 
-        TableResult resultTable = tableEnv.executeSql(selectSql);
-
-        List<Row> resultData = new ArrayList<>();
-        try (CloseableIterator<Row> collect = resultTable.collect()) {
-            while (collect.hasNext()) {
-                resultData.add(collect.next());
-            }
-        }
+        TableResult tableResult = tableEnv.executeSql(selectSql);
+        List<Row> resultData = DeltaTestUtils.readTableResult(tableResult);
 
         List<String> readNames =
             resultData.stream()
@@ -285,11 +266,8 @@ public abstract class DeltaSourceTableTestSuite {
             new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
         );
 
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(true) // streamingMode = true
-        );
-
-        setupDeltaCatalog(tableEnv);
+        // streamingMode = true
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(true);
 
         // CREATE Source TABLE
         tableEnv.executeSql(
@@ -301,9 +279,8 @@ public abstract class DeltaSourceTableTestSuite {
 
         String selectSql = String.format("SELECT * FROM sourceTable %s", connectorModeHint);
 
-        Table resultTable = tableEnv.sqlQuery(selectSql);
-
-        DataStream<Row> rowDataStream = tableEnv.toDataStream(resultTable);
+        Table tableResult = tableEnv.sqlQuery(selectSql);
+        DataStream<Row> rowDataStream = tableEnv.toDataStream(tableResult);
 
         List<List<Row>> resultData = DeltaTestUtils.testContinuousStream(
             FailoverType.NONE,
@@ -335,14 +312,10 @@ public abstract class DeltaSourceTableTestSuite {
     }
 
     @Test
-    public void testSelectWithWhereFilter() throws Exception {
-
+    public void shouldSelectWhere_nonPartitionedColumn() throws Exception {
         // GIVEN
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
-            getTestStreamEnv(false) // streamingMode = false
-        );
-
-        setupDeltaCatalog(tableEnv);
+        // streamingMode = false
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
 
         // CREATE Source TABLE
         tableEnv.executeSql(
@@ -352,14 +325,8 @@ public abstract class DeltaSourceTableTestSuite {
         // WHEN
         String selectSql = "SELECT * FROM sourceTable WHERE col1 > 500";
 
-        TableResult resultTable = tableEnv.executeSql(selectSql);
-
-        List<Row> resultData = new ArrayList<>();
-        try(CloseableIterator<Row> collect = resultTable.collect()) {
-            while (collect.hasNext()) {
-                resultData.add(collect.next());
-            }
-        }
+        TableResult tableResult = tableEnv.executeSql(selectSql);
+        List<Row> resultData = DeltaTestUtils.readTableResult(tableResult);
 
         // THEN
         List<Long> readCol1Values =
@@ -387,17 +354,51 @@ public abstract class DeltaSourceTableTestSuite {
         assertNoMoreColumns(resultData, 3);
     }
 
+    // TODO SQL_PR10 new test that has to be added to feature branch. Rest of the class was
+    //  refactored slightly.
+    @Test
+    public void shouldSelectWhere_partitionedColumn() throws Exception {
+        // streamingMode = false
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
+
+        String partitionTableSchema = "name VARCHAR, surname VARCHAR, age INT, col1 VARCHAR,"
+            + "col2 VARCHAR";
+        tableEnv.executeSql(
+            buildSourceTableSql(partitionedTablePath, partitionTableSchema, "col1, col2")
+        );
+
+        String selectSql = "SELECT * FROM sourceTable WHERE col1 = 'val1'";
+
+        TableResult tableResult = tableEnv.executeSql(selectSql);
+        List<Row> resultData = DeltaTestUtils.readTableResult(tableResult);
+
+        // number of rows with partition column "col1" value different that WHERE/ condition from
+        // SELECT statement.
+        long notMatchingPartitionValuesCount = resultData.stream()
+            .map(row -> row.getFieldAs("col1"))
+            .filter(value -> !value.equals("val1"))
+            .count();
+
+        assertThat(resultData)
+            .withFailMessage("SELECT with WHERE read different number of rows that expected.")
+            .hasSize(2);
+
+        assertThat(notMatchingPartitionValuesCount)
+            .withFailMessage(
+                "SELECT with WERE on partition column returned rows with unexpected partition "
+                    + "value.")
+            .isEqualTo(0);
+
+        // Checking that we don't have more columns.
+        assertNoMoreColumns(resultData, 5);
+    }
+
     @ParameterizedTest(name = "mode = {0}")
     @ValueSource(strings = {"batch", "streaming"})
     public void testThrowOnInvalidQueryHints(String queryMode) {
-
-        StreamExecutionEnvironment testStreamEnv =
-            QueryMode.BATCH.name().equals(queryMode) ? getTestStreamEnv(false)
-                : getTestStreamEnv(true);
-
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(testStreamEnv);
-
-        setupDeltaCatalog(tableEnv);
+        StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(
+            QueryMode.BATCH.name().equals(queryMode)
+        );
 
         String invalidQueryHints = String.format(""
             + "'spark.some.option' = '10',"
@@ -586,19 +587,44 @@ public abstract class DeltaSourceTableTestSuite {
         }
     }
 
-    private String buildSourceTableSql(String tablePath, String schemaString) {
+    private StreamTableEnvironment setupTableEnvAndDeltaCatalog(boolean streamingMode) {
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(
+            getTestStreamEnv(streamingMode)
+        );
+        setupDeltaCatalog(tableEnv);
+        return tableEnv;
+    }
+
+    /**
+     * Prepare DDL statement for partitioned table.
+     *
+     * @param partitions a comma separated String with partition column names such as "col1, col2"
+     */
+    private String buildSourceTableSql(String tablePath, String schemaString, String partitions) {
+
+        String partitionSpec = StringUtils.isNullOrWhitespaceOnly(partitions) ? ""
+            : String.format("PARTITIONED BY (%s)", partitions);
 
         return String.format(
             "CREATE TABLE %s ("
                 + schemaString
                 + ") "
+                + "%s" // partitionSpec
                 + "WITH ("
                 + " 'connector' = 'delta',"
                 + " 'table-path' = '%s'"
                 + ")",
             DeltaSourceTableTestSuite.TEST_SOURCE_TABLE_NAME,
+            partitionSpec,
             tablePath
         );
+    }
+
+    /**
+     * Prepare DDL statement for none partitioned table.
+     */
+    private String buildSourceTableSql(String tablePath, String schemaString) {
+        return buildSourceTableSql(tablePath, schemaString, "");
     }
 
     public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
