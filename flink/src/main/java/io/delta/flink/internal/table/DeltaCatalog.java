@@ -2,7 +2,12 @@ package io.delta.flink.internal.table;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import javax.annotation.ParametersAreNonnullByDefault;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import io.delta.flink.internal.table.DeltaCatalogTableHelper.DeltaMetastoreTable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.flink.table.api.Schema;
@@ -38,7 +43,7 @@ public class DeltaCatalog {
      */
     private final Catalog decoratedCatalog;
 
-    private final Configuration hadoopConf;
+    private final LoadingCache<DeltaLogCacheKey, DeltaLog> deltaLogCache;
 
     /**
      * Creates instance of {@link DeltaCatalog} for given decorated catalog and catalog name.
@@ -55,7 +60,6 @@ public class DeltaCatalog {
     DeltaCatalog(String catalogName, Catalog decoratedCatalog, Configuration hadoopConf) {
         this.catalogName = catalogName;
         this.decoratedCatalog = decoratedCatalog;
-        this.hadoopConf = hadoopConf;
 
         checkArgument(
             !StringUtils.isNullOrWhitespaceOnly(catalogName),
@@ -67,6 +71,19 @@ public class DeltaCatalog {
         checkArgument(hadoopConf != null,
             "The Hadoop Configuration object - 'hadoopConfiguration' cannot be null."
         );
+
+        // TODO SQL_PR_11
+        this.deltaLogCache =  CacheBuilder.newBuilder()
+            // A retained size of an array with 100 DeltaLog instances for Delta table containing 10
+            // parquet files, 10 delta versions and 1100 records in total is 700 KB (kilobytes).
+            .maximumSize(100)
+            .build(new CacheLoader<DeltaLogCacheKey, DeltaLog>() {
+                @Override
+                @ParametersAreNonnullByDefault
+                public DeltaLog load(DeltaLogCacheKey key) throws Exception {
+                    return DeltaLog.forTable(hadoopConf, key.deltaTablePath);
+                }
+            });
     }
 
     public CatalogBaseTable getTable(DeltaCatalogBaseTable catalogTable)
@@ -76,8 +93,8 @@ public class DeltaCatalog {
 
         String tablePath =
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
+        DeltaLog deltaLog = getDeltaLogFromCache(catalogTable, tablePath);
 
-        DeltaLog deltaLog = DeltaLog.forTable(this.hadoopConf, tablePath);
         if (!deltaLog.tableExists()) {
             // TableNotExistException does not accept custom message, but we would like to meet
             // API contracts from Flink's Catalog::getTable interface and throw
@@ -125,7 +142,7 @@ public class DeltaCatalog {
         CatalogBaseTable metastoreTable = catalogTable.getCatalogTable();
         String deltaTablePath =
             metastoreTable.getOptions().get(DeltaTableConnectorOptions.TABLE_PATH.key());
-        return DeltaLog.forTable(hadoopConf, deltaTablePath).tableExists();
+        return getDeltaLogFromCache(catalogTable, deltaTablePath).tableExists();
     }
 
     public void createTable(DeltaCatalogBaseTable catalogTable, boolean ignoreIfExists)
@@ -174,7 +191,7 @@ public class DeltaCatalog {
             throw new TableAlreadyExistException(this.catalogName, tableCatalogPath);
         }
 
-        DeltaLog deltaLog = DeltaLog.forTable(hadoopConf, deltaTablePath);
+        DeltaLog deltaLog = getDeltaLogFromCache(catalogTable, deltaTablePath);
         if (deltaLog.tableExists()) {
             // Table was not present in metastore however it is present on Filesystem, we have to
             // verify if schema, partition spec and properties stored in _delta_log match with DDL.
@@ -261,7 +278,7 @@ public class DeltaCatalog {
         Map<String, String> filteredDdlOptions =
             DeltaCatalogTableHelper.filterMetastoreDdlOptions(alterTableDdlOptions);
 
-        DeltaLog deltaLog = DeltaLog.forTable(hadoopConf, deltaTablePath);
+        DeltaLog deltaLog = getDeltaLogFromCache(newCatalogTable, deltaTablePath);
         Metadata originalMetaData = deltaLog.update().getMetadata();
 
         // Add new properties to metadata.
@@ -282,5 +299,44 @@ public class DeltaCatalog {
         // add properties to _delta_log
         DeltaCatalogTableHelper
             .commitToDeltaLog(deltaLog, updatedMetadata, Operation.Name.SET_TABLE_PROPERTIES);
+    }
+
+    // TODO SQL_PR_11
+    private DeltaLog getDeltaLogFromCache(DeltaCatalogBaseTable catalogTable, String tablePath) {
+        return deltaLogCache.getUnchecked(
+            new DeltaLogCacheKey(
+                catalogTable.getTableCatalogPath(),
+                tablePath
+            ));
+    }
+
+    // TODO SQL_PR_11
+    private static class DeltaLogCacheKey {
+
+        private final ObjectPath objectPath;
+
+        private final String deltaTablePath;
+
+        DeltaLogCacheKey(ObjectPath objectPath, String deltaTablePath) {
+            this.objectPath = objectPath;
+            this.deltaTablePath = deltaTablePath;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            DeltaLogCacheKey that = (DeltaLogCacheKey) o;
+            return objectPath.equals(that.objectPath) && deltaTablePath.equals(that.deltaTablePath);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(objectPath, deltaTablePath);
+        }
     }
 }

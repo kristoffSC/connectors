@@ -27,6 +27,8 @@ import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_
 import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.delta.standalone.DeltaLog;
+
 // TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
 //  new test is added here.
 public abstract class DeltaEndToEndTableTestSuite {
@@ -220,6 +222,21 @@ public abstract class DeltaEndToEndTableTestSuite {
             assertThat(row.getField("innerA")).isInstanceOf(Integer.class);
             assertThat(row.getField("innerB")).isInstanceOf(Integer.class);
         }
+    }
+
+    // TODO SQL_PR_11 remove
+    @Test
+    public void foo() throws Exception {
+
+        String deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+        DeltaTestUtils.initTestForNonPartitionedLargeTable(deltaTablePath);
+
+        DeltaLog[] deltaLogList = new DeltaLog[100];
+        for (int i = 0; i < 100; i++) {
+            deltaLogList[i] = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
+        }
+
+        System.out.println("hhh");
     }
 
     private void readWriteTable(StreamTableEnvironment tableEnv, String sinkTableDdl)
