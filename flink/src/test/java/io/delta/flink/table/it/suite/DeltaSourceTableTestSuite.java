@@ -66,9 +66,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 // TODO DC - This test class is fully moved to table_feature_branch. Update feature branch if any
 //  new test is added here.
-
-// TODO SQL_PR10 - this class was updated include changes in PR 10. New test + refactoring.
-//  Copy everything.
 public abstract class DeltaSourceTableTestSuite {
 
     private static final int PARALLELISM = 2;
@@ -313,8 +310,7 @@ public abstract class DeltaSourceTableTestSuite {
 
     @Test
     public void shouldSelectWhere_nonPartitionedColumn() throws Exception {
-        // GIVEN
-        // streamingMode = false
+        // GIVEN streamingMode = false
         StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
 
         // CREATE Source TABLE
@@ -354,8 +350,6 @@ public abstract class DeltaSourceTableTestSuite {
         assertNoMoreColumns(resultData, 3);
     }
 
-    // TODO SQL_PR10 new test that has to be added to feature branch. Rest of the class was
-    //  refactored slightly.
     @Test
     public void shouldSelectWhere_partitionedColumn() throws Exception {
         // streamingMode = false

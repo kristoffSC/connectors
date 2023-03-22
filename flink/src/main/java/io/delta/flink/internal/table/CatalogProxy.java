@@ -92,7 +92,6 @@ public class CatalogProxy extends BaseCatalog {
     public List<CatalogPartitionSpec> listPartitions(ObjectPath tablePath)
         throws TableNotExistException, TableNotPartitionedException, CatalogException {
 
-        // TODO SQL_PR_10
         DeltaCatalogBaseTable catalogTable = getCatalogTable(tablePath);
         if (catalogTable.isDeltaTable()) {
             // Delta standalone Metadata does not provide information about partition value.
@@ -123,7 +122,6 @@ public class CatalogProxy extends BaseCatalog {
         }
     }
 
-    // TODO SQL_PR_10
     @Override
     public List<CatalogPartitionSpec> listPartitionsByFilter(
             ObjectPath tablePath,

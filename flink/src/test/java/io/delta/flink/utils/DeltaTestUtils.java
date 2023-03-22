@@ -777,7 +777,6 @@ public class DeltaTestUtils {
         }
     }
 
-    // TODO SQL_PR10 - use this in all tests.
     public static List<Row> readTableResult(TableResult tableResult) throws Exception {
         List<Row> resultData = new ArrayList<>();
         try(CloseableIterator<Row> collect = tableResult.collect()) {
