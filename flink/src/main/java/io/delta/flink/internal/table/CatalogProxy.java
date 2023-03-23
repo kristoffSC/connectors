@@ -133,11 +133,11 @@ public class CatalogProxy extends BaseCatalog {
 
             // When implementing SupportsPartitionPushDown on DeltaDynamicTableSource, both
             // SupportsPartitionPushDown::listPartitions() and this method here should return
-            // empty optional/empty list. The Plan for Delta connector is to trick the planner
+            // empty optional/empty list. The plan for Delta connector is to trick the planner
             // into thinking the table is unpartitioned, which will force it to treat partition
             // columns as data columns. This allows us to not list all the partitions in the
-            // table, even with without a filter.Then we will get a data filter that we can apply
-            // to the scan we start reading from the delta log.
+            // table (on which we would apply this filter). Then we will get a data filter that
+            // we can apply to the scan we use to start reading from the delta log.
             throw new CatalogException(
                 "Delta table connector does not support partition listing by filter.");
         } else {
