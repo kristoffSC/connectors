@@ -1,5 +1,6 @@
 @startuml
 'https://plantuml.com/class-diagram
+set separator none
 package "org.apache.flink" #DDDDDD {
   interface CatalogBaseTable
   interface CatalogFunction
@@ -20,7 +21,6 @@ package "org.apache.flink" #DDDDDD {
 
 /' ------------------------------- '/
 package "io.delta.flink" {
-  note left of BaseCatalog: Methods without context for Delta Table ever\n except `getFactory()` method that creates\n a new instance of DeltaDynamicTableFactory.
   abstract class BaseCatalog extends AbstractCatalog {
     # decoratedCatalog : Catalog
 
@@ -44,8 +44,8 @@ package "io.delta.flink" {
     + dropFunction(ObjectPath, boolean) : void
     + getFactory() : Optional<Factory>
    }
+  note left of BaseCatalog: Methods without context for Delta Table ever\n except `getFactory()` method that creates\n a new instance of DeltaDynamicTableFactory.
 
-  note left of CatalogProxy: Methods that may have Delta table context\n.
   class CatalogProxy extends BaseCatalog {
     - deltaCatalog : DeltaCatalog
 
@@ -71,8 +71,8 @@ package "io.delta.flink" {
     + alterPartitionColumnStatistics(ObjectPath, CatalogPartitionSpec, CatalogColumnStatistics, boolean) void
     + alterPartitionColumnStatistics(ObjectPath, CatalogPartitionSpec, CatalogColumnStatistics, boolean) void
   }
+  note left of CatalogProxy: Methods that may have Delta table context\n.
 
-  note right of DeltaCatalog: Methods that will interact with _delta_log.
   class DeltaCatalog {
     - catalogName : String
     - decoratedCatalog : Catalog
@@ -82,6 +82,7 @@ package "io.delta.flink" {
     + createTable(DeltaCatalogBaseTable, boolean) : void
     + alterTable(DeltaCatalogBaseTable) : void
   }
+  note right of DeltaCatalog: Methods that will interact with _delta_log.
 
   class DeltaCatalogBaseTable {
     - tableCatalogPath : ObjectPath
