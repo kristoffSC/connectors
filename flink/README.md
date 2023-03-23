@@ -407,6 +407,9 @@ The project is compiled using [SBT](https://www.scala-sbt.org/1.x/docs/Command-L
 - To test the project, run `build/sbt flink/test`
 - To publish the JAR, run `build/sbt flink/publishM2`
 
+### UML diagrams
+UML diagrams can be found [here](uml/README.md)
+
 ## Frequently asked questions (FAQ)
 
 #### Can I use this connector to append data to a Delta table?
