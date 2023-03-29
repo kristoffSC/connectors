@@ -49,27 +49,20 @@ package "io.delta.flink" {
   class CatalogProxy extends BaseCatalog {
     - deltaCatalog : DeltaCatalog
 
+    various listPartition methods
+    various alter Table and partition methods
+    various get table and column statistics methods
+
     + getTable(ObjectPath) CatalogBaseTable
     + tableExists(ObjectPath) boolean
     + createTable(ObjectPath, CatalogBaseTable, boolean) void
     + alterTable(ObjectPath, CatalogBaseTable, boolean) void
-    + listPartitions(ObjectPath) List<CatalogPartitionSpec
-    + listPartitions(ObjectPath, CatalogPartitionSpec) List<CatalogPartitionSpec
-    + listPartitionsByFilter(ObjectPath, List<Expression>) List<CatalogPartitionSpec
     + getPartition(ObjectPath, CatalogPartitionSpec) CatalogPartition
     + partitionExists(ObjectPath, CatalogPartitionSpec) boolean
     + createPartition(ObjectPath, CatalogPartitionSpec, CatalogPartition, boolean) void
     + dropPartition(ObjectPath, CatalogPartitionSpec, boolean) void
     + alterPartition(ObjectPath, CatalogPartitionSpec, CatalogPartition, boolean) void
     + getTableStatistics(ObjectPath) CatalogTableStatistics
-    + getTableColumnStatistics(ObjectPath) CatalogColumnStatistics
-    + getPartitionStatistics(ObjectPath, CatalogPartitionSpec) CatalogTableStatistics
-    + getPartitionColumnStatistics(ObjectPath, CatalogPartitionSpec) CatalogColumnStatistics
-    + alterTableStatistics(ObjectPath, CatalogTableStatistics, boolean) void
-    + alterTableColumnStatistics(ObjectPath, CatalogColumnStatistics, boolean) void
-    + alterPartitionStatistics(ObjectPath, CatalogPartitionSpec, CatalogTableStatistics, boolean) void
-    + alterPartitionColumnStatistics(ObjectPath, CatalogPartitionSpec, CatalogColumnStatistics, boolean) void
-    + alterPartitionColumnStatistics(ObjectPath, CatalogPartitionSpec, CatalogColumnStatistics, boolean) void
   }
   note left of CatalogProxy: Methods that may have Delta table context\n.
 

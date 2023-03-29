@@ -72,7 +72,6 @@ public class DeltaCatalog {
             "The Hadoop Configuration object - 'hadoopConfiguration' cannot be null."
         );
 
-        // TODO SQL_PR_11
         this.deltaLogCache =  CacheBuilder.newBuilder()
             // A retained size of an array with 100 DeltaLog instances for Delta table containing 10
             // parquet files, 10 delta versions and 1100 records in total is 700 KB (kilobytes).
@@ -80,7 +79,7 @@ public class DeltaCatalog {
             .build(new CacheLoader<DeltaLogCacheKey, DeltaLog>() {
                 @Override
                 @ParametersAreNonnullByDefault
-                public DeltaLog load(DeltaLogCacheKey key) throws Exception {
+                public DeltaLog load(DeltaLogCacheKey key) {
                     return DeltaLog.forTable(hadoopConf, key.deltaTablePath);
                 }
             });
@@ -301,7 +300,6 @@ public class DeltaCatalog {
             .commitToDeltaLog(deltaLog, updatedMetadata, Operation.Name.SET_TABLE_PROPERTIES);
     }
 
-    // TODO SQL_PR_11
     private DeltaLog getDeltaLogFromCache(DeltaCatalogBaseTable catalogTable, String tablePath) {
         return deltaLogCache.getUnchecked(
             new DeltaLogCacheKey(
@@ -310,7 +308,6 @@ public class DeltaCatalog {
             ));
     }
 
-    // TODO SQL_PR_11
     private static class DeltaLogCacheKey {
 
         private final ObjectPath objectPath;
