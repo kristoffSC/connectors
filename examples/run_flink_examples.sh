@@ -12,11 +12,16 @@ declare -a source_tests=(
 	"org.example.source.continuous.DeltaContinuousSourceExample"
 	"org.example.source.continuous.DeltaContinuousSourceStartingVersionExample"
 	"org.example.source.continuous.DeltaContinuousSourceUserColumnsExample"
+	"org.example.sql.select.bounded.SelectBoundedTableExample"
+  "org.example.sql.select.bounded.SelectBoundedTableVersionAsOfExample"
+  "org.example.sql.select.continuous.SelectContinuousTableExample"
+  "org.example.sql.select.continuous.SelectContinuousTableStartingVersionExample"
 )
 
 declare -a sink_tests=(
 	"org.example.sink.DeltaSinkExample"
 	"org.example.sink.DeltaSinkPartitionedTableExample"
+	"org.example.sql.insert.InsertTableExample"
 )
 
 echo "============= Running Delta/Flink Integration Tests ============="
