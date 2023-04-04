@@ -16,10 +16,12 @@ Official Delta Lake connector for [Apache Flink](https://flink.apache.org/).
     - [Bounded Mode](#bounded-mode)
     - [Continuous Mode](#continuous-mode)
   - [Examples](#delta-source-examples)
+- [SQL Support](#sql-support)
 - [Usage](#usage)
   - [Maven](#maven)
   - [SBT](#sbt)
 - [Building](#building)
+- [UML diagrams](#uml-diagrams)
 - [FAQ](#frequently-asked-questions-faq)
 - [Known Issues](#known-issues)
 
@@ -310,38 +312,216 @@ public DataStream<RowData> createContinuousDeltaSourceUserColumns(
 }
 ```
 ## SQL Support
-Starting from version X-X-X Delta connector provides support for Flink SQL.
-Both Source and Sink Delta connectors can be used as Flink Tables for SELECT and INSERT queries.
-
-| Feature support                                     | Notes                                                                                   |
-|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
-| [CREATE CATALOG](#creating-and-using-delta-catalog) | A Delta catalog is required fot Delta Flink SQL support.                                |
-| CREATE DATABASE                                     |                                                                                         |
-| CREATE TABLE                                        |                                                                                         |
-| CREATE TABLE LIKE                                   |                                                                                         |
-| ALTER TABLE                                         | Support only altering table properties, column and partition changes are not supported. |
-| DROP TABLE                                          | Remove data from metastore leaving Delta table files on filesystem untouched.           |
-| SQL SELECT                                          | Support both streaming and batch mode.                                                  |
-| SQL INSERT                                          | Support both streaming and batch mode.                                                  |
+Starting from version X-X-X the Delta connector can be used from Flink SQL.
+Both Delta Source and Delta Sink can be used as Flink Tables for SELECT and INSERT queries.
 
 SQL Delta Flink connector must be used with Delta Catalog. Trying to execute SQL queries on Delta table
 using Flink API without Delta Catalog configured will cause SQL job to fail.
 
-### Creating and Using Delta Catalog
+| Feature support                                     | Notes                                                                                   |
+|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [CREATE CATALOG](#creating-and-using-delta-catalog) | A Delta catalog is required fot Delta Flink SQL support.                                |
+| [CREATE DATABASE](#create-database)                 |                                                                                         |
+| [CREATE TABLE](#create-table)                       |                                                                                         |
+| [CREATE TABLE LIKE](#create-table-like)             |                                                                                         |
+| [ALTER TABLE](#alter-table)                         | Support only altering table properties, column and partition changes are not supported. |
+| [DROP TABLE](#drop-table)                           | Remove data from metastore leaving Delta table files on filesystem untouched.           |
+| [SQL SELECT](#select-query)                         | Support both streaming and batch mode.                                                  |
+| [SQL INSERT](#insert-query)                         | Support both streaming and batch mode.                                                  |
 
-### SQL Limitations
+### Creating and Using Delta Catalog
+The Delta catalog is meant to be a source of truth regarding Delta tables in Flink's SQL API.
+That is why it is required by user to use Delta Catalog for eny interaction with Delta table using Flink SQL query.
+Such SQL query will fail if used without Delta catalog properly configured for given SQL session.
+
+At the same time any other Flink connector (Kafka, Filesystem etc.) can be used with Delta Catalog unless it has any restrictions on its own. 
+This is achieved by Delta catalog acting as a Proxy for non Delta tables.
+For Delta tables however, the Delta catalog ensures that any DDL operation is reflected in underlying Delta table log.
+In other words Delta catalog ensures that only valid Delta tables can be created and used by Flink users.
+
+#### Decorated catalog
+Delta Catalog is implemented using a decorator pattern. It decorates/wraps other [Catalog](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/catalogs/)
+implementation. The simplified architecture is presented on the below picture.
+
+![catalogArch](doc/CatalogDelegation.png)
+
+For Delta tables, all metastore actions will be delegated to decorated catalog.
+However, only minimum information such as database/table name, connector type and filesystem path to the delta table will be stored in the metastore.
+For Delta tables no information about table properties or schema will be stored in the metastore.
+Delta Catalog will store those in `_delta_log`
+
+The For none Delta tables, Delta catalog acts as a simple proxy and fully redirects every method call to decorated catalog. 
+
+#### Catalog Configuration
+A catalog is created and named by executing the following query. Replace `<catalog_name>` with your catalog's name.
+Replace `<decorated-catalog>` with Catalog implementation type that should be used as decorated catalog.
+Currently `in-mmemory` (default) and `hive` types are supported. The `<config_key> = <config_value>` are specific
+for chosen decorated catalog.
+```roomsql
+CREATE CATALOG <catalog_name> WITH (
+  'type' = 'delta-catalog',
+  'catalog-type' = '<decorated-catalog>',
+   '<config_key>' = '<config_value>'
+);
+```
+
+The following properties can be set globally and are not limited to a specific catalog implementation:
++ `type` - must be `delta-catalog`. This option is required by Flink.
++ `catalog-type` - an optional option that allows to specify type of decorated catalog. Allowed options are:
+  + `in-memory`- a default value if no other specified. Will use Flink's In-Memory catalog as decorated catalog. 
+  + `hive` - Use Flink's Hive catalog as decorated catalog.
+
+### DDL commands
+#### CREATE DATABASE
+By default, Delta catalog will use the `default` database in Flink.
+Use the following example to create a separate database:
+
+```roomsql
+CREATE DATABASE custom_DB;
+USE custom_DB;
+```
+
+#### CREATE TABLE
+```roomsql
+CREATE TABLE testTable (
+    id BIGINT,
+    data STRING
+  ) WITH (
+    'connector' = 'delta',
+    'table-path' = '<path-to-table>',
+    '<arbitrary-user-define-table-property' = '<value>',
+    '<delta.*-properties>' = '<value'>
+);
+```
+
+To create a partition table, use `PARTITIONED BY`:
+```roomsql
+CREATE TABLE testTable (
+    id BIGINT,
+    data STRING
+  ) 
+  PARTITIONED BY (data);
+  WITH (
+    'connector' = 'delta',
+    'table-path' = '<path-to-table>',
+    '<arbitrary-user-define-table-property' = '<value>',
+    '<delta.*-properties>' = '<value'>
+);
+```
+
+The supported table schema [types](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/types/).
+
+Currently, we do not support computed and metadata columns, primary key and watermark definition in
+`CREATE TABLE` statement.
+
+The mandatory DDL options are:
++ `connector` that must be set to 'delta'
++ `table-path` path (filesystem, S3 etc.) where Delta table should be.
+
+Additionally, to the mandatory options, DDL for Delta table can accept other table properties.
+those properties will be persisted into _delta_log for created table. However, those properties will not be used
+by Delta connector during the processing.
+
+Properties NOT allowed as table properties defined in DDL:
++ job-specific-properties like:
+  + versionAsOf
+  + timestampAsOf
+  + startingTimestamp
+  + mode
+  + ignoreChanges
+  + ignoreDeletes
++ Delta Standalone log store configurations such as `delta.logStore.*` properties
++ Parquet Format options such as `parquet.*`
+
+##### Creating _delta_log
+When executing `CREATE TABLE` for Delta connector, we can have two situations:
++ `_delta_log` does not exists under `table-path`
++ `_delta_log` already exists under `table-path`
+
+In the first case, Delta Catalog will create `_delta_log` folder and initialize
+an empty (zero row) Delta table with schema defined in DDL. Additionally, all table properties defined in DDL
+except `connector` and `table-path` will be added to Delta table metadata. On top of that a metastore entry
+for new table will be created.
+
+In the second case, where `_delta_log` already exists under `table_path` Delta catalog will throw an exception when: 
++ DDL schema does not match `_delta_log` schema.
++ DDL Partition definition does not match partition definition from `_delta_log`.
++ Table properties from DDL overrides existing table properties in `_delta_log`
+
+If all above checks were passing, Delta Catalog will add metastore entry for the new table and will
+add new table properties to the existing `_delta_log`.
+
+#### CREATE TABLE LIKE
+To create a table with the same schema, partitioning, and table properties as another table, use `CREATE TABLE LIKE`.
+
+```roomsql
+CREATE TABLE testTable (
+    id BIGINT COMMENT,
+    data STRING
+  ) WITH (
+    'connector' = 'delta',
+    'table-path' = '<path-to-table>'
+);
+
+CREATE TABLE likeTestTable 
+  WITH (
+    'connector' = 'delta',
+    'table-path' = '%s'
+) LIKE testTable;
+```
+
+#### ALTER TABLE
+Delta connector only support altering:
++ Table name
++ Table property value
++ Adding new table property
+
+```roomsql
+ALTER TABLE sourceTable SET ('userCustomProp'='myVal1')
+ALTER TABLE sourceTable RENAME TO newSourceTable
+```
+
+#### DROP TABLE
+To delete a table, run:
+```roomsql
+DROP TABLE sample;
+```
+
+### Querying with SQL
+#### SELECT query
+Delta connector support both streaming and batch read in Flink.
+In order to run `SELECT` query in `batch` mode run:
+```roomsql
+SELECT * FROM testTable;
+```
+Above query will read all records from `testTable` and stop. It is suitable for `BATCH` Flin jobs.
+
+In order to run `SELECT` query in `streaming` mode run:
+```roomsql
+SELECT * FROM testTable /*+ OPTIONS('mode' = 'streaming') */;
+```
+Above query will read all records from `testTable` and will keep monitoring underalying Delta table
+for any updates. 
+
+Both queries above will read all columns from Delta table. In order to specify subset of columns
+that should be read, specify those columns in `SELECT` statement instead using `*` like so:
+```roomsql
+SELECT col1, col2, col3 FROM testTable;
+```
+
+For more details look at [Flink SELECT documentation](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/queries/select/).
+#### INSERT query
+
+### SQL API Limitations
 The Delta connector currently supports only [Physical columns.](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=Physical%20/%20Regular%20Columns)
 The [Metadata](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=(%0A%20%20...%0A)%3B-,Metadata%20Columns,-Metadata%20columns%20are) nor [Computed](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=BIGINT%2C%20%60name%60%20STRING)-,Computed%20Columns,-Computed%20columns%20are) columns are not supported.
 
 Other unsupported features:
-<ul>
-<li>Watermark definition for CRAETE TABLE statement.</li>
-<li>Primary Key definition for CRAETE TABLE statement.</li>
-<li>Schema ALTER queries (create, drop column) including partitions columns.</li>
-</ul>
++ Watermark definition for CREATE TABLE statement.
++ Primary Key definition for CREATE TABLE statement.
++ Schema ALTER queries (create, drop column) including partitions columns.
 
 ## Usage
-
 You can add the Flink/Delta Connector library as a dependency using your favorite build tool. Please note
 that it expects the following packages to be provided:
 
@@ -437,7 +617,7 @@ The project is compiled using [SBT](https://www.scala-sbt.org/1.x/docs/Command-L
 - To test the project, run `build/sbt flink/test`
 - To publish the JAR, run `build/sbt flink/publishM2`
 
-### UML diagrams
+## UML diagrams
 UML diagrams can be found [here](uml/README.md)
 
 ## Frequently asked questions (FAQ)
