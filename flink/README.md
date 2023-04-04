@@ -60,11 +60,11 @@ See the [Java API docs](https://delta-io.github.io/connectors/latest/delta-flink
 ### Metrics
 Delta Sink currently exposes the following Flink metrics:
 
-| metric name |                                        description                                        | update interval |
-|:-----------:|:-----------------------------------------------------------------------------------------:|:---------------:|
-|    DeltaSinkRecordsOut    |                  Counter for how many records were processed by the sink                  | on every record |
-|    DeltaSinkRecordsWritten    |     Counter for how many records were written to the actual files on the file system      |  on checkpoint  |
-|    DeltaSinkBytesWritten    | Counter for how many bytes were written to the actual files on the underlying file system |  on checkpoint  |
+|       metric name       |                                        description                                        | update interval |
+|:-----------------------:|:-----------------------------------------------------------------------------------------:|:---------------:|
+|   DeltaSinkRecordsOut   |                  Counter for how many records were processed by the sink                  | on every record |
+| DeltaSinkRecordsWritten |     Counter for how many records were written to the actual files on the file system      |  on checkpoint  |
+|  DeltaSinkBytesWritten  | Counter for how many bytes were written to the actual files on the underlying file system |  on checkpoint  |
 
 <div id='delta-sink-examples'></div>
 
@@ -309,6 +309,36 @@ public DataStream<RowData> createContinuousDeltaSourceUserColumns(
     return env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "delta-source");
 }
 ```
+## SQL Support
+Starting from version X-X-X Delta connector provides support for Flink SQL.
+Both Source and Sink Delta connectors can be used as Flink Tables for SELECT and INSERT queries.
+
+| Feature support                                     | Notes                                                                                   |
+|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [CREATE CATALOG](#creating-and-using-delta-catalog) | A Delta catalog is required fot Delta Flink SQL support.                                |
+| CREATE DATABASE                                     |                                                                                         |
+| CREATE TABLE                                        |                                                                                         |
+| CREATE TABLE LIKE                                   |                                                                                         |
+| ALTER TABLE                                         | Support only altering table properties, column and partition changes are not supported. |
+| DROP TABLE                                          | Remove data from metastore leaving Delta table files on filesystem untouched.           |
+| SQL SELECT                                          | Support both streaming and batch mode.                                                  |
+| SQL INSERT                                          | Support both streaming and batch mode.                                                  |
+
+SQL Delta Flink connector must be used with Delta Catalog. Trying to execute SQL queries on Delta table
+using Flink API without Delta Catalog configured will cause SQL job to fail.
+
+### Creating and Using Delta Catalog
+
+### SQL Limitations
+The Delta connector currently supports only [Physical columns.](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=Physical%20/%20Regular%20Columns)
+The [Metadata](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=(%0A%20%20...%0A)%3B-,Metadata%20Columns,-Metadata%20columns%20are) nor [Computed](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=BIGINT%2C%20%60name%60%20STRING)-,Computed%20Columns,-Computed%20columns%20are) columns are not supported.
+
+Other unsupported features:
+<ul>
+<li>Watermark definition for CRAETE TABLE statement.</li>
+<li>Primary Key definition for CRAETE TABLE statement.</li>
+<li>Schema ALTER queries (create, drop column) including partitions columns.</li>
+</ul>
 
 ## Usage
 
