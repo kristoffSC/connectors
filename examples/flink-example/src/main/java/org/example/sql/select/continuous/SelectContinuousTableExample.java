@@ -5,6 +5,9 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.utils.Utils;
 import org.utils.job.sql.ContinuousSqlSourceExampleBase;
 
+/**
+ * This is an example of executing a continuous SELECT query on Delta Table using Flink SQL.
+ */
 public class SelectContinuousTableExample extends ContinuousSqlSourceExampleBase {
 
     private static final String TABLE_PATH =

@@ -7,6 +7,9 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.utils.Utils;
 import org.utils.job.sql.SqlSinkExampleBase;
 
+/**
+ * This is an example of executing a INSERT query on Delta Table using Flink SQL.
+ */
 public class InsertTableExample extends SqlSinkExampleBase {
 
     static String TABLE_PATH = Utils.resolveExampleTableAbsolutePath(

@@ -5,6 +5,9 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.utils.Utils;
 import org.utils.job.sql.BoundedSqlSourceExampleBase;
 
+/**
+ * This is an example of executing a bounded SELECT query on Delta Table using Flink SQL.
+ */
 public class SelectBoundedTableExample extends BoundedSqlSourceExampleBase {
 
     private static final String TABLE_PATH =

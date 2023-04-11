@@ -22,6 +22,7 @@ declare -a sink_tests=(
 	"org.example.sink.DeltaSinkExample"
 	"org.example.sink.DeltaSinkPartitionedTableExample"
 	"org.example.sql.insert.InsertTableExample"
+	"org.example.sql.StreamingApiDeltaSourceToTableDeltaSinkJob"
 )
 
 echo "============= Running Delta/Flink Integration Tests ============="

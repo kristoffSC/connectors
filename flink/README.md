@@ -177,7 +177,7 @@ The options relevant to this mode are
 - `updateCheckIntervalMillis` - The interval, in milliseconds, at which we will check the underlying Delta table for any changes.
 - `ignoreDeletes` - When set to `true`, the Delta Source will be able to process table versions where data is deleted, and skip those deleted records.
 - `ignoreChanges` - When set to `true`, the Delta Source will be able to process table versions where data is changed (i.e. updated), and return those changed records. Note that this can lead to duplicate processing, as some Delta operations, like `UPDATE`, may cause existing rows to be rewritten in new files. Those new files will be treated as new data and be reprocessed. This options subsumes `ignoreDeletes`. Therefore, if you set `ignoreChanges` to `true`, your stream will not be disrupted by either deletions or updates to the source table.
-- `columnNames` - Which columns to read. If not provided, the Delta Source source will read all columns.
+- `columnNames` - Which columns to read. If not provided, the Delta source will read all columns.
 
 #### Table schema discovery
 
@@ -312,24 +312,24 @@ public DataStream<RowData> createContinuousDeltaSourceUserColumns(
 }
 ```
 ## SQL Support
-Starting from version X-X-X the Delta connector can be used from Flink SQL.
+Starting from version X-X-X the Delta connector can be used Flink SQL based jobs.
 Both Delta Source and Delta Sink can be used as Flink Tables for SELECT and INSERT queries.
 
 SQL Delta Flink connector must be used with Delta Catalog. Trying to execute SQL queries on Delta table
 using Flink API without Delta Catalog configured will cause SQL job to fail.
 
-| Feature support                                     | Notes                                                                                   |
-|-----------------------------------------------------|-----------------------------------------------------------------------------------------|
-| [CREATE CATALOG](#creating-and-using-delta-catalog) | A Delta catalog is required fot Delta Flink SQL support.                                |
-| [CREATE DATABASE](#create-database)                 |                                                                                         |
-| [CREATE TABLE](#create-table)                       |                                                                                         |
-| [CREATE TABLE LIKE](#create-table-like)             |                                                                                         |
-| [ALTER TABLE](#alter-table)                         | Support only altering table properties, column and partition changes are not supported. |
-| [DROP TABLE](#drop-table)                           | Remove data from metastore leaving Delta table files on filesystem untouched.           |
-| [SQL SELECT](#select-query)                         | Support both streaming and batch mode.                                                  |
-| [SQL INSERT](#insert-query)                         | Support both streaming and batch mode.                                                  |
+| Feature support                                | Notes                                                                                   |
+|------------------------------------------------|-----------------------------------------------------------------------------------------|
+| [CREATE CATALOG](#delta-catalog-configuration) | A Delta catalog is required fot Delta Flink SQL support.                                |
+| [CREATE DATABASE](#create-database)            |                                                                                         |
+| [CREATE TABLE](#create-table)                  |                                                                                         |
+| [CREATE TABLE LIKE](#create-table-like)        |                                                                                         |
+| [ALTER TABLE](#alter-table)                    | Support only altering table properties, column and partition changes are not supported. |
+| [DROP TABLE](#drop-table)                      | Remove data from metastore leaving Delta table files on filesystem untouched.           |
+| [SQL SELECT](#select-query)                    | Support both streaming and batch mode.                                                  |
+| [SQL INSERT](#insert-query)                    | Support both streaming and batch mode.                                                  |
 
-### Creating and Using Delta Catalog
+### Delta Catalog
 The Delta catalog is meant to be a source of truth regarding Delta tables in Flink's SQL API.
 That is why it is required by user to use Delta Catalog for eny interaction with Delta table using Flink SQL query.
 Such SQL query will fail if used without Delta catalog properly configured for given SQL session.
@@ -346,30 +346,55 @@ implementation. The simplified architecture is presented on the below picture.
 ![catalogArch](doc/CatalogDelegation.png)
 
 For Delta tables, all metastore actions will be delegated to decorated catalog.
-However, only minimum information such as database/table name, connector type and filesystem path to the delta table will be stored in the metastore.
+However, only minimum information such as database/table name, connector type and delta table file path will be stored in the metastore.
 For Delta tables no information about table properties or schema will be stored in the metastore.
 Delta Catalog will store those in `_delta_log`
 
-The For none Delta tables, Delta catalog acts as a simple proxy and fully redirects every method call to decorated catalog. 
+For none Delta tables, Delta catalog acts as a simple proxy and fully redirects every method call to decorated catalog. 
 
-#### Catalog Configuration
-A catalog is created and named by executing the following query. Replace `<catalog_name>` with your catalog's name.
-Replace `<decorated-catalog>` with Catalog implementation type that should be used as decorated catalog.
-Currently `in-mmemory` (default) and `hive` types are supported. The `<config_key> = <config_value>` are specific
-for chosen decorated catalog.
+#### Delta Catalog Configuration
+A catalog is created and named by executing the following query.
 ```roomsql
 CREATE CATALOG <catalog_name> WITH (
   'type' = 'delta-catalog',
   'catalog-type' = '<decorated-catalog>',
    '<config_key>' = '<config_value>'
 );
+USE CATALOG <catalog_name>;
 ```
+Replace `<catalog_name>` with your catalog's name.
+Replace `<decorated-catalog>` with Catalog implementation type that should be used as decorated catalog.
+Currently `in-mmemory` (default) and `hive` types are supported. The `<config_key> = <config_value>` are specific
+for chosen decorated catalog.
 
-The following properties can be set globally and are not limited to a specific catalog implementation:
+The following properties can be set:
 + `type` - must be `delta-catalog`. This option is required by Flink.
 + `catalog-type` - an optional option that allows to specify type of decorated catalog. Allowed options are:
   + `in-memory`- a default value if no other specified. Will use Flink's In-Memory catalog as decorated catalog. 
   + `hive` - Use Flink's Hive catalog as decorated catalog.
+
+Any extra defined property will be passed to the decorated catalog. For example, in order to create
+Delta catalog backed by Hive catalog and use Hive's catalog hadoop-conf-dir option call below query:
+```roomsql
+CREATE CATALOG <catalog_name> WITH (
+  'type' = 'delta-catalog',
+  'catalog-type' = 'hive',
+  'hadoop-conf-dir' = 'some-path'
+);
+USE CATALOG <catalog_name>;
+```
+
+#### Delta Catalog Table Cache
+Delta catalog for interactions with _delta_log has to compute table snapshot.
+Creating a Delta table snapshot, depends on the table size can be an expressive and long operation.
+Instead, recomputing snapshot for every operation, Delta catalog instance maintain a Table cache with key
+equals to `database.table` name. The cache entry is loaded for the first query (for example `CREATE TABLE`).
+The cache has default size of '100'. This means that cache will keep up to 100 table references. No other eviction policy is currently implemented.
+When cache reaches its maximum size, the lest recently used entry will be replaced (LRU eviction policy).
+
+in order to change cache max size add `deltaCatalogTableCacheSize` property to Flink's cluster hadoop configuration.
+Please note that this configuration will have a global effect, for evey Delta catalog instance running on given Flink cluster.
+See [Hadoop Configuration](#hadoop-configuration) section for details.
 
 ### DDL commands
 #### CREATE DATABASE
@@ -511,6 +536,40 @@ SELECT col1, col2, col3 FROM testTable;
 
 For more details look at [Flink SELECT documentation](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/queries/select/).
 #### INSERT query
+To append new data to a table with a Flink job, use INSERT INTO.
+
+Inserts three rows into Delta table called `sintTable` and stops.
+```roomsql
+INSERT INTO sinkTable VALUES
+            ('a', 'b', 1),
+            ('c', 'd', 2),
+            ('e', 'f', 3);
+```
+
+Inserts entire content of table called `sourceTable` into Delta table `sinkTable` and stop. The table schema's must match.
+```roomsql
+INSERT INTO sinkTable SELECT * FROM sourceTable;
+```
+
+Inserts entire data from `sourceTable` into Delta table `sinkTable` under static partition `region = europe` and stops. 
+```roomsql
+INSERT INTO sinkTable PARTITION (region='europe') SELECT * FROM sourceTable;
+```
+
+Creates a continuous query that will insert entire content of table called `sourceTable` into Delta table `sinkTable` and will continuously monitor `sourceTable` for new data.
+```roomsql
+INSERT INTO sinkTable SELECT * FROM sourceTable /*+ OPTIONS('mode' = 'streaming') */;
+```
+
+### Hadoop Configuration
+Delta Connector will resolve Flink cluster Hadoop configuration in order to pass properties such as
+Delta log store properties or Delta Catalog cache size.
+
+For SQL jobs, Delta connector will resolve Flink cluster hadoop configuration in below order:
++ `HADOOP_HOME` environment  variable,
++ hdfs-default.xml pointed by deprecated flink config option `fs.hdfs.hdfsdefault` (deprecated),
++ `HADOOP_CONF_DIR` environment variable,
++ properties from Flink cluster config prefixed with `flink.hadoop`.
 
 ### SQL API Limitations
 The Delta connector currently supports only [Physical columns.](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/create/#columns:~:text=Physical%20/%20Regular%20Columns)

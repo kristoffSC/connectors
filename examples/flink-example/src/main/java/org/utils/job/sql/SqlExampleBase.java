@@ -14,7 +14,7 @@ public abstract class SqlExampleBase {
         StreamTableEnvironment tableEnv
     ) throws Exception;
 
-    protected StreamExecutionEnvironment createTestStreamEnv(boolean isStreaming) {
+    public static StreamExecutionEnvironment createTestStreamEnv(boolean isStreaming) {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setRestartStrategy(RestartStrategies.noRestart());
 
@@ -28,13 +28,13 @@ public abstract class SqlExampleBase {
         return env;
     }
 
-    protected StreamTableEnvironment createTableStreamingEnv(boolean isStreaming) {
+    public static StreamTableEnvironment createTableStreamingEnv(boolean isStreaming) {
         return StreamTableEnvironment.create(
             createTestStreamEnv(isStreaming)
         );
     }
 
-    protected StreamTableEnvironment createTableStreamingEnv(StreamExecutionEnvironment env) {
+    public static StreamTableEnvironment createTableStreamingEnv(StreamExecutionEnvironment env) {
         return StreamTableEnvironment.create(env);
     }
 }
