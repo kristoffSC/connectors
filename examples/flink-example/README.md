@@ -132,8 +132,8 @@ NOTE: there is no need to manually delete previous data to run the example job a
 
 # Run an example on a local Flink cluster
 ## Setup 
-1. Setup Flink cluster on your local machine by following the instructions provided [here](https://nightlies.apache.org/flink/flink-docs-release-1.13/try-flink/local_installation.html) (note: link redirects to Flink 1.13 release so be aware to choose your desired release).
-2. Go to the examples directory in order to package the jar
+1. Setup Flink cluster on your local machine by following the instructions provided [here](https://nightlies.apache.org/flink/flink-docs-release-1.16/try-flink/local_installation.html) (note: link redirects to Flink 1.16 release so be aware to choose your desired release).
+2. Go to the `examples` directory in order to package the jar
 ```shell
 > cd examples/flink-example/
 > mvn -P cluster clean package -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
@@ -154,7 +154,7 @@ Before running cluster examples for Delta Source, you need to manually copy Delt
 to `/tmp/delta-flink-example/source_table`.
 
 ## Verify
-### Dela Sink
+### Delta Sink
 Go the http://localhost:8081 on your browser where you should find Flink UI and you will be able to inspect your running job.
 You can also look for the written files under `/tmp/delta-flink-example/<UUID>` directory.
 ![flink job ui](src/main/resources/assets/images/flink-cluster-job.png)
@@ -165,7 +165,87 @@ You can also look at Task Manager logs for `ConsoleSink` output.
 ![flink job ui](src/main/resources/assets/images/source-pipeline.png)
 ![flink job logs](src/main/resources/assets/images/source-pipeline-logs.png)
 
-### Cleaning up
+# Running cluster examples using AWS S3 and GCP Object Store.
+Below instructions are for running Flink jobs that are meant to be run on a real Flink cluster
+and interact with AWS S3 and GCP Object Store services for reading/writing Delta tables.
+
+The Java classes containing Flink Jobs for this example are placed under `org.example.cluster` package.
+Instructions here does not cover S3 and GCP Object store configuration. From Flink point of view,
+respective buckets have to be created with roles/access keys allowing for uploading new files and reading them back.
+
+We will use environment variable to configure S3 and GCP object store access.
+For details please see Flink [S3](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/filesystems/s3/#configure-access-credentials)
+and [GCP](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/filesystems/gcs/#authentication-to-access-gcs) documentation.
+
+Environment variables for AWS:
+- `AWS_REGION` - whatever region since S3 are global and not region specific.
+- `AWS_ACCESS_KEY_ID` - contains AWS access key value that has to be extracted from AWS console
+- `AWS_SECRET_ACCESS` - contains AWS secret access key value that has to be extracted from AWS console
+
+Environment variables for GCP:
+- `GOOGLE_APPLICATION_CREDENTIALS` - path to GCP JSON credential file. The file has to be generated for service account with privileges
+  to Object Store bucket used in tests. 
+
+## Setup
+1. Setup Flink cluster on your local machine by following the instructions provided [here](https://nightlies.apache.org/flink/flink-docs-release-1.16/try-flink/local_installation.html)
+   (note: link redirects to Flink 1.16 release so be aware to choose your desired release).
+2. Add S3 hadoop and plugins to Flink cluster following Flink documentation:
+   1. flink-s3-fs-hadoop plugin -> [here](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/filesystems/s3/#hadooppresto-s3-file-systems-plugins)
+   2. flink-gs-fs-hadoop-1.16.0.jar plugin -> [here](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/filesystems/gcs/#gcs-file-system-plugin)
+3. create `hdfs-site.xml` file with below content:
+  ```xml
+   <?xml version="1.0"?>
+   <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+      <configuration>
+         <property>
+            <name>fs.gs.impl</name>
+            <value>com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem</value>
+         </property>
+      </configuration>
+  ```
+   If you already have hadoop configuration files on your system, add `fs.gs.impl` property to it.
+   This is needed for GCP Object Store interactions.
+4. Go to the example's directory in order to package the jar
+```shell
+> cd examples/flink-example/
+> mvn clean package -P cluster-aws -f cluster-cloud-pom.xml -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
+```
+After that you should find the packaged fat-jar under path: `<connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar`
+5. Set environment variables. Please note that below example sets environment variables per bash session.
+   Those must be set for terminal console from where Flink cluster will be started and from Flink job will be submitted.
+
+   Environment variables to set:
+   ```shell
+   export AWS_REGION=us-east-1 (you can set any you whish)
+   export AWS_ACCESS_KEY_ID=<your-key>
+   export AWS_SECRET_ACCESS_KEY=<your-secret-key>
+   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/gcp-secret.json
+   export HADOOP_CONF_DIR=/path/to/folder/with/hadoop-configuration (this folder should contain file with property added in step #3)
+    ```
+7. Assuming you've downloaded and extracted Flink binaries from step 1 to the directory `<local-flink-cluster-dir>` run:
+```shell
+> cd <local-flink-cluster-dir>
+> ./bin/start-cluster.sh
+> ./bin/flink run -c org.example.cluster.<flink-job-class> <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -tablePath <path-to-cloud-storage>
+```
+The example above will submit Flink example job.
+
+## Test jobs
+Test SQL jobs using S3/Object Store are located under `org.example.cluster` package.
+The jos are:
+- `SinkBatchSqlClusterJob` - writes Delta table in batch mode.
+- `SourceBatchSqlClusterJob` - reads Delta table in batch mode and print its content in logs.
+- `SourceBatchSqlCountJob` - reds all records from Delta table and count them.
+- `StreamingApiSourceToTableDeltaSinkJob` - writes Delta table in streaming mode. Job will write 5 records for every Flink checkpoint, lasting 25 checkpoints in total. The result table should have 125 records.
+
+Additional job:
+- `SourceBatchClusterJob` Streaming API batch job that will read records from Delta table.
+- `SinkBatchClusterJob` Streaming API job that will write 100 rows into Delta table.
+
+## Test job verification
+Details about test job verification are presented [here](doc/TEST_JOB_VERIFICATION.md)
+
+# Cleaning up after running jobs on real cluster
 1. You cancel your job from the UI after you've verified your test. 
 2. To shut down the cluster go back to the command line and run 
 ```shell
