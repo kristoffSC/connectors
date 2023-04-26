@@ -11,7 +11,7 @@ import org.example.cluster.utils.JobClusterUtils;
 public class SinkBatchSqlHiveJob {
 
     // Program arg be like:
-    // -tablePath delta/table; -sinkTableName tableName; -hiveConfDir /path/to/dir/
+    // -tablePath delta/table -sinkTableName tableName -hiveConfDir /path/to/dir/
     public static void main(String[] args) throws Exception {
 
         ParameterTool parameter = ParameterTool.fromArgs(args);

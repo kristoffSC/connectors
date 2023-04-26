@@ -24,7 +24,7 @@ public class SourceBatchSqlHiveJob {
     ));
 
     // Program arg be like:
-    // -sourceTableName aTable; -hiveConfDir /path/to/hive/conf/dir/
+    // -sourceTableName aTable -hiveConfDir /path/to/hive/conf/dir/
     public static void main(String[] args) throws Exception {
 
         ParameterTool parameter = ParameterTool.fromArgs(args);

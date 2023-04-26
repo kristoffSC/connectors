@@ -230,7 +230,7 @@ After that you should find the packaged fat-jar under path: `<connectors-repo-lo
 ```shell
 > cd <local-flink-cluster-dir>
 > ./bin/start-cluster.sh
-> ./bin/flink run -c org.example.cluster.<flink-job-class> <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -tablePath <path-to-cloud-storage>
+> ./bin/flink run -c org.example.cluster.<flink-job-class> <connectors-repo-local-dir>/examples/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -tablePath <path-to-cloud-storage>
 ```
 The example above will submit Flink example job.
 
@@ -289,7 +289,7 @@ and copy it into `/lib/` directory in Flink distribution downloaded in step 1
 change `hive-metastore` in `core-site.xml` file created in step 11 to match ip address of your hive metastore service.
 However, if you would like to use a docker-compose setup to run hive-metastore service run:
 ```shell
-  docker compose -f C:\GID\Dev\FlinkDeltaDemo\docker-compose.yml up -d`
+  docker compose -f <connectors-repo-local-dir>/examples/flink-example/hive/hive-docker-compose.yml up -d
 ```
 For details how to set up docker and docker-compose please visit [docker documentation page](https://docs.docker.com/compose/gettingstarted/)
 Please not, that state of hive-metastore will be lost after shutting down the containers. 
@@ -302,22 +302,48 @@ Please not, that state of hive-metastore will be lost after shutting down the co
 13. Next for:
     1. `SinkBatchSqlHiveJob` run:
       ```shell
-      > ./bin/flink run -c org.example.cluster.hive.SinkBatchSqlHiveJob <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -tablePath <path-to-cloud-storage>; -sinkTableName testTable; -hiveConfDir /path/to/core-site.xml/from/step/10
+      > ./bin/flink run -c org.example.cluster.hive.SinkBatchSqlHiveJob <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -tablePath <path-to-cloud-storage> -sinkTableName testTable -hiveConfDir /path/to/core-site.xml/from/step/10
       ```
     2. `SourceBatchSqlHiveJob` run:
     ```shell
-    > ./bin/flink run -c org.example.cluster.hive.SourceBatchSqlHiveJob <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -sourceTableName <name-used-for-sinkTableName-in-SinkBatchSqlHiveJob>; -hiveConfDir /path/to/core-site.xml/from/step/10
+    > ./bin/flink run -c org.example.cluster.hive.SourceBatchSqlHiveJob <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -sourceTableName <name-used-for-sinkTableName-in-SinkBatchSqlHiveJob> -hiveConfDir /path/to/core-site.xml/from/step/10
     ```
     
 The example above will submit Flink example job.
 
+It is expected that job submission will throw an exception:
+```shell
+2023-04-26 18:24:45,247 WARN  org.apache.hadoop.util.ShutdownHookManager                   [] - ShutdownHook 'ClientFinalizer' failed, java.util.concurrent.ExecutionException: java.lang.NoClassDefFoundError: com/amazonaws/thirdparty/apache/http/impl/conn/PoolingHttpClientConnectionManager$2
+java.util.concurrent.ExecutionException: java.lang.NoClassDefFoundError: com/amazonaws/thirdparty/apache/http/impl/conn/PoolingHttpClientConnectionManager$2
+        at java.util.concurrent.FutureTask.report(FutureTask.java:122) ~[?:1.8.0_322]
+        at java.util.concurrent.FutureTask.get(FutureTask.java:206) ~[?:1.8.0_322]
+        at org.apache.hadoop.util.ShutdownHookManager.executeShutdown(ShutdownHookManager.java:124) [hadoop-common-3.3.2.jar:?]
+        at org.apache.hadoop.util.ShutdownHookManager$1.run(ShutdownHookManager.java:95) [hadoop-common-3.3.2.jar:?]
+Caused by: java.lang.NoClassDefFoundError: com/amazonaws/thirdparty/apache/http/impl/conn/PoolingHttpClientConnectionManager$2
+        at com.amazonaws.thirdparty.apache.http.impl.conn.PoolingHttpClientConnectionManager.shutdown(PoolingHttpClientConnectionManager.java:413) ~[?:?]
+        at com.amazonaws.http.AmazonHttpClient.shutdown(AmazonHttpClient.java:453) ~[?:?]
+        at com.amazonaws.AmazonWebServiceClient.shutdown(AmazonWebServiceClient.java:560) ~[?:?]
+        at com.amazonaws.services.s3.transfer.TransferManager.shutdownNow(TransferManager.java:2034) ~[?:?]
+        at org.apache.hadoop.fs.s3a.S3AFileSystem.stopAllServices(S3AFileSystem.java:4092) ~[?:?]
+```
+
+This exception has no effect on job execution.
+
 ### Test job verification
 Verification of job status and logs is similar to verification steps for `SinkBatchSqlClusterJob` and `SourceBatchSqlClusterJob` jobs described [here](doc/TEST_JOB_VERIFICATION.md). 
 
+Additionally, hive-metastore verification can be done using `beeline` hive client.
+In attached screen, w can see an output of `show tables` command where we can see a metastore entry created for Delta table
+from `SinkBatchSqlHiveJob`.
+![beeline](doc/BeelineHive_1.PNG)
 
 # Cleaning up after running jobs on real cluster
 1. You cancel your job from the UI after you've verified your test. 
 2. To shut down the cluster go back to the command line and run 
 ```shell
 > ./bin/stop-cluster.sh
+```
+3. To shut down hive-metastore call:
+```shell
+  docker-compose -f <connectors-repo-local-dir>/examples/flink-example/hive/hive-docker-compose.yml down
 ```
