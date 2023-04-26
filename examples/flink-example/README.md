@@ -139,6 +139,7 @@ NOTE: there is no need to manually delete previous data to run the example job a
 > mvn -P cluster clean package -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
 ```
 After that you should find the packaged fat-jar under path: `<connectors-repo-local-dir>/flink-example/target/flink-example-<version>-jar-with-dependencies.jar`
+
 3. Assuming you've downloaded and extracted Flink binaries from step 1 to the directory `<local-flink-cluster-dir>` run:
 ```shell
 > cd <local-flink-cluster-dir>
@@ -186,7 +187,8 @@ Environment variables for GCP:
 - `GOOGLE_APPLICATION_CREDENTIALS` - path to GCP JSON credential file. The file has to be generated for service account with privileges
   to Object Store bucket used in tests. 
 
-## Setup
+## Testing with In-memory metastore
+### Setup
 1. Setup Flink cluster on your local machine by following the instructions provided [here](https://nightlies.apache.org/flink/flink-docs-release-1.16/try-flink/local_installation.html)
    (note: link redirects to Flink 1.16 release so be aware to choose your desired release).
 2. Add S3 hadoop and plugins to Flink cluster following Flink documentation:
@@ -194,7 +196,7 @@ Environment variables for GCP:
    2. flink-gs-fs-hadoop-1.16.0.jar plugin -> [here](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/filesystems/gcs/#gcs-file-system-plugin)
 3. create `hdfs-site.xml` file with below content:
   ```xml
-   <?xml version="1.0"?>
+   <?xml version="1.0"?>  
    <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
       <configuration>
          <property>
@@ -205,12 +207,14 @@ Environment variables for GCP:
   ```
    If you already have hadoop configuration files on your system, add `fs.gs.impl` property to it.
    This is needed for GCP Object Store interactions.
+
 4. Go to the example's directory in order to package the jar
 ```shell
 > cd examples/flink-example/
 > mvn clean package -P cluster-aws -f cluster-cloud-pom.xml -Dstaging.repo.url={maven_repo} -Dconnectors.version={version}
 ```
 After that you should find the packaged fat-jar under path: `<connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar`
+
 5. Set environment variables. Please note that below example sets environment variables per bash session.
    Those must be set for terminal console from where Flink cluster will be started and from Flink job will be submitted.
 
@@ -221,8 +225,8 @@ After that you should find the packaged fat-jar under path: `<connectors-repo-lo
    export AWS_SECRET_ACCESS_KEY=<your-secret-key>
    export GOOGLE_APPLICATION_CREDENTIALS=/path/to/gcp-secret.json
    export HADOOP_CONF_DIR=/path/to/folder/with/hadoop-configuration (this folder should contain file with property added in step #3)
-    ```
-7. Assuming you've downloaded and extracted Flink binaries from step 1 to the directory `<local-flink-cluster-dir>` run:
+   ```
+6. Assuming you've downloaded and extracted Flink binaries from step 1 to the directory `<local-flink-cluster-dir>` run:
 ```shell
 > cd <local-flink-cluster-dir>
 > ./bin/start-cluster.sh
@@ -230,7 +234,7 @@ After that you should find the packaged fat-jar under path: `<connectors-repo-lo
 ```
 The example above will submit Flink example job.
 
-## Test jobs
+### Test jobs
 Test SQL jobs using S3/Object Store are located under `org.example.cluster` package.
 The jos are:
 - `SinkBatchSqlClusterJob` - writes Delta table in batch mode.
@@ -242,8 +246,74 @@ Additional job:
 - `SourceBatchClusterJob` Streaming API batch job that will read records from Delta table.
 - `SinkBatchClusterJob` Streaming API job that will write 100 rows into Delta table.
 
-## Test job verification
+### Test job verification
 Details about test job verification are presented [here](doc/TEST_JOB_VERIFICATION.md)
+
+## Testing with Hive metastore
+The examples presented in previous chapter are set up to work with Delta Catalog in `in-memory` mode.
+
+### Test jobs
+Test SQL jobs using S3/Object Store and expect to work with Delta Catalog with `hive` mode 
+are located under `org.example.cluster.hive` package.
+The jos are:
+- `SinkBatchSqlHiveJob` writes Delta table in batch mode. Will create a Delta table entry in hive metastore if it doesn't exist already. 
+- `SourceBatchSqlHiveJob` reads Delta table in batch mode and print its content in logs. Will not create metastore entry for queried table. Should use information from Delta Catalog. 
+
+### Setup
+Repeat steps 1 - 5 from [Testing with In-memory metastore#Setup](testing-with-in-memory-metastore#setup) 
+
+6. download and extract [hadoop-3.3.2](https://archive.apache.org/dist/hadoop/common/hadoop-3.3.2/hadoop-3.3.2.tar.gz)
+7. set HADOOP_HOME environment variable to point to extracted hadoop-3.3.2.
+```shell
+  export HADOOP_HOME=/path/to/extracted/hadoop-3.3.2
+```
+8. set HADOOP_CLASSPATH environment variable:
+```shell
+  export HADOOP_CLASSPATH=`hadoop classpath`
+```
+
+9. download [flink-sql-connector-hive-2.3.9.jar](https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-hive-2.3.9_2.12/1.16.0/flink-sql-connector-hive-2.3.9_2.12-1.16.0.jar)
+and copy it into `/lib/` directory in Flink distribution downloaded in step 1
+
+10. create `core-site.xml` file with below content:
+  ```xml
+      <configuration>
+         <property>
+            <name>hive.metastore.uris</name>
+            <value>thrift://hive-metastore:9083</value>
+            <description>IP address (or fully-qualified domain name) and port of the metastore host</description>
+         </property>
+      </configuration>
+  ```
+11. If you have your own hive-metastore service running, this step is not required. In this case please
+change `hive-metastore` in `core-site.xml` file created in step 11 to match ip address of your hive metastore service.
+However, if you would like to use a docker-compose setup to run hive-metastore service run:
+```shell
+  docker compose -f C:\GID\Dev\FlinkDeltaDemo\docker-compose.yml up -d`
+```
+For details how to set up docker and docker-compose please visit [docker documentation page](https://docs.docker.com/compose/gettingstarted/)
+Please not, that state of hive-metastore will be lost after shutting down the containers. 
+
+12. Assuming you've downloaded and extracted Flink binaries from step 1 to the directory `<local-flink-cluster-dir>` run:
+   ```shell
+         > cd <local-flink-cluster-dir>
+         > ./bin/start-cluster.sh
+   ```
+13. Next for:
+    1. `SinkBatchSqlHiveJob` run:
+      ```shell
+      > ./bin/flink run -c org.example.cluster.hive.SinkBatchSqlHiveJob <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -tablePath <path-to-cloud-storage>; -sinkTableName testTable; -hiveConfDir /path/to/core-site.xml/from/step/10
+      ```
+    2. `SourceBatchSqlHiveJob` run:
+    ```shell
+    > ./bin/flink run -c org.example.cluster.hive.SourceBatchSqlHiveJob <connectors-repo-local-dir>/flink-example/target/flink-cluster-cloud-example-<version>-jar-with-dependencies.jar -sourceTableName <name-used-for-sinkTableName-in-SinkBatchSqlHiveJob>; -hiveConfDir /path/to/core-site.xml/from/step/10
+    ```
+    
+The example above will submit Flink example job.
+
+### Test job verification
+Verification of job status and logs is similar to verification steps for `SinkBatchSqlClusterJob` and `SourceBatchSqlClusterJob` jobs described [here](doc/TEST_JOB_VERIFICATION.md). 
+
 
 # Cleaning up after running jobs on real cluster
 1. You cancel your job from the UI after you've verified your test. 
