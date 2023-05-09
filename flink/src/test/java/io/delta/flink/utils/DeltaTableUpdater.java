@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.delta.flink.utils.TestDescriptor.Descriptor;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.api.common.serialization.BulkWriter;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.core.fs.Path;
@@ -37,6 +38,10 @@ public class DeltaTableUpdater {
 
     public DeltaTableUpdater(String deltaTablePath) {
         this.deltaTablePath = deltaTablePath;
+    }
+
+    public DeltaTableUpdater(TableInfo nonPartitionedTable) {
+        this(nonPartitionedTable.getTablePath());
     }
 
     /**

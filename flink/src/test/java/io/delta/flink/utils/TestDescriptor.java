@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.types.Row;
 
@@ -32,6 +33,10 @@ public class TestDescriptor {
     public TestDescriptor(String tablePath, int initialDataSize) {
         this.tablePath = tablePath;
         this.initialDataSize = initialDataSize;
+    }
+
+    public TestDescriptor(TableInfo partitionedTable) {
+        this(partitionedTable.getTablePath(), partitionedTable.getInitialRecordCount());
     }
 
     /**

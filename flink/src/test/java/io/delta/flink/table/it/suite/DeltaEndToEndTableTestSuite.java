@@ -8,7 +8,9 @@ import java.util.concurrent.TimeUnit;
 
 import io.delta.flink.utils.CheckpointCountingSource;
 import io.delta.flink.utils.CheckpointCountingSource.RowProducer;
-import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.resources.LargeNonPartitionedTableInfo;
+import io.delta.flink.utils.resources.SqlTableInfo;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -34,14 +36,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildClusterResourceConfig;
 import static io.delta.flink.utils.DeltaTestUtils.getTestStreamEnv;
 import static io.delta.flink.utils.DeltaTestUtils.verifyDeltaTable;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public abstract class DeltaEndToEndTableTestSuite {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DeltaEndToEndTableTestSuite.class);
 
     private static final int PARALLELISM = 2;
 
@@ -53,6 +57,8 @@ public abstract class DeltaEndToEndTableTestSuite {
     private static final MiniClusterExtension miniClusterResource =  new MiniClusterExtension(
         buildClusterResourceConfig(PARALLELISM)
     );
+
+    private SqlTableInfo sourceTable;
 
     private String sinkTablePath;
 
@@ -69,29 +75,25 @@ public abstract class DeltaEndToEndTableTestSuite {
     @BeforeEach
     public void setUp() {
 
-        // Schema for this table has only
-        // {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
-        // {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_TYPES} columns.
-        // Column types are long, long, String
-        String nonPartitionedLargeTablePath;
         try {
-            nonPartitionedLargeTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+            sourceTable = LargeNonPartitionedTableInfo.create(TEMPORARY_FOLDER);
             sinkTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-            DeltaTestUtils.initTestForNonPartitionedLargeTable(nonPartitionedLargeTablePath);
-            assertThat(sinkTablePath).isNotEqualToIgnoringCase(nonPartitionedLargeTablePath);
+            assertThat(sinkTablePath)
+                .isNotEqualToIgnoringCase(sourceTable.getTablePath());
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
 
         sourceTableDdl = String.format("CREATE TABLE sourceTable ("
-                + "col1 BIGINT,"
-                + "col2 BIGINT,"
-                + "col3 VARCHAR"
+                + "%s"
                 + ") WITH ("
                 + " 'connector' = 'delta',"
                 + " 'table-path' = '%s'"
                 + ")",
-            nonPartitionedLargeTablePath);
+            sourceTable.getSqlTableSchema(),
+            sourceTable.getTablePath());
+
+        LOG.info("Source Table DDL: " + sinkTablePath);
     }
 
     @Test
@@ -171,8 +173,7 @@ public abstract class DeltaEndToEndTableTestSuite {
         tableEnv.executeSql(this.sourceTableDdl).await(10, TimeUnit.SECONDS);
         tableEnv.executeSql(sinkTableDdl).await(10, TimeUnit.SECONDS);
 
-        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
-        verifyDeltaTable(this.sinkTablePath, rowType, 1100);
+        verifyDeltaTable(new ExpectedTable(this.sinkTablePath, sourceTable.getRowType(), 1100));
 
         // Execute SELECT on sink table and validate TableResult.
         TableResult tableResult = tableEnv.executeSql("SELECT * FROM sinkTable");
@@ -237,8 +238,7 @@ public abstract class DeltaEndToEndTableTestSuite {
 
         tableEnv.executeSql(selectToInsertSql).await(10, TimeUnit.SECONDS);
 
-        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
-        verifyDeltaTable(this.sinkTablePath, rowType, 1100);
+        verifyDeltaTable(new ExpectedTable(this.sinkTablePath, sourceTable.getRowType(), 1100));
     }
 
     private List<Row> readRowsFromQuery(TableResult tableResult, int expectedRowsCount)
@@ -324,4 +324,58 @@ public abstract class DeltaEndToEndTableTestSuite {
     }
 
     public abstract void setupDeltaCatalog(TableEnvironment tableEnv);
+
+    private static class ExpectedTable implements TableInfo {
+
+        private final String tablePath;
+
+        private final RowType rowType;
+
+        private final int recordCount;
+
+        private ExpectedTable(
+                String tablePath,
+                RowType rowtype,
+                int recordCount) {
+            this.tablePath = tablePath;
+            this.rowType = rowtype;
+            this.recordCount = recordCount;
+        }
+
+        @Override
+        public String getTablePath() {
+            return tablePath;
+        }
+
+        @Override
+        public String getPartitions() {
+            return "";
+        }
+
+        @Override
+        public String getTableInitStatePath() {
+            return "";
+        }
+
+        @Override
+        public String[] getDataColumnNames() {
+            return rowType.getFieldNames().toArray(new String[0]);
+        }
+
+        @Override
+        public LogicalType[] getDataColumnTypes() {
+            return rowType.getFields().stream().map(RowField::getType).toArray(LogicalType[]::new);
+        }
+
+        @Override
+        public int getInitialRecordCount() {
+            return recordCount;
+        }
+
+        @Override
+        public RowType getRowType() {
+            return rowType;
+        }
+    }
+
 }

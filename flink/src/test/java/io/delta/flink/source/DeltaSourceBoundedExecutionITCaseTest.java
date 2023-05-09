@@ -15,6 +15,7 @@ import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.TestDescriptor;
 import io.delta.flink.utils.TestDescriptor.Descriptor;
+import io.delta.flink.utils.resources.TableInfo;
 import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
@@ -38,7 +39,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -75,9 +75,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     public void shouldReadDeltaTableUsingDeltaLogSchema(FailoverType failoverType)
             throws Exception {
         DeltaSource<RowData> deltaSource =
-            initSourceAllColumns(nonPartitionedLargeTablePath);
+            initSourceAllColumns(largeNonPartitionedTable.getTablePath());
 
-        shouldReadDeltaTable(deltaSource, failoverType);
+        shouldReadDeltaTable(deltaSource, failoverType, largeNonPartitionedTable);
     }
 
     @ParameterizedRepeatedIfExceptionsTest(
@@ -91,9 +91,12 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
     public void shouldReadDeltaTableUsingUserSchema(FailoverType failoverType) throws Exception {
 
         DeltaSource<RowData> deltaSource =
-            initSourceForColumns(nonPartitionedLargeTablePath, new String[] {"col1", "col2"});
+            initSourceForColumns(
+                largeNonPartitionedTable.getTablePath(),
+                new String[] {"col1", "col2"}
+            );
 
-        shouldReadDeltaTable(deltaSource, failoverType);
+        shouldReadDeltaTable(deltaSource, failoverType, largeNonPartitionedTable);
     }
 
     /**
@@ -129,15 +132,19 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
         // Create a Delta source instance. In this step, builder discovered Delta table schema
         // and create Table format based on this schema acquired from snapshot.
-        DeltaSource<RowData> source = initSourceAllColumns(nonPartitionedTablePath);
+        DeltaSource<RowData> source = initSourceAllColumns(nonPartitionedTable.getTablePath());
 
         // Updating table with new data, changing head  Snapshot version.
         Descriptor update = new Descriptor(
-            RowType.of(true, DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
+            RowType.of(
+                true, // nullable = true;
+                nonPartitionedTable.getDataColumnTypes(),
+                nonPartitionedTable.getDataColumnNames()
+            ),
             Collections.singletonList(Row.of("John-K", "Wick-P", 1410))
         );
 
-        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTablePath);
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTable.getTablePath());
         tableUpdater.writeToTable(update);
 
         // Starting pipeline and reading the data. Source should read Snapshot version used for
@@ -145,7 +152,7 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         List<RowData> rowData = testBoundedDeltaSource(source);
 
         // We are expecting to read version 0, before table update.
-        assertThat(rowData.size(), equalTo(SMALL_TABLE_COUNT));
+        assertThat(rowData.size(), equalTo(nonPartitionedTable.getInitialRecordCount()));
     }
 
     /**
@@ -333,12 +340,16 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
 
     private void shouldReadDeltaTable(
             DeltaSource<RowData> deltaSource,
-            FailoverType failoverType) throws Exception {
+            FailoverType failoverType,
+            TableInfo tableInfo) throws Exception {
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
         // FailoverType.NONE.
+        // The tableInfo.getInitialRecordCount(); cannot be passed directly to FailCheck lambda
+        // since TableInfo is not serializable.
+        int recordCount = tableInfo.getInitialRecordCount();
         List<RowData> resultData = testBoundedDeltaSource(failoverType, deltaSource,
-            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
+            (FailCheck) readRows -> readRows == recordCount / 2);
 
         Set<Long> actualValues =
             resultData.stream().map(row -> row.getLong(0)).collect(Collectors.toSet());
@@ -346,9 +357,9 @@ public class DeltaSourceBoundedExecutionITCaseTest extends DeltaSourceITBase {
         // THEN
         assertThat("Source read different number of rows that Delta table have.",
             resultData.size(),
-            equalTo(LARGE_TABLE_RECORD_COUNT));
+            equalTo(recordCount));
         assertThat("Source Must Have produced some duplicates.", actualValues.size(),
-            equalTo(LARGE_TABLE_RECORD_COUNT));
+            equalTo(recordCount));
     }
 
     /**

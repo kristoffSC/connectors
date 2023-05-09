@@ -15,6 +15,10 @@ import io.delta.flink.utils.FailoverType;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.TableUpdateDescriptor;
 import io.delta.flink.utils.TestDescriptor;
+import io.delta.flink.utils.resources.AllTypesNonPartitionedTableInfo;
+import io.delta.flink.utils.resources.LargeNonPartitionedTableInfo;
+import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.TableInfo;
 import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
@@ -37,18 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static io.delta.flink.utils.DeltaTestUtils.verifyDeltaTable;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.ALL_DATA_TABLE_COLUMN_NAMES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.ALL_DATA_TABLE_COLUMN_TYPES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.ALL_DATA_TABLE_RECORD_COUNT;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.DATA_COLUMN_NAMES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.DATA_COLUMN_TYPES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_NAMES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_ALL_COLUMN_TYPES;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.LARGE_TABLE_RECORD_COUNT;
-import static io.delta.flink.utils.ExecutionITCaseTestConstants.SMALL_TABLE_COUNT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.core.IsNot.not;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import io.delta.standalone.Snapshot;
@@ -66,8 +60,6 @@ public class DeltaEndToEndExecutionITCaseTest {
 
     private final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
-    private String sourceTablePath;
-
     private String sinkTablePath;
 
     @BeforeAll
@@ -84,10 +76,7 @@ public class DeltaEndToEndExecutionITCaseTest {
     public void setUp() {
         try {
             miniClusterResource.before();
-
-            sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
             sinkTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
@@ -105,12 +94,12 @@ public class DeltaEndToEndExecutionITCaseTest {
     )
     @EnumSource(FailoverType.class)
     public void testEndToEndBoundedStream(FailoverType failoverType) throws Exception {
-        DeltaTestUtils.initTestForNonPartitionedLargeTable(sourceTablePath);
+        TableInfo sourceTableInfo = LargeNonPartitionedTableInfo.create(TMP_FOLDER);
 
         // Making sure that we are using path with schema to file system "file://"
         Configuration hadoopConfiguration = DeltaTestUtils.getConfigurationWithMockFs();
 
-        Path sourceTablePath = Path.fromLocalFile(new File(this.sourceTablePath));
+        Path sourceTablePath = Path.fromLocalFile(new File(sourceTableInfo.getTablePath()));
         Path sinkTablePath = Path.fromLocalFile(new File(this.sinkTablePath));
 
         assertThat(sinkTablePath.toUri().getScheme(), equalTo("file"));
@@ -122,7 +111,7 @@ public class DeltaEndToEndExecutionITCaseTest {
             )
             .build();
 
-        RowType rowType = RowType.of(LARGE_TABLE_ALL_COLUMN_TYPES, LARGE_TABLE_ALL_COLUMN_NAMES);
+        RowType rowType = sourceTableInfo.getRowType();
         DeltaSinkInternal<RowData> deltaSink = DeltaSink.forRowData(
                 sinkTablePath,
                 hadoopConfiguration,
@@ -138,14 +127,17 @@ public class DeltaEndToEndExecutionITCaseTest {
             env.fromSource(deltaSource, WatermarkStrategy.noWatermarks(), "delta-source");
         stream.sinkTo(deltaSink);
 
+        // The tableInfo.getInitialRecordCount(); cannot be passed directly to FailCheck lambda
+        // since TableInfo is not serializable.
+        int initialRecordCount = sourceTableInfo.getInitialRecordCount();
         DeltaTestUtils.testBoundedStream(
             failoverType,
-            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2,
+            (FailCheck) readRows -> readRows == initialRecordCount / 2,
             stream,
             miniClusterResource
         );
 
-        verifyDeltaTable(this.sinkTablePath, rowType, LARGE_TABLE_RECORD_COUNT);
+        verifyDeltaTable(sourceTableInfo);
     }
 
     @ParameterizedRepeatedIfExceptionsTest(
@@ -155,12 +147,12 @@ public class DeltaEndToEndExecutionITCaseTest {
     )
     @EnumSource(FailoverType.class)
     public void testEndToEndContinuousStream(FailoverType failoverType) throws Exception {
-        DeltaTestUtils.initTestForNonPartitionedTable(sourceTablePath);
+        TableInfo sourceTableInfo = NonPartitionedTableInfo.create(TMP_FOLDER);
 
         // Making sure that we are using path with schema to file system "file://"
         Configuration hadoopConfiguration = DeltaTestUtils.getConfigurationWithMockFs();
 
-        Path sourceTablePath = Path.fromLocalFile(new File(this.sourceTablePath));
+        Path sourceTablePath = Path.fromLocalFile(new File(sourceTableInfo.getTablePath()));
         Path sinkTablePath = Path.fromLocalFile(new File(this.sinkTablePath));
 
         assertThat(sinkTablePath.toUri().getScheme(), equalTo("file"));
@@ -172,11 +164,10 @@ public class DeltaEndToEndExecutionITCaseTest {
             )
             .build();
 
-        RowType rowType = RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES);
         DeltaSinkInternal<RowData> deltaSink = DeltaSink.forRowData(
                 sinkTablePath,
                 hadoopConfiguration,
-                rowType)
+                sourceTableInfo.getRowType())
             .build();
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -191,24 +182,23 @@ public class DeltaEndToEndExecutionITCaseTest {
 
         int numberOfTableUpdateBulks = 5;
         int rowsPerTableUpdate = 5;
-        int expectedRowCount = SMALL_TABLE_COUNT + numberOfTableUpdateBulks * rowsPerTableUpdate;
+        int expectedRowCount =
+            sourceTableInfo.getInitialRecordCount() + numberOfTableUpdateBulks * rowsPerTableUpdate;
 
         TestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
-            deltaSource.getTablePath().toUri().toString(),
-            RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
-            SMALL_TABLE_COUNT,
+            sourceTableInfo,
             new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
         );
 
         DeltaTestUtils.testContinuousStream(
             failoverType,
             testDescriptor,
-            (FailCheck) readRows -> readRows == expectedRowCount/ 2,
+            (FailCheck) readRows -> readRows == expectedRowCount / 2,
             stream,
             miniClusterResource
         );
 
-        verifyDeltaTable(this.sinkTablePath, rowType, expectedRowCount);
+        verifyDeltaTable(sourceTableInfo, expectedRowCount);
     }
 
     @RepeatedIfExceptionsTest(suspend = 2000L, repeats = 3)
@@ -216,12 +206,12 @@ public class DeltaEndToEndExecutionITCaseTest {
 
         // this test uses test-non-partitioned-delta-table-alltypes table. See README.md from
         // table's folder for detail information about this table.
-        DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
+        TableInfo sourceTableInfo = AllTypesNonPartitionedTableInfo.create(TMP_FOLDER);
 
         // Making sure that we are using path with schema to file system "file://"
         Configuration hadoopConfiguration = DeltaTestUtils.getConfigurationWithMockFs();
 
-        Path sourceTablePath = Path.fromLocalFile(new File(this.sourceTablePath));
+        Path sourceTablePath = Path.fromLocalFile(new File(sourceTableInfo.getTablePath()));
         Path sinkTablePath = Path.fromLocalFile(new File(this.sinkTablePath));
 
         assertThat(sinkTablePath.toUri().getScheme(), equalTo("file"));
@@ -233,7 +223,7 @@ public class DeltaEndToEndExecutionITCaseTest {
             )
             .build();
 
-        RowType rowType = RowType.of(ALL_DATA_TABLE_COLUMN_TYPES, ALL_DATA_TABLE_COLUMN_NAMES);
+        RowType rowType = sourceTableInfo.getRowType();
         DeltaSinkInternal<RowData> deltaSink = DeltaSink.forRowData(
                 sinkTablePath,
                 hadoopConfiguration,
@@ -251,23 +241,20 @@ public class DeltaEndToEndExecutionITCaseTest {
 
         DeltaTestUtils.testBoundedStream(stream, miniClusterResource);
 
-        Snapshot snapshot = verifyDeltaTable(
-            this.sinkTablePath,
-            rowType,
-            ALL_DATA_TABLE_RECORD_COUNT
-        );
+        Snapshot snapshot = verifyDeltaTable(sourceTableInfo);
 
-        assertRowsFromSnapshot(snapshot);
+        assertRowsFromSnapshot(snapshot, sourceTableInfo);
     }
 
     /**
      * Read entire snapshot using delta standalone and check every column.
+     *
      * @param snapshot {@link Snapshot} to read data from.
      */
-    private void assertRowsFromSnapshot(Snapshot snapshot) throws IOException {
+    private void assertRowsFromSnapshot(Snapshot snapshot, TableInfo tableInfo) throws IOException {
 
         final AtomicInteger index = new AtomicInteger(0);
-        try(CloseableIterator<RowRecord> iterator = snapshot.open()) {
+        try (CloseableIterator<RowRecord> iterator = snapshot.open()) {
             while (iterator.hasNext()) {
                 final int i = index.getAndIncrement();
 
@@ -275,56 +262,51 @@ public class DeltaEndToEndExecutionITCaseTest {
 
                 RowRecord row = iterator.next();
                 LOG.info("Row Content: " + row.toString());
+                String[] columnNames = tableInfo.getDataColumnNames();
                 assertAll(() -> {
                         assertThat(
-                            row.getByte(ALL_DATA_TABLE_COLUMN_NAMES[0]),
+                            row.getByte(columnNames[0]),
                             equalTo(new Integer(i).byteValue())
                         );
                         assertThat(
-                            row.getShort(ALL_DATA_TABLE_COLUMN_NAMES[1]),
+                            row.getShort(columnNames[1]),
                             equalTo((short) i)
                         );
-                        assertThat(row.getInt(ALL_DATA_TABLE_COLUMN_NAMES[2]), equalTo(i));
+                        assertThat(row.getInt(columnNames[2]), equalTo(i));
                         assertThat(
-                            row.getDouble(ALL_DATA_TABLE_COLUMN_NAMES[3]),
+                            row.getDouble(columnNames[3]),
                             equalTo(new Integer(i).doubleValue())
                         );
                         assertThat(
-                            row.getFloat(ALL_DATA_TABLE_COLUMN_NAMES[4]),
+                            row.getFloat(columnNames[4]),
                             equalTo(new Integer(i).floatValue())
                         );
 
                         // In Source Table this column was generated as: BigInt(x)
                         assertThat(
-                            row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[5]),
+                            row.getBigDecimal(columnNames[5]),
                             equalTo(expectedBigDecimal)
                         );
 
-                        // In Source Table this column was generated as: BigDecimal(x),
-                        // There is a problem with parquet library used by delta standalone when
-                        // reading BigDecimal values. The issue should be resolved
-                        // after https://github.com/delta-io/connectors/pull/303
-                        if (i > 0) {
-                            assertThat(
-                                row.getBigDecimal(ALL_DATA_TABLE_COLUMN_NAMES[6]),
-                                not(equalTo(expectedBigDecimal))
-                            );
-                        }
+                        assertThat(
+                            row.getBigDecimal(columnNames[6]),
+                            equalTo(expectedBigDecimal)
+                        );
 
                         // same value for all columns
                         assertThat(
-                            row.getTimestamp(ALL_DATA_TABLE_COLUMN_NAMES[7])
+                            row.getTimestamp(columnNames[7])
                                 .toLocalDateTime().toInstant(ZoneOffset.UTC),
                             equalTo(Timestamp.valueOf("2022-06-14 18:54:24.547557")
                                 .toLocalDateTime().toInstant(ZoneOffset.UTC))
                         );
                         assertThat(
-                            row.getString(ALL_DATA_TABLE_COLUMN_NAMES[8]),
+                            row.getString(columnNames[8]),
                             equalTo(String.valueOf(i))
                         );
 
                         // same value for all columns
-                        assertThat(row.getBoolean(ALL_DATA_TABLE_COLUMN_NAMES[9]), equalTo(true));
+                        assertThat(row.getBoolean(columnNames[9]), equalTo(true));
                     }
                 );
             }

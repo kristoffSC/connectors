@@ -24,6 +24,7 @@ import io.delta.flink.utils.RecordCounterToFail.FailCheck;
 import io.delta.flink.utils.TableUpdateDescriptor;
 import io.delta.flink.utils.TestDescriptor;
 import io.delta.flink.utils.TestDescriptor.Descriptor;
+import io.delta.flink.utils.resources.TableInfo;
 import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -58,11 +59,6 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     private static final Logger LOG =
         LoggerFactory.getLogger(DeltaSourceContinuousExecutionITCaseTest.class);
 
-    /**
-     * Number of rows in Delta table before inserting a new data into it.
-     */
-    private static final int INITIAL_DATA_SIZE = 2;
-
     @BeforeAll
     public static void beforeAll() throws IOException {
         DeltaSourceITBase.beforeAll();
@@ -90,16 +86,15 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     public void shouldReadTableWithNoUpdates(FailoverType failoverType) throws Exception {
 
         // GIVEN
-        DeltaSource<RowData> deltaSource = initSourceAllColumns(nonPartitionedTablePath);
+        DeltaSource<RowData> deltaSource = initSourceAllColumns(nonPartitionedTable.getTablePath());
 
         // WHEN
         // Fail TaskManager or JobManager after half of the records or do not fail anything if
         // FailoverType.NONE.
+        int initialRecordCount = nonPartitionedTable.getInitialRecordCount();
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new TestDescriptor(
-                deltaSource.getTablePath().toUri().toString(),
-                INITIAL_DATA_SIZE),
-            (FailCheck) readRows -> readRows == SMALL_TABLE_COUNT / 2);
+            new TestDescriptor(nonPartitionedTable),
+            (FailCheck) readRows -> readRows == initialRecordCount / 2);
 
         // total number of read rows.
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
@@ -114,7 +109,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
-            equalTo(SMALL_TABLE_COUNT));
+            equalTo(initialRecordCount));
         assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues,
             equalTo(SURNAME_COLUMN_VALUES));
     }
@@ -126,14 +121,14 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     public void shouldReadLargeDeltaTableWithNoUpdates(FailoverType failoverType) throws Exception {
 
         // GIVEN
-        DeltaSource<RowData> deltaSource = initSourceAllColumns(nonPartitionedLargeTablePath);
+        DeltaSource<RowData> deltaSource =
+            initSourceAllColumns(largeNonPartitionedTable.getTablePath());
 
         // WHEN
+        int initialRecordCount = largeNonPartitionedTable.getInitialRecordCount();
         List<List<RowData>> resultData = testContinuousDeltaSource(failoverType, deltaSource,
-            new TestDescriptor(
-                deltaSource.getTablePath().toUri().toString(),
-                LARGE_TABLE_RECORD_COUNT),
-            (FailCheck) readRows -> readRows == LARGE_TABLE_RECORD_COUNT / 2);
+            new TestDescriptor(largeNonPartitionedTable),
+            (FailCheck) readRows -> readRows == initialRecordCount / 2);
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
 
@@ -147,9 +142,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.", totalNumberOfRows,
-            equalTo(LARGE_TABLE_RECORD_COUNT));
+            equalTo(initialRecordCount));
         assertThat("Source Produced Different Rows that were in Delta Table", uniqueValues.size(),
-            equalTo(LARGE_TABLE_RECORD_COUNT));
+            equalTo(initialRecordCount));
     }
 
     @ParameterizedRepeatedIfExceptionsTest(
@@ -162,9 +157,12 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // GIVEN
         DeltaSource<RowData> deltaSource =
-            initSourceForColumns(nonPartitionedTablePath, new String[]{"name", "surname"});
+            initSourceForColumns(
+                nonPartitionedTable.getTablePath(),
+                new String[]{"name", "surname"}
+            );
 
-        shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource, failoverType);
+        shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource, failoverType, nonPartitionedTable);
     }
 
     @ParameterizedRepeatedIfExceptionsTest(
@@ -176,9 +174,9 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             FailoverType failoverType) throws Exception {
 
         // GIVEN
-        DeltaSource<RowData> deltaSource = initSourceAllColumns(nonPartitionedTablePath);
+        DeltaSource<RowData> deltaSource = initSourceAllColumns(nonPartitionedTable.getTablePath());
 
-        shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource, failoverType);
+        shouldReadDeltaTableFromSnapshotAndUpdates(deltaSource, failoverType, nonPartitionedTable);
     }
 
     /**
@@ -225,10 +223,14 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
     public void shouldReadLoadedSchemaVersion() throws Exception {
 
         // Add version 1 to delta Table.
-        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTablePath);
+        DeltaTableUpdater tableUpdater = new DeltaTableUpdater(nonPartitionedTable);
 
         Descriptor versionOneUpdate = new Descriptor(
-            RowType.of(true, DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
+            RowType.of(
+                true, // nullable = true;
+                nonPartitionedTable.getDataColumnTypes(),
+                nonPartitionedTable.getDataColumnNames()
+            ),
             Arrays.asList(
                 Row.of("John-K", "Wick-P", 1410),
                 Row.of("John-K", "Wick-P", 1411),
@@ -238,7 +240,7 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         tableUpdater.writeToTable(versionOneUpdate);
         // Create a Source object with option "startingVersion" == 1;
         DeltaSource<RowData> source =  DeltaSource.forContinuousRowData(
-                Path.fromLocalFile(new File(nonPartitionedTablePath)),
+                Path.fromLocalFile(new File(nonPartitionedTable.getTablePath())),
                 DeltaTestUtils.getHadoopConf()
             )
             .startingVersion(1)
@@ -246,7 +248,11 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // Add another version with new rows.
         Descriptor versionTwoUpdate = new Descriptor(
-            RowType.of(true, DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
+            RowType.of(
+                true, // nullable = true;
+                nonPartitionedTable.getDataColumnTypes(),
+                nonPartitionedTable.getDataColumnNames()
+            ),
             Arrays.asList(
                 Row.of("John-K", "Wick-P", 1510),
                 Row.of("John-K", "Wick-P", 1511),
@@ -534,26 +540,24 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
     private void shouldReadDeltaTableFromSnapshotAndUpdates(
             DeltaSource<RowData> deltaSource,
-            FailoverType failoverType)
-            throws Exception {
+            FailoverType failoverType,
+            TableInfo tableInfo) throws Exception {
 
         int numberOfTableUpdateBulks = 5;
         int rowsPerTableUpdate = 5;
 
         TestDescriptor testDescriptor = DeltaTestUtils.prepareTableUpdates(
-                deltaSource.getTablePath().toUri().toString(),
-                RowType.of(DATA_COLUMN_TYPES, DATA_COLUMN_NAMES),
-                INITIAL_DATA_SIZE,
+            tableInfo,
             new TableUpdateDescriptor(numberOfTableUpdateBulks, rowsPerTableUpdate)
         );
 
         // WHEN
+        int initialRecordCount = tableInfo.getInitialRecordCount();
         List<List<RowData>> resultData =
             testContinuousDeltaSource(failoverType, deltaSource, testDescriptor,
                 (FailCheck) readRows -> readRows
-                    ==
-                    (INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate)
-                        / 2);
+                    == (initialRecordCount + numberOfTableUpdateBulks * rowsPerTableUpdate) / 2
+            );
 
         int totalNumberOfRows = resultData.stream().mapToInt(List::size).sum();
 
@@ -569,10 +573,10 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             totalNumberOfRows,
-            equalTo(INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate));
+            equalTo(initialRecordCount + numberOfTableUpdateBulks * rowsPerTableUpdate));
         assertThat("Source Produced Different Rows that were in Delta Table",
             uniqueValues.size(),
-            equalTo(INITIAL_DATA_SIZE + numberOfTableUpdateBulks * rowsPerTableUpdate));
+            equalTo(initialRecordCount + numberOfTableUpdateBulks * rowsPerTableUpdate));
     }
 
     /**

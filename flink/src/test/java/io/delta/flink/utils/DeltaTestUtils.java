@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import io.delta.flink.internal.ConnectorUtils;
 import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
 import io.delta.flink.utils.RecordCounterToFail.FailCheck;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.RuntimeExecutionMode;
@@ -116,22 +117,11 @@ public class DeltaTestUtils {
     public static final String TEST_DELTA_TABLE_INITIAL_STATE_P_DIR =
         "/test-data/test-partitioned-delta-table-initial-state";
 
-    public static final String TEST_DELTA_LARGE_TABLE_INITIAL_STATE_DIR =
-        "/test-data/test-non-partitioned-delta-table_1100_records";
-
-    public static final String TEST_DELTA_TABLE_ALL_DATA_TYPES =
-        "/test-data/test-non-partitioned-delta-table-alltypes";
-
     public static final String TEST_VERSIONED_DELTA_TABLE =
         "/test-data/test-non-partitioned-delta-table-4-versions";
 
     public static final String TEST_DELTA_TABLE_INITIAL_STATE_TABLE_API_DIR =
         "/test-data/test-table-api";
-
-    public static void initTestForAllDataTypes(String targetTablePath)
-        throws IOException {
-        initTestFor(TEST_DELTA_TABLE_ALL_DATA_TYPES, targetTablePath);
-    }
 
     public static void initTestForNonPartitionedTable(String targetTablePath)
         throws IOException {
@@ -141,11 +131,6 @@ public class DeltaTestUtils {
     public static void initTestForPartitionedTable(String targetTablePath)
         throws IOException {
         initTestFor(TEST_DELTA_TABLE_INITIAL_STATE_P_DIR, targetTablePath);
-    }
-
-    public static void initTestForNonPartitionedLargeTable(String targetTablePath)
-        throws IOException {
-        initTestFor(TEST_DELTA_LARGE_TABLE_INITIAL_STATE_DIR, targetTablePath);
     }
 
     public static void initTestForVersionedTable(String targetTablePath)
@@ -166,19 +151,6 @@ public class DeltaTestUtils {
         FileUtils.copyDirectory(
             new File(initialTablePath),
             new File(targetTablePath));
-    }
-
-    /**
-     * In this method we check in short time intervals for the total time of 10 seconds whether
-     * the DeltaLog for the table has been already created by the Flink job running in the deamon
-     * thread.
-     *
-     * @param deltaLog {@link DeltaLog} instance for test table
-     * @throws InterruptedException when the thread is interrupted when waiting for the log to be
-     *                              created
-     */
-    public static void waitUntilDeltaLogExists(DeltaLog deltaLog) throws InterruptedException {
-        waitUntilDeltaLogExists(deltaLog, 0L);
     }
 
     /**
@@ -480,20 +452,18 @@ public class DeltaTestUtils {
      * new unique rows.
      */
     public static TestDescriptor prepareTableUpdates(
-            String tablePath,
-            RowType rowType,
-            int initialDataSize,
+            TableInfo tableInfo,
             TableUpdateDescriptor tableUpdateDescriptor) {
 
         TestDescriptor testDescriptor =
-            new TestDescriptor(tablePath, initialDataSize);
+            new TestDescriptor(tableInfo);
 
         for (int i = 0; i < tableUpdateDescriptor.getNumberOfNewVersions(); i++) {
             List<Row> newRows = new ArrayList<>();
             for (int j = 0; j < tableUpdateDescriptor.getNumberOfRecordsPerNewVersion(); j++) {
                 newRows.add(Row.of("John-" + i + "-" + j, "Wick-" + i + "-" + j, j * i));
             }
-            testDescriptor.add(rowType, newRows);
+            testDescriptor.add(tableInfo.getRowType(), newRows);
         }
         return testDescriptor;
     }
@@ -575,25 +545,29 @@ public class DeltaTestUtils {
         return env;
     }
 
+    public static Snapshot verifyDeltaTable(TableInfo tableInfo) throws IOException {
+        return verifyDeltaTable(tableInfo, tableInfo.getInitialRecordCount());
+    }
+
     /**
      * Verifies if Delta table under parameter {@code tablePath} contains expected number of rows
      * with given rowType format.
      *
-     * @param tablePath               Path to Delta table.
-     * @param rowType                 {@link RowType} for test Delta table.
      * @param expectedNumberOfRecords expected number of row in Delta table.
      * @return Head snapshot of Delta table.
      * @throws IOException If any issue while reading Delta Table.
      */
     @SuppressWarnings("unchecked")
-    public static Snapshot verifyDeltaTable(
-            String tablePath,
-            RowType rowType,
-            Integer expectedNumberOfRecords) throws IOException {
+    public static Snapshot verifyDeltaTable(TableInfo tableInfo, int expectedNumberOfRecords)
+            throws IOException {
 
-        DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(
+            DeltaTestUtils.getHadoopConf(),
+            tableInfo.getTablePath()
+        );
         Snapshot snapshot = deltaLog.snapshot();
         List<AddFile> deltaFiles = snapshot.getAllFiles();
+        RowType rowType = tableInfo.getRowType();
         int finalTableRecordsCount = TestParquetReader
             .readAndValidateAllTableRecords(
                 deltaLog,
@@ -753,8 +727,8 @@ public class DeltaTestUtils {
                 .collect(Collectors.toList());
 
         if (lastModifiedTimestamps.length > sortedLogFiles.size()) {
-            throw new IllegalArgumentException(String.format(""
-                    + "Delta log for table %s size, does not match"
+            throw new IllegalArgumentException(String.format(
+                "Delta log for table %s size, does not match"
                     + " test's last modify argument size %d",
                 sourceTablePath, lastModifiedTimestamps.length
             ));

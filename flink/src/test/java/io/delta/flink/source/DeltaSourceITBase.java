@@ -13,9 +13,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import io.delta.flink.source.internal.enumerator.supplier.TimestampFormatConverter;
-import io.delta.flink.utils.DeltaTestUtils;
-import io.delta.flink.utils.ExecutionITCaseTestConstants;
 import io.delta.flink.utils.TestDescriptor;
+import io.delta.flink.utils.resources.AllTypesNonPartitionedTableInfo;
+import io.delta.flink.utils.resources.LargeNonPartitionedTableInfo;
+import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.PartitionedTableInfo;
+import io.delta.flink.utils.resources.TableInfo;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
@@ -44,27 +47,11 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     protected final MiniClusterWithClientResource miniClusterResource = buildCluster(PARALLELISM);
 
-    /**
-     * Schema for this table has only {@link ExecutionITCaseTestConstants#DATA_COLUMN_NAMES}
-     * of type {@link ExecutionITCaseTestConstants#DATA_COLUMN_TYPES} columns.
-     */
-    protected String nonPartitionedTablePath;
+    protected TableInfo nonPartitionedTable;
 
-    /**
-     * Schema for this table contains data columns
-     * {@link ExecutionITCaseTestConstants#DATA_COLUMN_NAMES} and col1, col2
-     * partition columns. Types of data columns are
-     * {@link ExecutionITCaseTestConstants#DATA_COLUMN_TYPES}
-     */
-    protected String partitionedTablePath;
+    protected TableInfo largeNonPartitionedTable;
 
-    /**
-     * Schema for this table has only
-     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_NAMES} of type
-     * {@link ExecutionITCaseTestConstants#LARGE_TABLE_ALL_COLUMN_TYPES} columns.
-     * Column types are long, long, String
-     */
-    protected String nonPartitionedLargeTablePath;
+    protected TableInfo partitionedTable;
 
     public static void beforeAll() throws IOException {
         TMP_FOLDER.create();
@@ -77,15 +64,9 @@ public abstract class DeltaSourceITBase extends TestLogger {
     public void setup() {
         try {
             miniClusterResource.before();
-
-            nonPartitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-            nonPartitionedLargeTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-            partitionedTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-
-            DeltaTestUtils.initTestForPartitionedTable(partitionedTablePath);
-            DeltaTestUtils.initTestForNonPartitionedTable(nonPartitionedTablePath);
-            DeltaTestUtils.initTestForNonPartitionedLargeTable(
-                nonPartitionedLargeTablePath);
+            nonPartitionedTable = NonPartitionedTableInfo.create(TMP_FOLDER);
+            largeNonPartitionedTable = LargeNonPartitionedTableInfo.create(TMP_FOLDER);
+            partitionedTable = PartitionedTableInfo.create(TMP_FOLDER);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }
@@ -101,14 +82,14 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
         // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
-            partitionedTablePath,
-            DATA_COLUMN_NAMES
+            partitionedTable.getTablePath(),
+            partitionedTable.getDataColumnNames()
         );
 
         // WHEN
         List<RowData> resultData = this.testSource(
             deltaSource,
-            new TestDescriptor(partitionedTablePath, 2)
+            new TestDescriptor(partitionedTable)
         );
 
         List<String> readNames =
@@ -124,7 +105,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
-            equalTo(SMALL_TABLE_COUNT));
+            equalTo(partitionedTable.getInitialRecordCount()));
 
         // check for column values
         assertThat("Source produced different values for [name] column",
@@ -148,20 +129,20 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
         // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
-            partitionedTablePath,
+            partitionedTable.getTablePath(),
             new String[]{"col1", "col2"}
         );
 
         // WHEN
         List<RowData> resultData = this.testSource(
             deltaSource,
-            new TestDescriptor(partitionedTablePath, 2)
+            new TestDescriptor(partitionedTable)
         );
 
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
-            equalTo(SMALL_TABLE_COUNT));
+            equalTo(partitionedTable.getInitialRecordCount()));
 
         // check partition column values
         String col1_partitionValue = "val1";
@@ -184,14 +165,14 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
         // columns. The size of version 0 is two rows.
         DeltaSource<RowData> deltaSource = initSourceForColumns(
-            partitionedTablePath,
+            partitionedTable.getTablePath(),
             new String[]{"surname", "age", "col2"} // sipping [name] column
         );
 
         // WHEN
         List<RowData> resultData = this.testSource(
             deltaSource,
-            new TestDescriptor(partitionedTablePath, 2)
+            new TestDescriptor(partitionedTable)
         );
 
         Set<String> readSurnames =
@@ -203,7 +184,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
-            equalTo(SMALL_TABLE_COUNT));
+            equalTo(partitionedTable.getInitialRecordCount()));
 
         // check for column values
         assertThat("Source produced different values for [surname] column",
@@ -226,12 +207,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
         // GIVEN, the full schema of used table is {name, surname, age} + col1, col2 as a partition
         // columns. The size of version 0 is two rows.
-        DeltaSource<RowData> deltaSource = initSourceAllColumns(partitionedTablePath);
+        DeltaSource<RowData> deltaSource = initSourceAllColumns(partitionedTable.getTablePath());
 
         // WHEN
         List<RowData> resultData = this.testSource(
             deltaSource,
-            new TestDescriptor(partitionedTablePath, 2)
+            new TestDescriptor(partitionedTable)
         );
 
         List<String> readNames =
@@ -247,7 +228,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         // THEN
         assertThat("Source read different number of rows that Delta Table have.",
             resultData.size(),
-            equalTo(SMALL_TABLE_COUNT));
+            equalTo(partitionedTable.getInitialRecordCount()));
 
         // check for column values
         assertThat("Source produced different values for [name] column",
@@ -276,15 +257,12 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     @RepeatedIfExceptionsTest(suspend = 2000L, repeats = 3)
     public void shouldReadTableWithAllDataTypes() throws Exception {
-        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-        DeltaTestUtils.initTestForAllDataTypes(sourceTablePath);
 
+        TableInfo sourceTable = AllTypesNonPartitionedTableInfo.create(TMP_FOLDER);
+        String sourceTablePath = sourceTable.getTablePath();
         DeltaSource<RowData> deltaSource = initSourceAllColumns(sourceTablePath);
 
-        List<RowData> rowData = this.testSource(
-            deltaSource,
-            new TestDescriptor(sourceTablePath, ALL_DATA_TABLE_RECORD_COUNT)
-        );
+        List<RowData> rowData = this.testSource(deltaSource, new TestDescriptor(sourceTable));
 
         assertThat(
             "Source read different number of records than expected.",
