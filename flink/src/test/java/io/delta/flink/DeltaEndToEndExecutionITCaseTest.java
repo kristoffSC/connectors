@@ -262,7 +262,7 @@ public class DeltaEndToEndExecutionITCaseTest {
 
                 RowRecord row = iterator.next();
                 LOG.info("Row Content: " + row.toString());
-                String[] columnNames = tableInfo.getDataColumnNames();
+                String[] columnNames = tableInfo.getColumnNames();
                 assertAll(() -> {
                         assertThat(
                             row.getByte(columnNames[0]),

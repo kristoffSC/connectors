@@ -11,9 +11,9 @@ public interface TableInfo {
 
     String getTableInitStatePath();
 
-    String[] getDataColumnNames();
+    String[] getColumnNames();
 
-    LogicalType[] getDataColumnTypes();
+    LogicalType[] getColumnTypes();
 
     int getInitialRecordCount();
 

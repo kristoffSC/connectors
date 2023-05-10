@@ -51,7 +51,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
 
     protected TableInfo largeNonPartitionedTable;
 
-    protected TableInfo partitionedTable;
+    protected PartitionedTableInfo partitionedTable;
 
     public static void beforeAll() throws IOException {
         TMP_FOLDER.create();

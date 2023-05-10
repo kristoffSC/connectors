@@ -111,19 +111,11 @@ public class DeltaTestUtils {
     // test data utils
     ///////////////////////////////////////////////////////////////////////////
 
-    public static final String TEST_DELTA_TABLE_INITIAL_STATE_P_DIR =
-        "/test-data/test-partitioned-delta-table-initial-state";
-
     public static final String TEST_VERSIONED_DELTA_TABLE =
         "/test-data/test-non-partitioned-delta-table-4-versions";
 
     public static final String TEST_DELTA_TABLE_INITIAL_STATE_TABLE_API_DIR =
         "/test-data/test-table-api";
-
-    public static void initTestForPartitionedTable(String targetTablePath)
-        throws IOException {
-        initTestFor(TEST_DELTA_TABLE_INITIAL_STATE_P_DIR, targetTablePath);
-    }
 
     public static void initTestForVersionedTable(String targetTablePath)
         throws IOException {

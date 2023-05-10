@@ -56,12 +56,12 @@ public class LargeNonPartitionedTableInfo implements SqlTableInfo {
     }
 
     @Override
-    public String[] getDataColumnNames() {
+    public String[] getColumnNames() {
         return dataColumnNames;
     }
 
     @Override
-    public LogicalType[] getDataColumnTypes() {
+    public LogicalType[] getColumnTypes() {
         return dataColumnTypes;
     }
 

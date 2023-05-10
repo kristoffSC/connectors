@@ -1,10 +1,10 @@
 package io.delta.flink.utils.resources;
 
 import io.delta.flink.utils.DeltaTestUtils;
-import org.apache.flink.table.types.logical.CharType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.rules.TemporaryFolder;
 
 public class PartitionedTableInfo implements SqlTableInfo {
@@ -15,10 +15,25 @@ public class PartitionedTableInfo implements SqlTableInfo {
     private static final String sqlTableSchema =
         "name VARCHAR, surname VARCHAR, age INT, col1 VARCHAR, col2 VARCHAR";
 
+    private static final String[] columnNames = {"name", "surname", "age", "col1", "col2"};
+
     private static final String[] dataColumnNames = {"name", "surname", "age"};
 
+    private static final LogicalType[] columnTypes =
+    {
+        new VarCharType(VarCharType.MAX_LENGTH),
+        new VarCharType(VarCharType.MAX_LENGTH),
+        new IntType(),
+        new VarCharType(VarCharType.MAX_LENGTH),
+        new VarCharType(VarCharType.MAX_LENGTH)
+    };
+
     private static final LogicalType[] dataColumnTypes =
-        {new CharType(), new CharType(), new IntType()};
+    {
+        new VarCharType(VarCharType.MAX_LENGTH),
+        new VarCharType(VarCharType.MAX_LENGTH),
+        new IntType()
+    };
 
     private static final int initialRecordCount = 2;
 
@@ -68,11 +83,17 @@ public class PartitionedTableInfo implements SqlTableInfo {
     }
 
     @Override
+    public String[] getColumnNames() {
+        return columnNames;
+    }
     public String[] getDataColumnNames() {
         return dataColumnNames;
     }
 
     @Override
+    public LogicalType[] getColumnTypes() {
+        return columnTypes;
+    }
     public LogicalType[] getDataColumnTypes() {
         return dataColumnTypes;
     }
@@ -84,7 +105,7 @@ public class PartitionedTableInfo implements SqlTableInfo {
 
     @Override
     public RowType getRowType() {
-        return RowType.of(dataColumnTypes, dataColumnNames);
+        return RowType.of(columnTypes, columnNames);
     }
 
     @Override

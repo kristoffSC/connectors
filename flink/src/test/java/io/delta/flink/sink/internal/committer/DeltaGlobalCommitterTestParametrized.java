@@ -110,8 +110,7 @@ public class DeltaGlobalCommitterTestParametrized {
             }
         }
         deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tableInfo.getTablePath());
-        RowType rowType = (partitionSpec.isEmpty()) ?
-            DeltaSinkTestUtils.TEST_ROW_TYPE : DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE;
+        RowType rowType = tableInfo.getRowType();
 
         rowTypeToCommit = mergeSchema ?
             DeltaSinkTestUtils.addNewColumnToSchema(rowType) : rowType;

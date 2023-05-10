@@ -134,8 +134,8 @@ public abstract class DeltaEndToEndTableTestSuite {
         // streamingMode = false
         StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
 
-        String sinkTableDdl = String.format(""
-                + "CREATE TABLE sinkTable "
+        String sinkTableDdl = String.format(
+            "CREATE TABLE sinkTable "
                 + "WITH ("
                 + "'connector' = 'delta',"
                 + "'table-path' = '%s'"
@@ -162,8 +162,8 @@ public abstract class DeltaEndToEndTableTestSuite {
         // streamingMode = false
         StreamTableEnvironment tableEnv = setupTableEnvAndDeltaCatalog(false);
 
-        String sinkTableDdl = String.format(""
-                + "CREATE TABLE sinkTable "
+        String sinkTableDdl = String.format(
+            "CREATE TABLE sinkTable "
                 + "WITH ("
                 + "'connector' = 'delta',"
                 + "'table-path' = '%s'"
@@ -358,12 +358,12 @@ public abstract class DeltaEndToEndTableTestSuite {
         }
 
         @Override
-        public String[] getDataColumnNames() {
+        public String[] getColumnNames() {
             return rowType.getFieldNames().toArray(new String[0]);
         }
 
         @Override
-        public LogicalType[] getDataColumnTypes() {
+        public LogicalType[] getColumnTypes() {
             return rowType.getFields().stream().map(RowField::getType).toArray(LogicalType[]::new);
         }
 

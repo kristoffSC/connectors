@@ -61,12 +61,12 @@ public class AllTypesNonPartitionedTableInfo implements TableInfo {
     }
 
     @Override
-    public String[] getDataColumnNames() {
+    public String[] getColumnNames() {
         return dataColumnNames;
     }
 
     @Override
-    public LogicalType[] getDataColumnTypes() {
+    public LogicalType[] getColumnTypes() {
         return dataColumnTypes;
     }
 

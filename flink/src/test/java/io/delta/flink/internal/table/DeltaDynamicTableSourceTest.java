@@ -9,6 +9,8 @@ import io.delta.flink.internal.table.DeltaFlinkJobSpecificOptions.QueryMode;
 import io.delta.flink.source.DeltaSource;
 import io.delta.flink.source.internal.DeltaSourceOptions;
 import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.resources.TableInfo;
+import io.delta.flink.utils.resources.VersionedNonPartitionedTable;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.table.connector.source.ScanTableSource.ScanContext;
 import org.apache.flink.table.connector.source.SourceProvider;
@@ -31,8 +33,6 @@ public class DeltaDynamicTableSourceTest {
 
     private Configuration hadoopConf;
 
-    private String tablePath;
-
     private ScanContext context;
 
     @BeforeAll
@@ -49,7 +49,6 @@ public class DeltaDynamicTableSourceTest {
     public void setUp() throws IOException {
         this.context = new ScanRuntimeProviderContext();
         this.hadoopConf = DeltaTestUtils.getHadoopConf();
-        this.tablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
     }
 
     @SuppressWarnings("unchecked")
@@ -62,7 +61,8 @@ public class DeltaDynamicTableSourceTest {
     })
     public void shouldCreateBoundedSourceWithOptions(String name, String value) throws IOException {
 
-        DeltaTestUtils.initTestForVersionedTable(tablePath);
+        TableInfo tableInfo = VersionedNonPartitionedTable.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         if (name.equals("timestampAsOf")) {
             DeltaTestUtils.changeDeltaLogLastModifyTimestamp(tablePath, new String[] {value});
@@ -106,7 +106,8 @@ public class DeltaDynamicTableSourceTest {
     public void shouldCreateContinuousSourceWithOptions(String name, String value)
         throws IOException {
 
-        DeltaTestUtils.initTestForVersionedTable(tablePath);
+        TableInfo tableInfo = VersionedNonPartitionedTable.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         // Continuous mode has more options that can be used together comparing to BATCH mode.
         Map<String, String> jobOptions = new HashMap<>();

@@ -25,6 +25,7 @@ import io.delta.flink.utils.TableUpdateDescriptor;
 import io.delta.flink.utils.TestDescriptor;
 import io.delta.flink.utils.TestDescriptor.Descriptor;
 import io.delta.flink.utils.resources.TableInfo;
+import io.delta.flink.utils.resources.VersionedNonPartitionedTable;
 import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -228,8 +229,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         Descriptor versionOneUpdate = new Descriptor(
             RowType.of(
                 true, // nullable = true;
-                nonPartitionedTable.getDataColumnTypes(),
-                nonPartitionedTable.getDataColumnNames()
+                nonPartitionedTable.getColumnTypes(),
+                nonPartitionedTable.getColumnNames()
             ),
             Arrays.asList(
                 Row.of("John-K", "Wick-P", 1410),
@@ -250,8 +251,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
         Descriptor versionTwoUpdate = new Descriptor(
             RowType.of(
                 true, // nullable = true;
-                nonPartitionedTable.getDataColumnTypes(),
-                nonPartitionedTable.getDataColumnNames()
+                nonPartitionedTable.getColumnTypes(),
+                nonPartitionedTable.getColumnNames()
             ),
             Arrays.asList(
                 Row.of("John-K", "Wick-P", 1510),
@@ -366,8 +367,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
 
         // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
         // table's folder for detail information about this table.
-        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-        DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+        TableInfo tableInfo = VersionedNonPartitionedTable.createWithInitData(TMP_FOLDER);
+        String sourceTablePath = tableInfo.getTablePath();
 
         DeltaSource<RowData> deltaSource = DeltaSource
             .forContinuousRowData(
@@ -429,8 +430,8 @@ public class DeltaSourceContinuousExecutionITCaseTest extends DeltaSourceITBase 
             + startingTimestamp);
         // this test uses test-non-partitioned-delta-table-4-versions table. See README.md from
         // table's folder for detail information about this table.
-        String sourceTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
-        DeltaTestUtils.initTestForVersionedTable(sourceTablePath);
+        TableInfo tableInfo = VersionedNonPartitionedTable.createWithInitData(TMP_FOLDER);
+        String sourceTablePath = tableInfo.getTablePath();
 
         // Delta standalone uses "last modification time" file attribute for providing commits
         // before/after or at timestamp. It Does not use an actually commits creation timestamp

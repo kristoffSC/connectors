@@ -13,6 +13,7 @@ import java.util.StringJoiner;
 import io.delta.flink.internal.table.TestTableData;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.PartitionedTableInfo;
 import io.delta.flink.utils.resources.SqlTableInfo;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -252,8 +253,8 @@ public abstract class DeltaCatalogTestSuite {
             assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
 
         assertThat(exception.getCause().getMessage())
-            .isEqualTo(""
-                + "Table definition contains unsupported column types. Currently, only physical "
+            .isEqualTo(
+                "Table definition contains unsupported column types. Currently, only physical "
                 + "columns are supported by Delta Flink connector.\n"
                 + "Invalid columns and types:\n"
                 + "col4 -> ComputedColumn\n"
@@ -292,8 +293,8 @@ public abstract class DeltaCatalogTestSuite {
             assertThrows(RuntimeException.class, () -> tableEnv.executeSql(deltaTable).await());
 
         assertThat(exception.getCause().getMessage())
-            .isEqualTo(""
-                + "Table definition contains unsupported column types. Currently, only physical "
+            .isEqualTo(
+                "Table definition contains unsupported column types. Currently, only physical "
                 + "columns are supported by Delta Flink connector.\n"
                 + "Invalid columns and types:\n"
                 + "record_time -> MetadataColumn"
@@ -312,7 +313,7 @@ public abstract class DeltaCatalogTestSuite {
         "name INT, surname VARCHAR, age INT", // different type for first column
         "name VARCHAR NOT NULL, surname VARCHAR, age INT" // all columns should be nullable
     })
-    public void shouldThrowIfSchemaDoesNotMatch(String ddlSchema) throws Exception {
+    public void shouldThrowIfSchemaDoesNotMatch(String ddlSchema) {
 
         // GIVEN
         SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
@@ -357,14 +358,14 @@ public abstract class DeltaCatalogTestSuite {
     @Test
     public void shouldThrow_createTable_invalidTableProperties() throws Exception {
 
-        String invalidOptions = ""
-            + "'spark.some.option' = 'aValue',\n"
+        String invalidOptions =
+            "'spark.some.option' = 'aValue',\n"
             + "'delta.logStore' = 'myLog',\n"
             + "'io.delta.storage.S3DynamoDBLogStore.ddb.region' = 'Poland',\n"
             + "'parquet.writer.max-padding' = '10'\n";
 
-        String expectedValidationMessage = ""
-            + "DDL contains invalid properties. DDL can have only delta table properties or "
+        String expectedValidationMessage =
+            "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "Invalid options used:\n"
             + " - 'spark.some.option'\n"
@@ -383,8 +384,8 @@ public abstract class DeltaCatalogTestSuite {
 
         // This test will not check if options are mutual excluded.
         // This is covered by table Factory and Source builder tests.
-        String invalidOptions = ""
-            + "'startingVersion' = '10',\n"
+        String invalidOptions =
+            "'startingVersion' = '10',\n"
             + "'startingTimestamp' = '2022-02-24T04:55:00.001',\n"
             + "'updateCheckIntervalMillis' = '1000',\n"
             + "'updateCheckDelayMillis' = '1000',\n"
@@ -393,8 +394,8 @@ public abstract class DeltaCatalogTestSuite {
             + "'versionAsOf' = '10',\n"
             + "'timestampAsOf' = '2022-02-24T04:55:00.001'";
 
-        String expectedValidationMessage = ""
-            + "DDL contains invalid properties. DDL can have only delta table properties or "
+        String expectedValidationMessage =
+            "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "DDL contains job-specific options. Job-specific options can be used only via Query"
             + " hints.\n"
@@ -420,8 +421,8 @@ public abstract class DeltaCatalogTestSuite {
 
         // This test will not check if options are mutual excluded.
         // This is covered by table Factory and Source builder tests.
-        String invalidOptions = ""
-            + "'startingVersion' = '10',\n"
+        String invalidOptions =
+            "'startingVersion' = '10',\n"
             + "'startingTimestamp' = '2022-02-24T04:55:00.001',\n"
             + "'updateCheckIntervalMillis' = '1000',\n"
             + "'updateCheckDelayMillis' = '1000',\n"
@@ -434,8 +435,8 @@ public abstract class DeltaCatalogTestSuite {
             + "'io.delta.storage.S3DynamoDBLogStore.ddb.region' = 'Poland',\n"
             + "'parquet.writer.max-padding' = '10'\n";
 
-        String expectedValidationMessage = ""
-            + "DDL contains invalid properties. DDL can have only delta table properties or "
+        String expectedValidationMessage =
+            "DDL contains invalid properties. DDL can have only delta table properties or "
             + "arbitrary user options only.\n"
             + "Invalid options used:\n"
             + " - 'spark.some.option'\n"
@@ -492,7 +493,7 @@ public abstract class DeltaCatalogTestSuite {
      * has different partition spec that specified in DDL.
      */
     @Test
-    public void shouldThrowIfPartitionSpecDoesNotMatch() throws Exception {
+    public void shouldThrowIfPartitionSpecDoesNotMatch() {
 
         // GIVEN
         SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
@@ -534,7 +535,7 @@ public abstract class DeltaCatalogTestSuite {
     }
 
     @Test
-    public void shouldThrowIfTableSchemaAndPartitionSpecDoNotMatch() throws IOException {
+    public void shouldThrowIfTableSchemaAndPartitionSpecDoNotMatch() {
         // GIVEN
         SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
         String tablePath = tableInfo.getTablePath();
@@ -579,7 +580,7 @@ public abstract class DeltaCatalogTestSuite {
      * has different delta table properties that specified in DDL.
      */
     @Test
-    public void shouldThrowIfDeltaTablePropertiesDoNotMatch() throws Exception {
+    public void shouldThrowIfDeltaTablePropertiesDoNotMatch() {
 
         // GIVEN
         SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
@@ -617,8 +618,8 @@ public abstract class DeltaCatalogTestSuite {
 
         // THEN
         assertThat(exception.getCause().getMessage())
-            .isEqualTo(""
-                + "Invalid DDL options for table [default.sourceTable]. DDL options for Delta "
+            .isEqualTo(
+                "Invalid DDL options for table [default.sourceTable]. DDL options for Delta "
                 + "table connector cannot override table properties already defined in _delta_log"
                 + ".\n"
                 + "DDL option name | DDL option value | Delta option value \n"
@@ -635,7 +636,8 @@ public abstract class DeltaCatalogTestSuite {
     public void shouldDescribeTable() throws Exception {
 
         // GIVEN
-        DeltaTestUtils.initTestForPartitionedTable(tablePath);
+        SqlTableInfo tableInfo = PartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
@@ -689,7 +691,8 @@ public abstract class DeltaCatalogTestSuite {
     public void shouldAlterTableName() throws Exception {
 
         // GIVEN
-        DeltaTestUtils.initTestForPartitionedTable(tablePath);
+        SqlTableInfo tableInfo = PartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
