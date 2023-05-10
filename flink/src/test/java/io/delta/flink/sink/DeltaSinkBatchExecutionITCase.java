@@ -33,6 +33,7 @@ import io.delta.flink.sink.internal.writer.DeltaWriterBucketState;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
@@ -47,7 +48,6 @@ import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.table.data.RowData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -72,8 +72,6 @@ public class DeltaSinkBatchExecutionITCase extends DeltaSinkExecutionITCaseBase 
 
     public static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
-    private String deltaTablePath;
-
     @BeforeAll
     public static void beforeAll() throws IOException {
         TEMPORARY_FOLDER.create();
@@ -82,15 +80,6 @@ public class DeltaSinkBatchExecutionITCase extends DeltaSinkExecutionITCaseBase 
     @AfterAll
     public static void afterAll() {
         TEMPORARY_FOLDER.delete();
-    }
-
-    @BeforeEach
-    public void setup() {
-        try {
-            deltaTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-        } catch (IOException e) {
-            throw new RuntimeException("Weren't able to setup the test dependencies", e);
-        }
     }
 
     /**
@@ -121,10 +110,13 @@ public class DeltaSinkBatchExecutionITCase extends DeltaSinkExecutionITCaseBase 
             equalTo(true)
         );
 
-        initSourceFolder(isPartitioned, deltaTablePath);
+        TableInfo tableInfo = initSourceFolder(isPartitioned, TEMPORARY_FOLDER);
 
         // GIVEN
-        DeltaLog deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), deltaTablePath);
+        DeltaLog deltaLog = DeltaLog.forTable(
+            DeltaTestUtils.getHadoopConf(),
+            tableInfo.getTablePath()
+        );
         List<AddFile> initialDeltaFiles = deltaLog.snapshot().getAllFiles();
         int initialTableRecordsCount = TestParquetReader.readAndValidateAllTableRecords(deltaLog);
         long initialVersion = deltaLog.snapshot().getVersion();
@@ -135,7 +127,7 @@ public class DeltaSinkBatchExecutionITCase extends DeltaSinkExecutionITCaseBase 
             assertEquals(2, initialDeltaFiles.size());
         }
 
-        JobGraph jobGraph = createJobGraph(deltaTablePath, isPartitioned, exceptionMode);
+        JobGraph jobGraph = createJobGraph(tableInfo, exceptionMode);
 
         // WHEN
         try (MiniCluster miniCluster = DeltaSinkTestUtils.getMiniCluster()) {
@@ -145,7 +137,7 @@ public class DeltaSinkBatchExecutionITCase extends DeltaSinkExecutionITCaseBase 
 
         // THEN
         int writtenRecordsCount =
-            DeltaSinkTestUtils.validateIfPathContainsParquetFilesWithData(deltaTablePath);
+            DeltaSinkTestUtils.validateIfPathContainsParquetFilesWithData(tableInfo.getTablePath());
         assertEquals(NUM_RECORDS, writtenRecordsCount - initialTableRecordsCount);
 
         List<AddFile> finalDeltaFiles = deltaLog.update().getAllFiles();
@@ -191,15 +183,17 @@ public class DeltaSinkBatchExecutionITCase extends DeltaSinkExecutionITCaseBase 
     }
 
     protected JobGraph createJobGraph(
-            String deltaTablePath,
-            boolean isPartitioned,
+            TableInfo tableInfo,
             GlobalCommitterExceptionMode exceptionMode) {
 
         boolean triggerFailover = !GlobalCommitterExceptionMode.NONE.equals(exceptionMode);
         StreamExecutionEnvironment env = getTestStreamEnv(triggerFailover);
 
         Sink<RowData, DeltaCommittable, DeltaWriterBucketState, DeltaGlobalCommittable> deltaSink =
-            DeltaSinkTestUtils.createDeltaSink(deltaTablePath, isPartitioned);
+            DeltaSinkTestUtils.createDeltaSink(
+                tableInfo.getTablePath(),
+                tableInfo.isPartitioned()
+            );
 
         deltaSink = new FailoverDeltaSink((DeltaSinkInternal<RowData>) deltaSink, exceptionMode);
 

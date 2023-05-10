@@ -376,6 +376,11 @@ public abstract class DeltaEndToEndTableTestSuite {
         public RowType getRowType() {
             return rowType;
         }
+
+        @Override
+        public boolean isPartitioned() {
+            return false;
+        }
     }
 
 }

@@ -104,9 +104,9 @@ public abstract class DeltaSourceTableTestSuite {
     public void setUp() {
         try {
             miniClusterResource.before();
-            nonPartitionedTable = NonPartitionedTableInfo.create(TEMPORARY_FOLDER);
+            nonPartitionedTable = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
             largeNonPartitionedTable = LargeNonPartitionedTableInfo.create(TEMPORARY_FOLDER);
-            partitionedTable = PartitionedTableInfo.create(TEMPORARY_FOLDER);
+            partitionedTable = PartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);
         }

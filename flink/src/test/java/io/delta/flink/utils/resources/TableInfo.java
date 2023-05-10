@@ -18,4 +18,6 @@ public interface TableInfo {
     int getInitialRecordCount();
 
     RowType getRowType();
+
+    boolean isPartitioned();
 }

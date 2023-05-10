@@ -46,6 +46,8 @@ import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.CheckpointCountingSource;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
+import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.CheckpointListener;
@@ -105,8 +107,6 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
     private String latchId;
 
-    private String deltaTablePath;
-
     @BeforeAll
     public static void beforeAll() throws IOException {
         TMP_FOLDER.create();
@@ -119,7 +119,6 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
 
     @BeforeEach
     public void setup() throws IOException {
-        deltaTablePath = TMP_FOLDER.newFolder().getAbsolutePath();
         this.latchId = UUID.randomUUID().toString();
         LATCH_MAP.put(latchId, new CountDownLatch(NUM_SOURCES * 2));
     }
@@ -145,16 +144,9 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         "true, true"
     })
     public void testFileSink(boolean isPartitioned, boolean triggerFailover) throws Exception {
-
-        initSourceFolder(isPartitioned, deltaTablePath);
-
-        JobGraph jobGraph = createJobGraphWithFailoverSource(
-            deltaTablePath,
-            triggerFailover,
-            isPartitioned
-        );
-
-        runDeltaSinkTest(deltaTablePath, jobGraph, NUM_RECORDS);
+        TableInfo tableInfo = initSourceFolder(isPartitioned, TMP_FOLDER);
+        JobGraph jobGraph = createJobGraphWithFailoverSource(tableInfo, triggerFailover);
+        runDeltaSinkTest(tableInfo.getTablePath(), jobGraph, NUM_RECORDS);
     }
 
     /**
@@ -193,7 +185,8 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
             equalTo(0)
         );
 
-        initSourceFolder(isPartitioned, deltaTablePath);
+        TableInfo tableInfo = initSourceFolder(isPartitioned, TMP_FOLDER);
+        String deltaTablePath = tableInfo.getTablePath();
         DeltaTestUtils.resetDeltaLogLastModifyTimestamp(deltaTablePath);
 
         Set<Integer> checkpointsToFailOn = new HashSet<>(Arrays.asList(5, 10, 11, 14));
@@ -201,12 +194,11 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         int recordsPerCheckpoint = 100;
         int totalNumberOfCheckpoints = 15;
         JobGraph jobGraph = createJobGraphWithFailoverGlobalCommitter(
-            deltaTablePath,
+            tableInfo,
             exceptionMode,
             recordsPerCheckpoint,
             totalNumberOfCheckpoints,
-            checkpointsToFailOn,
-            isPartitioned
+            checkpointsToFailOn
         );
 
         // WHEN/THEN
@@ -231,12 +223,13 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
     @Test
     public void testSinkDeltaCheckpoint() throws Exception {
 
-        DeltaTestUtils.initTestForNonPartitionedTable(deltaTablePath);
+        NonPartitionedTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TMP_FOLDER);
+        String deltaTablePath = tableInfo.getTablePath();
 
         StreamExecutionEnvironment env = getTestStreamEnv(false); // no failover
         env.addSource(new CheckpointCountingSource(1_000, 12))
             .setParallelism(1)
-            .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, false)) // not partitioned
+            .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, tableInfo.isPartitioned()))
             .setParallelism(3);
 
         StreamGraph streamGraph = env.getStreamGraph();
@@ -329,15 +322,17 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
      * Sink]. The source would trigger failover if required.
      */
     protected JobGraph createJobGraphWithFailoverSource(
-            String deltaTablePath,
-            boolean triggerFailover,
-            boolean isPartitioned) {
+            TableInfo tableInfo,
+            boolean triggerFailover) {
 
         StreamExecutionEnvironment env = getTestStreamEnv(triggerFailover);
 
         env.addSource(new DeltaStreamingExecutionTestSource(latchId, NUM_RECORDS, triggerFailover))
             .setParallelism(NUM_SOURCES)
-            .sinkTo(DeltaSinkTestUtils.createDeltaSink(deltaTablePath, isPartitioned))
+            .sinkTo(DeltaSinkTestUtils.createDeltaSink(
+                tableInfo.getTablePath(),
+                tableInfo.isPartitioned()
+            ))
             .setParallelism(NUM_SINKS);
 
         StreamGraph streamGraph = env.getStreamGraph();
@@ -350,12 +345,11 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
      * committing to the delta log after certain number of Flink checkpoints.
      */
     protected JobGraph createJobGraphWithFailoverGlobalCommitter(
-            String deltaTablePath,
+            TableInfo tableInfo,
             GlobalCommitterExceptionMode exceptionMode,
             int recordsPerCheckpoint,
             int numberOfCheckpoints,
-            Set<Integer> checkpointsToFailOn,
-            boolean isPartitioned) {
+            Set<Integer> checkpointsToFailOn) {
 
         Preconditions.checkArgument(
             numberOfCheckpoints > 1,
@@ -365,7 +359,10 @@ public class DeltaSinkStreamingExecutionITCase extends DeltaSinkExecutionITCaseB
         StreamExecutionEnvironment env = getTestStreamEnv(true);
 
         Sink<RowData, DeltaCommittable, DeltaWriterBucketState, DeltaGlobalCommittable> deltaSink =
-            DeltaSinkTestUtils.createDeltaSink(deltaTablePath, isPartitioned);
+            DeltaSinkTestUtils.createDeltaSink(
+                tableInfo.getTablePath(),
+                tableInfo.isPartitioned()
+            );
 
         deltaSink = new FailoverDeltaSink(
             (DeltaSinkInternal<RowData>) deltaSink,

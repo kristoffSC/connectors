@@ -31,6 +31,9 @@ import io.delta.flink.sink.internal.SchemaConverter;
 import io.delta.flink.sink.internal.committables.DeltaGlobalCommittable;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.PartitionedTableInfo;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.table.types.logical.RowType;
 import org.junit.Before;
@@ -87,22 +90,26 @@ public class DeltaGlobalCommitterTestParametrized {
 
     private RowType rowTypeToCommit;
 
-    private Path tablePath;
+    private TableInfo tableInfo;
 
     private DeltaLog deltaLog;
 
     @Before
     public void setup() throws IOException {
-        tablePath = new Path(TEMPORARY_FOLDER.newFolder().toURI());
         if (initializeTableBeforeCommit) {
             if (partitionSpec.isEmpty()) {
-                DeltaTestUtils.initTestForNonPartitionedTable(
-                    tablePath.getPath());
+                tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
             } else {
-                DeltaTestUtils.initTestForPartitionedTable(tablePath.getPath());
+                tableInfo = PartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+            }
+        } else {
+            if (partitionSpec.isEmpty()) {
+                tableInfo = NonPartitionedTableInfo.createWithoutInitData(TEMPORARY_FOLDER);
+            } else {
+                tableInfo = PartitionedTableInfo.createWithoutInitData(TEMPORARY_FOLDER);
             }
         }
-        deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath.getPath());
+        deltaLog = DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tableInfo.getTablePath());
         RowType rowType = (partitionSpec.isEmpty()) ?
             DeltaSinkTestUtils.TEST_ROW_TYPE : DeltaSinkTestUtils.TEST_PARTITIONED_ROW_TYPE;
 
@@ -115,7 +122,7 @@ public class DeltaGlobalCommitterTestParametrized {
         //GIVEN
         DeltaGlobalCommitter globalCommitter = new DeltaGlobalCommitter(
             DeltaTestUtils.getHadoopConf(),
-            tablePath,
+            new Path(tableInfo.getTablePath()),
             rowTypeToCommit,
             mergeSchema);
         int numAddedFiles = 3;

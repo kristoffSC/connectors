@@ -12,6 +12,8 @@ import java.util.StringJoiner;
 
 import io.delta.flink.internal.table.TestTableData;
 import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.SqlTableInfo;
 import org.apache.commons.io.FileUtils;
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
@@ -313,7 +315,8 @@ public abstract class DeltaCatalogTestSuite {
     public void shouldThrowIfSchemaDoesNotMatch(String ddlSchema) throws Exception {
 
         // GIVEN
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+        SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
@@ -492,7 +495,8 @@ public abstract class DeltaCatalogTestSuite {
     public void shouldThrowIfPartitionSpecDoesNotMatch() throws Exception {
 
         // GIVEN
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+        SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
@@ -532,7 +536,8 @@ public abstract class DeltaCatalogTestSuite {
     @Test
     public void shouldThrowIfTableSchemaAndPartitionSpecDoNotMatch() throws IOException {
         // GIVEN
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+        SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         DeltaLog deltaLog =
             DeltaLog.forTable(DeltaTestUtils.getHadoopConf(), tablePath);
@@ -577,7 +582,8 @@ public abstract class DeltaCatalogTestSuite {
     public void shouldThrowIfDeltaTablePropertiesDoNotMatch() throws Exception {
 
         // GIVEN
-        DeltaTestUtils.initTestForNonPartitionedTable(tablePath);
+        SqlTableInfo tableInfo = NonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String tablePath = tableInfo.getTablePath();
 
         Map<String, String> configuration = new HashMap<>();
         configuration.put("delta.appendOnly", "false");

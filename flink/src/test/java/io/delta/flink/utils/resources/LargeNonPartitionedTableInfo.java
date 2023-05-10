@@ -74,4 +74,9 @@ public class LargeNonPartitionedTableInfo implements SqlTableInfo {
     public RowType getRowType() {
         return RowType.of(dataColumnTypes, dataColumnNames);
     }
+
+    @Override
+    public boolean isPartitioned() {
+        return false;
+    }
 }

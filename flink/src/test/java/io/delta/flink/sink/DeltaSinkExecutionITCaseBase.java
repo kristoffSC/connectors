@@ -9,26 +9,23 @@ import io.delta.flink.sink.internal.committables.DeltaCommittable;
 import io.delta.flink.sink.internal.committables.DeltaGlobalCommittable;
 import io.delta.flink.sink.internal.committer.DeltaGlobalCommitter;
 import io.delta.flink.sink.internal.writer.DeltaWriterBucketState;
-import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.resources.NonPartitionedTableInfo;
+import io.delta.flink.utils.resources.PartitionedTableInfo;
+import io.delta.flink.utils.resources.TableInfo;
 import org.apache.flink.api.connector.sink.Committer;
 import org.apache.flink.api.connector.sink.GlobalCommitter;
 import org.apache.flink.api.connector.sink.Sink;
 import org.apache.flink.api.connector.sink.SinkWriter;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
+import org.junit.rules.TemporaryFolder;
 
 public abstract class DeltaSinkExecutionITCaseBase {
 
-    protected String initSourceFolder(boolean isPartitioned, String deltaTablePath) {
-        try {
-            if (isPartitioned) {
-                DeltaTestUtils.initTestForPartitionedTable(deltaTablePath);
-            } else {
-                DeltaTestUtils.initTestForNonPartitionedTable(deltaTablePath);
-            }
-
-            return deltaTablePath;
-        } catch (IOException e) {
-            throw new RuntimeException("Weren't able to setup the test dependencies", e);
+    protected TableInfo initSourceFolder(boolean isPartitioned, TemporaryFolder tmpFolder) {
+        if (isPartitioned) {
+            return PartitionedTableInfo.createWithInitData(tmpFolder);
+        } else {
+            return NonPartitionedTableInfo.createWithInitData(tmpFolder);
         }
     }
 

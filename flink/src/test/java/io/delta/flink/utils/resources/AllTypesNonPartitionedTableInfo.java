@@ -79,4 +79,9 @@ public class AllTypesNonPartitionedTableInfo implements TableInfo {
     public RowType getRowType() {
         return RowType.of(dataColumnTypes, dataColumnNames);
     }
+
+    @Override
+    public boolean isPartitioned() {
+        return false;
+    }
 }
