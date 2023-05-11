@@ -7,6 +7,9 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.junit.rules.TemporaryFolder;
 
+/**
+ * {@link TableInfo} non-implementation for partitioned Delta table with four Delta versions.
+ */
 public class VersionedNonPartitionedTable implements SqlTableInfo {
 
     private static final String tableInitStatePath =
@@ -23,6 +26,21 @@ public class VersionedNonPartitionedTable implements SqlTableInfo {
         this.runtimePath = runtimePath;
     }
 
+    /**
+     * Initialized non-partitioned test Delta table that can be used for IT tests.
+     * Table will have four Delta table versions and will be backed with files from
+     * {@code resources/test-data/test-non-partitioned-delta-table-4-versions}.
+     * The original files will be compiled to the temporary folder provided via
+     * the argument. The path to created Delta table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "col1, col2, col3"</li>
+     *     <li> column types: CharType, CharType, IntType</li>
+     * </ul>
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
     public static VersionedNonPartitionedTable createWithInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();

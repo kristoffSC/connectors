@@ -7,6 +7,9 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.rules.TemporaryFolder;
 
+/**
+ * {@link TableInfo} non-implementation for partitioned Delta table with 1100 rows.
+ */
 public class LargeNonPartitionedTableInfo implements SqlTableInfo {
 
     private static final String tableInitStatePath =
@@ -25,7 +28,22 @@ public class LargeNonPartitionedTableInfo implements SqlTableInfo {
         this.runtimePath = runtimePath;
     }
 
-    public static LargeNonPartitionedTableInfo create(TemporaryFolder tmpFolder) {
+    /**
+     * Initialized non-partitioned test Delta table that can be used for IT tests.
+     * Created table will contain 1100 records and will be backed by predefined delta table data
+     * from {@code resources/test-data/test-non-partitioned-delta-table_1100_records}.
+     * The original files will be compiled to the temporary folder provided via the argument
+     * The path to created Delta table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "col1", "col2", "col3"</li>
+     *     <li> column types: BIGINT, BIGINT, VARCHAR</li>
+     * </ul>
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
+    public static LargeNonPartitionedTableInfo createWithInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();
             DeltaTestUtils.initTestFor(tableInitStatePath, runtimePath);

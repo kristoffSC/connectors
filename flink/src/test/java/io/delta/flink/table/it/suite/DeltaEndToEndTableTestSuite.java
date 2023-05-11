@@ -76,7 +76,7 @@ public abstract class DeltaEndToEndTableTestSuite {
     public void setUp() {
 
         try {
-            sourceTable = LargeNonPartitionedTableInfo.create(TEMPORARY_FOLDER);
+            sourceTable = LargeNonPartitionedTableInfo.createWithInitData(TEMPORARY_FOLDER);
             sinkTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
             assertThat(sinkTablePath)
                 .isNotEqualToIgnoringCase(sourceTable.getTablePath());

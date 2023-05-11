@@ -7,6 +7,9 @@ import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
 import org.junit.rules.TemporaryFolder;
 
+/**
+ * {@link TableInfo} implementation for unpartitioned Delta table.
+ */
 public class NonPartitionedTableInfo implements SqlTableInfo {
 
     private static final String tableInitStatePath =
@@ -25,6 +28,21 @@ public class NonPartitionedTableInfo implements SqlTableInfo {
         this.runtimePath = runtimePath;
     }
 
+    /**
+     * Initialized non-partitioned test Delta table that can be used for IT tests. This table will
+     * be backed by predefined delta table data from
+     * {@code resources/test-data/test-non-partitioned-delta-table-initial-state}. Original files
+     * will be compiled to the temporary folder provided via the argument. The path to created Delta
+     * table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "name", "surname", "age"</li>
+     *     <li> column types: VARCHAR, VARCHAR, INT</li>
+     * </ul>
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
     public static NonPartitionedTableInfo createWithInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();
@@ -35,6 +53,21 @@ public class NonPartitionedTableInfo implements SqlTableInfo {
         }
     }
 
+    /**
+     * Initialized non-partitioned test Delta table without any records that can be used for IT
+     * tests. This table will be backed by predefined delta table data from
+     * {@code resources/test-data/test-non-partitioned-delta-table-initial-state}. Original files
+     * will be compiled to the temporary folder provided via the argument. The path to created Delta
+     * table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "name", "surname", "age"</li>
+     *     <li> column types: VARCHAR, VARCHAR, INT</li>
+     * </ul>
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
     public static TableInfo createWithoutInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();

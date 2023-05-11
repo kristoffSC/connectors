@@ -94,7 +94,7 @@ public class DeltaEndToEndExecutionITCaseTest {
     )
     @EnumSource(FailoverType.class)
     public void testEndToEndBoundedStream(FailoverType failoverType) throws Exception {
-        TableInfo sourceTableInfo = LargeNonPartitionedTableInfo.create(TMP_FOLDER);
+        TableInfo sourceTableInfo = LargeNonPartitionedTableInfo.createWithInitData(TMP_FOLDER);
 
         // Making sure that we are using path with schema to file system "file://"
         Configuration hadoopConfiguration = DeltaTestUtils.getConfigurationWithMockFs();

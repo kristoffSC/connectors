@@ -14,6 +14,10 @@ import org.apache.flink.table.types.logical.TinyIntType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.rules.TemporaryFolder;
 
+/**
+ * {@link TableInfo} non-implementation for partitioned Delta table containing rows with all
+ * supported simple data types.
+ */
 public class AllTypesNonPartitionedTableInfo implements TableInfo {
 
     private static final String tableInitStatePath =
@@ -35,6 +39,22 @@ public class AllTypesNonPartitionedTableInfo implements TableInfo {
         this.runtimePath = runtimePath;
     }
 
+    /**
+     * Initialized non-partitioned test Delta table that can be used for IT tests.
+     * Created table will contain 5 with columns representing every simple Flink column type.
+     * Table will be backed with files from {@code resources/test-data/test-non-partitioned-delta
+     * -table-alltypes}. The original files will be compiled to the temporary folder provided via
+     * the argument. The path to created Delta table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "col1 - col10"</li>
+     *     <li> column types: TinyIntType, SmallIntType, IntType, DoubleType, FloatType,
+     *      DecimalType, TimestampType, VarCharType, BooleanType</li>
+     * </ul>
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
     public static AllTypesNonPartitionedTableInfo create(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();

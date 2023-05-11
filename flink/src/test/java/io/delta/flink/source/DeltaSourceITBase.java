@@ -65,7 +65,7 @@ public abstract class DeltaSourceITBase extends TestLogger {
         try {
             miniClusterResource.before();
             nonPartitionedTable = NonPartitionedTableInfo.createWithInitData(TMP_FOLDER);
-            largeNonPartitionedTable = LargeNonPartitionedTableInfo.create(TMP_FOLDER);
+            largeNonPartitionedTable = LargeNonPartitionedTableInfo.createWithInitData(TMP_FOLDER);
             partitionedTable = PartitionedTableInfo.createWithInitData(TMP_FOLDER);
         } catch (Exception e) {
             throw new RuntimeException("Weren't able to setup the test dependencies", e);

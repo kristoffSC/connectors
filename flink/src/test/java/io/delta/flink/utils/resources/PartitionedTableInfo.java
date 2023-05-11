@@ -7,6 +7,9 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.rules.TemporaryFolder;
 
+/**
+ * {@link TableInfo} implementation for partitioned Delta table.
+ */
 public class PartitionedTableInfo implements SqlTableInfo {
 
     private static final String tableInitStatePath =
@@ -43,6 +46,23 @@ public class PartitionedTableInfo implements SqlTableInfo {
         this.runtimePath = runtimePath;
     }
 
+    /**
+     * Initialized partitioned test Delta table that can be used for IT tests. This table will
+     * be backed by predefined delta table data from
+     * {@code resources/test-data/test-partitioned-delta-table-initial-state}. Original files
+     * will be compiled to the temporary folder provided via the argument. The path to created Delta
+     * table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "name", "surname", "age, col1, col2"</li>
+     *     <li> column types: VARCHAR, VARCHAR, INT, VARCHAR, VARCHAR</li>
+     * </ul>
+     *
+     * Columns "col1" and "col2" are partitioned columns.
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
     public static PartitionedTableInfo createWithInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();
@@ -53,6 +73,23 @@ public class PartitionedTableInfo implements SqlTableInfo {
         }
     }
 
+    /**
+     * Initialized partitioned test Delta table without any records, that can be used for IT tests.
+     * This table will be backed by predefined delta table data from
+     * {@code resources/test-data/test-partitioned-delta-table-initial-state}. Original files will
+     * be compiled to the temporary folder provided via the argument.
+     * The path to created Delta table can be obtained from {@link #getTablePath()}.
+     * <p>
+     * Schema for created table will be:
+     * <ul>
+     *     <li> column names: "name", "surname", "age, col1, col2"</li>
+     *     <li> column types: VARCHAR, VARCHAR, INT, VARCHAR, VARCHAR</li>
+     * </ul>
+     * <p>
+     * Columns "col1" and "col2" are partitioned columns.
+     *
+     * @param tmpFolder Temporary folder where table files should be copied to.
+     */
     public static TableInfo createWithoutInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();
