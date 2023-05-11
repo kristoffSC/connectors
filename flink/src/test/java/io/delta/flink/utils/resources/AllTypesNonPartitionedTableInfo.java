@@ -56,11 +56,6 @@ public class AllTypesNonPartitionedTableInfo implements TableInfo {
     }
 
     @Override
-    public String getTableInitStatePath() {
-        return null;
-    }
-
-    @Override
     public String[] getColumnNames() {
         return dataColumnNames;
     }

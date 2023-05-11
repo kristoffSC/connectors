@@ -9,8 +9,6 @@ public interface TableInfo {
 
     String getPartitions();
 
-    String getTableInitStatePath();
-
     String[] getColumnNames();
 
     LogicalType[] getColumnTypes();

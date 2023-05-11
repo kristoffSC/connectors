@@ -49,11 +49,6 @@ public class VersionedNonPartitionedTable implements SqlTableInfo {
     }
 
     @Override
-    public String getTableInitStatePath() {
-        return tableInitStatePath;
-    }
-
-    @Override
     public String[] getColumnNames() {
         return dataColumnNames;
     }

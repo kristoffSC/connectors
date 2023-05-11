@@ -93,7 +93,7 @@ public abstract class DeltaEndToEndTableTestSuite {
             sourceTable.getSqlTableSchema(),
             sourceTable.getTablePath());
 
-        LOG.info("Source Table DDL: " + sinkTablePath);
+        LOG.info("Source Table DDL: " + sourceTableDdl);
     }
 
     @Test
@@ -349,11 +349,6 @@ public abstract class DeltaEndToEndTableTestSuite {
 
         @Override
         public String getPartitions() {
-            return "";
-        }
-
-        @Override
-        public String getTableInitStatePath() {
             return "";
         }
 

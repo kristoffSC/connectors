@@ -24,7 +24,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import io.delta.flink.utils.DeltaTestUtils;
+import io.delta.flink.utils.resources.SqlTableInfo;
+import io.delta.flink.utils.resources.TableApiTableInfo;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.streaming.api.CheckpointingMode;
@@ -43,6 +44,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static io.delta.flink.utils.DeltaTestUtils.buildCluster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,12 +55,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 public abstract class DeltaFlinkSqlTestSuite {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DeltaFlinkSqlTestSuite.class);
+
     private static final int PARALLELISM = 2;
 
     private static final TemporaryFolder TEMPORARY_FOLDER = new TemporaryFolder();
 
-    private static final String DATAGEN_SOURCE_DDL = ""
-        + "CREATE TABLE sourceTable ("
+    private static final String DATAGEN_SOURCE_DDL =
+        "CREATE TABLE sourceTable ("
         + " col1 VARCHAR,"
         + " col2 VARCHAR,"
         + " col3 INT,"
@@ -175,23 +180,24 @@ public abstract class DeltaFlinkSqlTestSuite {
     @Test
     public void testPipelineWithoutDeltaTables_3() throws Exception {
 
-        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
+        SqlTableInfo sourceTableInfo = TableApiTableInfo.createWithInitData(TEMPORARY_FOLDER);
+
+        String sourceTablePath = sourceTableInfo.getTablePath();
         String targetTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
 
-        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
-
-        String sourceTableSql = String.format(""
-                + "CREATE TABLE sourceTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
+        String sourceTableSql = String.format(
+            "CREATE TABLE sourceTable ("
+                + "%s"
                 + ") WITH ("
                 + " 'connector' = 'filesystem',"
                 + " 'path' = '%s',"
                 + " 'format' = 'parquet'"
                 + ")",
+            sourceTableInfo.getSqlTableSchema(),
             sourceTablePath
         );
+
+        LOG.info("Source Table DDL: " + sourceTableSql);
 
         String sinkTableSql = String.format(
             "CREATE TABLE sinkTable ("
@@ -217,23 +223,24 @@ public abstract class DeltaFlinkSqlTestSuite {
     }
 
     @Test
-    public void testSelectDeltaTableAsTempTable() throws Exception {
+    public void testSelectDeltaTableAsTempTable() {
 
         // GIVEN
-        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
+        SqlTableInfo sourceTableInfo = TableApiTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String sourceTablePath = sourceTableInfo.getTablePath();
 
         String sourceTableSql = String.format(
             "CREATE TABLE sourceTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
+                + "%s"
                 + ") "
                 + "WITH ("
                 + " 'connector' = 'delta',"
                 + " 'table-path' = '%s'"
                 + ")",
+            sourceTableInfo.getSqlTableSchema(),
             sourceTablePath);
+
+        LOG.info("Source Table DDL: " + sourceTableSql);
 
         tableEnv.executeSql(sourceTableSql);
 
@@ -264,20 +271,21 @@ public abstract class DeltaFlinkSqlTestSuite {
     public void testSelectViewFromDeltaTable() throws Exception {
 
         // GIVEN
-        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
+        SqlTableInfo sourceTableInfo = TableApiTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String sourceTablePath = sourceTableInfo.getTablePath();
 
         String sourceTableSql = String.format(
             "CREATE TABLE sourceTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
+                + "%s"
                 + ") "
                 + "WITH ("
                 + " 'connector' = 'delta',"
                 + " 'table-path' = '%s'"
                 + ")",
+            sourceTableInfo.getSqlTableSchema(),
             sourceTablePath);
+
+        LOG.info("Source Table DDL: " + sourceTableSql);
 
         tableEnv.executeSql(sourceTableSql);
 
@@ -306,20 +314,21 @@ public abstract class DeltaFlinkSqlTestSuite {
     public void testSelectWithClauseFromDeltaTable() throws Exception {
 
         // GIVEN
-        String sourceTablePath = TEMPORARY_FOLDER.newFolder().getAbsolutePath();
-        DeltaTestUtils.initTestForTableApiTable(sourceTablePath);
+        SqlTableInfo sourceTableInfo = TableApiTableInfo.createWithInitData(TEMPORARY_FOLDER);
+        String sourceTablePath = sourceTableInfo.getTablePath();
 
         String sourceTableSql = String.format(
             "CREATE TABLE sourceTable ("
-                + " col1 VARCHAR,"
-                + " col2 VARCHAR,"
-                + " col3 INT"
+                + "%s"
                 + ") "
                 + "WITH ("
                 + " 'connector' = 'delta',"
                 + " 'table-path' = '%s'"
                 + ")",
+            sourceTableInfo.getSqlTableSchema(),
             sourceTablePath);
+
+        LOG.info("Source Table DDL: " + sourceTableSql);
 
         tableEnv.executeSql(sourceTableSql);
 

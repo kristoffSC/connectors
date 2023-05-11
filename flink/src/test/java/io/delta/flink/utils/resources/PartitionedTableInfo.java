@@ -78,11 +78,6 @@ public class PartitionedTableInfo implements SqlTableInfo {
     }
 
     @Override
-    public String getTableInitStatePath() {
-        return tableInitStatePath;
-    }
-
-    @Override
     public String[] getColumnNames() {
         return columnNames;
     }
@@ -94,6 +89,7 @@ public class PartitionedTableInfo implements SqlTableInfo {
     public LogicalType[] getColumnTypes() {
         return columnTypes;
     }
+
     public LogicalType[] getDataColumnTypes() {
         return dataColumnTypes;
     }

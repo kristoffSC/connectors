@@ -1,35 +1,35 @@
 package io.delta.flink.utils.resources;
 
 import io.delta.flink.utils.DeltaTestUtils;
-import org.apache.flink.table.types.logical.BigIntType;
+import org.apache.flink.table.types.logical.CharType;
+import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.RowType;
-import org.apache.flink.table.types.logical.VarCharType;
 import org.junit.rules.TemporaryFolder;
 
-public class LargeNonPartitionedTableInfo implements SqlTableInfo {
+public class TableApiTableInfo implements SqlTableInfo {
 
     private static final String tableInitStatePath =
-        "/test-data/test-non-partitioned-delta-table_1100_records";
+        "/test-data/test-table-api";
 
-    private static final String sqlTableSchema = "col1 BIGINT, col2 BIGINT, col3 VARCHAR";
+    private static final String sqlTableSchema = "col1 VARCHAR, col2 VARCHAR, col3 INT";
 
     private static final String[] dataColumnNames = {"col1", "col2", "col3"};
 
     private static final LogicalType[] dataColumnTypes =
-        {new BigIntType(), new BigIntType(), new VarCharType()};
+        {new CharType(), new CharType(), new IntType()};
 
     private final String runtimePath;
 
-    private LargeNonPartitionedTableInfo(String runtimePath) {
+    private TableApiTableInfo(String runtimePath) {
         this.runtimePath = runtimePath;
     }
 
-    public static LargeNonPartitionedTableInfo create(TemporaryFolder tmpFolder) {
+    public static TableApiTableInfo createWithInitData(TemporaryFolder tmpFolder) {
         try {
             String runtimePath = tmpFolder.newFolder().getAbsolutePath();
             DeltaTestUtils.initTestFor(tableInitStatePath, runtimePath);
-            return new LargeNonPartitionedTableInfo(runtimePath);
+            return new TableApiTableInfo(runtimePath);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -47,7 +47,7 @@ public class LargeNonPartitionedTableInfo implements SqlTableInfo {
 
     @Override
     public String getPartitions() {
-        return "";
+        return null;
     }
 
     @Override
@@ -62,7 +62,7 @@ public class LargeNonPartitionedTableInfo implements SqlTableInfo {
 
     @Override
     public int getInitialRecordCount() {
-        return 1100;
+        return 0;
     }
 
     @Override
