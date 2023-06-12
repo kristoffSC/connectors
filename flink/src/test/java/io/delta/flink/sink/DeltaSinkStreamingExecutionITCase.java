@@ -44,6 +44,7 @@ import io.delta.flink.sink.internal.committer.DeltaGlobalCommitter;
 import io.delta.flink.sink.internal.writer.DeltaWriterBucketState;
 import io.delta.flink.sink.utils.DeltaSinkTestUtils;
 import io.delta.flink.utils.CheckpointCountingSource;
+import io.delta.flink.utils.DeltaTableAsserts;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
 import org.apache.flink.api.common.JobStatus;
