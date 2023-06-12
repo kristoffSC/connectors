@@ -21,6 +21,15 @@ package io.delta.standalone.internal.sources
  */
 private[internal] object StandaloneHadoopConf {
 
+  /**
+   * If enabled, this ignores errors when trying to relativize an absolute path of an
+   * [[io.delta.standalone.actions.AddFile]] across file systems.
+   * This allows user to define shallow clone delta tables where data resides in
+   * external file systems such as s3://, wasbs:// or adls://
+   * By default, this feature is disabled. Set to `true` to enable.
+   */
+  val RELATIVE_PATH_IGNORE = "io.delta.vacuum.relativize.ignoreError"
+
   /** Time zone as which time-based parquet values will be encoded and decoded. */
   val PARQUET_DATA_TIME_ZONE_ID = "io.delta.standalone.PARQUET_DATA_TIME_ZONE_ID"
 
@@ -37,4 +46,10 @@ private[internal] object StandaloneHadoopConf {
    */
   val PARTITION_FILTER_RECORD_CACHING_KEY =
     "io.delta.standalone.partitionFilterRecordCaching.enabled"
+
+  /**
+   * When set to true, Delta Standalone will checkpoint as normal. When set to false, Delta
+   * Standalone will explicitly skip checkpointing.
+   */
+  val CHECKPOINTING_ENABLED = "io.delta.standalone.checkpointing.enabled"
 }

@@ -37,7 +37,9 @@ import io.delta.flink.sink.internal.committables.DeltaGlobalCommittable;
 import io.delta.flink.utils.DeltaTestUtils;
 import io.delta.flink.utils.TestParquetReader;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.RestOptions;
+import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.connector.file.sink.utils.FileSinkTestUtils;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
@@ -74,6 +76,12 @@ public class DeltaSinkTestUtils {
         new RowType.RowField("age", new IntType())
     ));
 
+    public static final RowType TEST_ROW_TYPE2 = new RowType(Arrays.asList(
+        new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
+        new RowType.RowField("age", new VarCharType(VarCharType.MAX_LENGTH))
+    ));
+
     public static final RowType TEST_PARTITIONED_ROW_TYPE = new RowType(Arrays.asList(
         new RowType.RowField("name", new VarCharType(VarCharType.MAX_LENGTH)),
         new RowType.RowField("surname", new VarCharType(VarCharType.MAX_LENGTH)),
@@ -91,6 +99,12 @@ public class DeltaSinkTestUtils {
         TEST_ROW_TYPE_CONVERTER = DataFormatConverters.getConverterForDataType(
             TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE)
         );
+
+    @SuppressWarnings("unchecked")
+    public static final DataFormatConverters.DataFormatConverter<RowData, Row>
+        TEST_ROW_TYPE_CONVERTER2 = DataFormatConverters.getConverterForDataType(
+        TypeConversions.fromLogicalToDataType(TEST_ROW_TYPE2)
+    );
 
     @SuppressWarnings("unchecked")
     public static final DataFormatConverters.DataFormatConverter<RowData, Row>
@@ -119,8 +133,12 @@ public class DeltaSinkTestUtils {
     }
 
     public static RowType addNewColumnToSchema(RowType schema) {
+        return addNewColumnToSchema(schema, true);
+    }
+
+    public static RowType addNewColumnToSchema(RowType schema, boolean isNullable) {
         List<RowType.RowField> fields = new ArrayList<>(schema.getFields());
-        fields.add(new RowType.RowField("col4", new IntType()));
+        fields.add(new RowType.RowField("someNewField", new IntType(isNullable)));
         return new RowType(fields);
     }
 
@@ -363,6 +381,13 @@ public class DeltaSinkTestUtils {
     public static DeltaSinkInternal<RowData> createDeltaSink(
             String deltaTablePath,
             boolean isTablePartitioned) {
+        return createDeltaSink(deltaTablePath, isTablePartitioned, DeltaTestUtils.getHadoopConf());
+    }
+
+    public static DeltaSinkInternal<RowData> createDeltaSink(
+            String deltaTablePath,
+            boolean isTablePartitioned,
+            org.apache.hadoop.conf.Configuration hadoopConf) {
 
         if (isTablePartitioned) {
             DeltaSinkBuilder<RowData> builder = new DeltaSinkBuilder.DefaultDeltaFormatBuilder<>(
@@ -370,7 +395,7 @@ public class DeltaSinkTestUtils {
                 DeltaTestUtils.getHadoopConf(),
                 ParquetRowDataBuilder.createWriterFactory(
                     DeltaSinkTestUtils.TEST_ROW_TYPE,
-                    DeltaTestUtils.getHadoopConf(),
+                    hadoopConf,
                     true // utcTimestamp
                 ),
                 new BasePathBucketAssigner<>(),
@@ -387,7 +412,7 @@ public class DeltaSinkTestUtils {
         return DeltaSink
             .forRowData(
                 new Path(deltaTablePath),
-                DeltaTestUtils.getHadoopConf(),
+                hadoopConf,
                 DeltaSinkTestUtils.TEST_ROW_TYPE).build();
     }
 
@@ -403,10 +428,12 @@ public class DeltaSinkTestUtils {
     public static MiniCluster getMiniCluster() {
         final Configuration config = new Configuration();
         config.setString(RestOptions.BIND_PORT, "18081-19000");
+        config.set(TaskManagerOptions.FRAMEWORK_OFF_HEAP_MEMORY, MemorySize.parse("128mb"));
+        config.set(TaskManagerOptions.TASK_OFF_HEAP_MEMORY, MemorySize.parse("128mb"));
         final MiniClusterConfiguration cfg =
             new MiniClusterConfiguration.Builder()
-                .setNumTaskManagers(1)
-                .setNumSlotsPerTaskManager(4)
+                .setNumTaskManagers(3)
+                .setNumSlotsPerTaskManager(2)
                 .setConfiguration(config)
                 .build();
         return new MiniCluster(cfg);
